@@ -1,7 +1,7 @@
 # Sprint 2-A — Detailed Editor Foundation 보고서
 
 - 작성일: 2026-11-24
-- 상태: **구현 완료, 로컬 검증 완료, 검토 대기.** 커밋·push 전입니다(승인 후 작업 브랜치에 커밋·push하고 CI 결과를 보고합니다).
+- 상태: **로컬 구현 승인됨 → 작업 브랜치에 커밋·push 완료, CI 통과, PR 생성(미병합).** main 병합은 별도 승인 대상입니다.
 - 브랜치: `feature/sprint-2a-detailed-foundation` (기준 `main` = `21c5582`, main은 변경하지 않음)
 - 범위: 승인서의 D1~D10 결정을 반영했습니다. 인물 상세 카탈로그, 제품용 복합 프리셋, Precision, AI·API 기능은 구현하지 않았습니다. 유료 API 호출 0건.
 
@@ -213,12 +213,38 @@ undoPresetTransaction             → userEdited가 아니고 현재 값이 적�
 | 프리셋 대화상자 포커스 트랩 미구현 | 접근성 개선 |
 | ESLint 9 지원 종료 경고(Sprint 1에서 이월) | eslint-config-next의 ESLint 10 지원 후 |
 
-## 13. Git 및 CI 상태
-- 로컬: `feature/sprint-2a-detailed-foundation` 브랜치에 **미커밋**(검토 대기). main은 그대로입니다.
-- 커밋 대상에 생성물(`.next`, `.next-e2e`, `test-results`)과 비밀 정보는 없습니다(`.gitignore`에 `.next-e2e/` 추가).
-- CI: 워크플로를 갱신했습니다(action v7·v5, 격리 검증 단계, `feature/**` 트리거). **원격 CI는 push 후 실행 예정이며 아직 결과가 없습니다.**
-- main 병합은 별도 승인 대상입니다.
+## 13. Git 및 CI 상태 (최종)
+| 항목 | 값 |
+|---|---|
+| 구현 커밋 | `0af6b0f` — feat: implement Sprint 2-A detailed editor foundation |
+| 보고서 갱신 커밋 | 이 문서를 수정한 후속 커밋 (해시는 최종 보고에 기재) |
+| 원격 작업 브랜치 | `origin/feature/sprint-2a-detailed-foundation` (로컬과 동기화) |
+| main | `21c5582` 그대로 (직접 push 없음, 병합 없음) |
+| Pull Request | https://github.com/nyfever007/prompt-helper/pull/1 (main 대상, **미병합**) |
+| 작업 트리 | 커밋 후 깨끗함 (생성물 `.next`, `.next-e2e`, `test-results`는 `.gitignore`로 제외) |
+
+### 13.1 GitHub Actions 결과 (`0af6b0f`)
+| 실행 | 이벤트 | 결과 |
+|---|---|---|
+| [45325156909](https://github.com/nyfever007/prompt-helper/actions/runs/45325156909) | push | ✅ success |
+| [45325220794](https://github.com/nyfever007/prompt-helper/actions/runs/45325220794) | pull_request | ✅ success |
+
+CI 로그 발췌(push 실행):
+```text
+Run pnpm test          Tests  344 passed (344)
+Run pnpm build         Route (app) … └ ○ /e2e-fixtures
+Run pnpm verify:isolation
+  ✓ 149 production output files contain no fixture marker
+  ✓ /e2e-fixtures → 404
+  ✓ /e2e-fixtures?fixtures=1 → 404
+  ✓ /e2e-fixtures?PROMPTER_E2E_FIXTURES=1 → 404
+  ✓ production build isolates the test catalog
+Run pnpm test:e2e      1 skipped · 39 passed (30.8s)
+```
+- **일반 프로덕션 빌드와 E2E 전용 빌드 구분을 CI에서 확인**했습니다. 일반 빌드(`pnpm build`) 직후 `verify:isolation`이 통과했고, E2E 단계는 별도 E2E 빌드(`.next-e2e`)에서 테스트 카탈로그 화면까지 검증했습니다.
+- **CI에서 발견된 문제: 없음.** 수정 없이 첫 실행에서 통과했습니다.
+- Sprint 1 CI에 있던 **Node 20 지원 종료 경고(annotation)는 0건**입니다(action 버전 업그레이드 효과).
 
 ## 14. 다음 단계 (승인 필요)
-1. 이 보고서를 검토하고 승인해 주시면 작업 브랜치에 커밋·push하고 CI 결과를 보고합니다.
+1. PR #1 검토 후 main 병합 여부를 결정합니다(별도 승인).
 2. Sprint 2-B: `docs/catalogs/person/*.md` 설계 승인 순서를 정한 뒤 영역별로 실제 속성을 추가합니다. 승인 대상은 연령 표현 정책(identity)과, 그와 연결된 정책 제한 대상(표정·인상, 의상)입니다.
