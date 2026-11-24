@@ -24,13 +24,13 @@ const open = async (store: KeyValueStore = createMemoryStore()) => {
 };
 
 describe("Identity navigation and editing (real core catalog)", () => {
-  it("shows Identity with its 6 subcategories as editable; other person areas stay Draft", async () => {
+  it("shows Identity with its 6 subcategories as editable; every person area is approved since 2-B.6 (pose included)", async () => {
     const { go } = await open();
     await go("인물 기본 정보");
     expect(screen.queryByTestId("draft-placeholder")).toBeNull();
     for (const sub of ["존재", "연령", "성별", "배경", "사회", "기타"]) expect(within(nav()).getByRole("button", { name: sub })).toBeInTheDocument();
-    await go("자세 및 행동"); // still DRAFT (face … lips approved in 2-B.2; skin, hair, facial hair in 2-B.3)
-    expect(screen.getByTestId("draft-placeholder")).toBeInTheDocument();
+    await go("자세 및 행동"); // approved in 2-B.6 (the draft placeholder is still covered on the fixture catalog: component/detailed)
+    expect(screen.queryByTestId("draft-placeholder")).toBeNull();
   });
 
   it("hierarchical, typical-first species list; selection writes only the species", async () => {

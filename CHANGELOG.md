@@ -9,7 +9,23 @@
 - 컴파일러(`COMPILER_VERSION`): 0.1.0 / generic-en adapter: 0.1.0
 - 로컬 저장 envelope(`STORAGE_FORMAT_VERSION`): 1
 
-## [Unreleased] — TD-11: 속성 테스트 비용 절감 (부분 해결)
+## [0.9.0] — 2026-11-25 — Sprint 2-B.6: Appearance direction, pose, camera & lighting (승인됨 — Sprint 2-B 카탈로그 구현 완료)
+
+버전 변화: core 카탈로그 0.8.0 → **0.9.0**(ID 변경 없음). ImageSpec 0.3.0, 카탈로그 형식 0.4.0, 컴파일러 0.4.0, 안전 정책 0.2.0은 그대로.
+
+### Added
+- 외모 방향 `person.appearance.direction`(18개 선택지, 다중 + 사용자 정의): Basic에서 인물 선택 직후, Detailed 인상 및 매력에서 같은 값을 편집. 의미가 같은 인상 값은 `covers`로 한 번만 출력
+- 인물 › 자세 및 행동 22개 속성(하위 분류 5개) — 누적 인물 상세 속성 300개
+- 카메라 15개(거리·롤·구도·여백·피사체 위치·렌즈·초점 거리·투영·원근감·조리개·피사계 심도·초점 대상·초점 선명도·보케·모션 블러), 조명 11개(주광 높이·색상, 보조광, 림 라이트·색상, 환경광, 그림자 강도·경계, 반사광, 볼류메트릭, 광원 가시성)와 조명 색상 팔레트 14색
+- 경고 규칙 17개, 테스트 `appearance-pose-catalog`(29)·`camera-lighting-catalog`(29)·`component/pose-camera-lighting`(4)·E2E `pose-camera-lighting`(데스크톱·모바일), 스크린샷 `docs/screenshots/sprint-2b6/`
+- 문서: `docs/catalogs/person/pose.md`, `docs/catalogs/shared/{camera,lighting}.md` 1.0.0 APPROVED, `expression.md` 1.1.0, ADR-056, `docs/SPRINT_2B6_REPORT.md`
+
+### Changed
+- 피사체 출력 순서 번호 200 → 190(상대 순서·프롬프트 동일)
+- 조명 속성 6개에 선택지 12개 추가(기존 ID·문구 유지)
+- 테스트 전용 카탈로그에서만 `person_pose`를 DRAFT로 유지(설계 중 화면 검증용), 기존 테스트의 버전·노출 목록·누적 개수 갱신
+
+## [Unreleased] — TD-11: 속성 테스트 비용 절감 (부분 해결, PR #8 병합 `3a340a7`)
 
 출력·진단·안전 결과와 버전 변화 없음.
 

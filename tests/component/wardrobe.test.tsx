@@ -28,7 +28,7 @@ describe("Sprint 2-B.5 areas in the Detailed editor", () => {
   it("all new areas are editable with the approved attribute counts (no draft placeholder)", async () => {
     const { go } = await open();
     for (const [label, n] of [
-      ["표정", 10], ["인상 및 매력", 8], ["메이크업", 16],
+      ["표정", 10], ["인상 및 매력", 9 /* + appearance direction (2-B.6) */], ["메이크업", 16],
       ["전체 설정", 8], ["상의", 12], ["하의", 10], ["원피스 및 일체형", 13], ["아우터", 11], ["내의", 4], ["신발", 8], ["양말 및 스타킹", 6],
       ["액세서리", 18],
     ] as const) {
@@ -37,7 +37,7 @@ describe("Sprint 2-B.5 areas in the Detailed editor", () => {
       expect(document.querySelectorAll(".cat-panel .attribute-list > [data-attribute-id]"), label).toHaveLength(n);
     }
     await go("자세 및 행동");
-    expect(screen.getByTestId("draft-placeholder")).toBeInTheDocument(); // pose stays draft (2-B.6)
+    expect(screen.queryByTestId("draft-placeholder")).toBeNull(); // pose approved in 2-B.6
   });
 
   it("emotion intensity is a band-label slider that stores nothing until moved; emotions combine", async () => {

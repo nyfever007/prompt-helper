@@ -16,9 +16,10 @@ export const SLIDER = (en: string, ko: string) => fd(`${en} Relative impression 
 /** Person attributes apply to a single person; when no subject is chosen yet, do not restrict. */
 export const forPerson: Condition[] = [{ op: "anyOf", attributeId: "subject.kind", optionIds: ["person"], whenUnset: "pass" }];
 
-const base = (id: string, order: number, categoryId: string, label: L, aliases: string[], description: L, kind: "categorical" | "relative", when: Condition[] = []) => ({
+/** Subject scope of an attribute: person attributes by default; shared (camera, lighting) attributes pass `[]` or their own subjects. */
+const base = (id: string, order: number, categoryId: string, label: L, aliases: string[], description: L, kind: "categorical" | "relative", when: Condition[] = [], scope: Condition[] = forPerson) => ({
   id,
-  domain: id.split(".").slice(0, 2).join("."),
+  domain: id.startsWith("person.") ? id.split(".").slice(0, 2).join(".") : id.split(".")[0]!,
   status: "approved" as const,
   categoryId,
   tier: "detailed" as const,
@@ -26,7 +27,7 @@ const base = (id: string, order: number, categoryId: string, label: L, aliases: 
   label,
   aliases,
   description,
-  appliesWhen: [...forPerson, ...when],
+  appliesWhen: [...scope, ...when],
   expression: { role: "direct" as const, kind },
   outputToggle: true,
 });
@@ -52,11 +53,13 @@ export interface ShapeOptions {
   groups?: Array<[string, string, string]>;
   /** Extra applicability conditions (kept values are restored when they apply again). */
   when?: Condition[];
+  /** Subject scope (default: single person). */
+  scope?: Condition[];
 }
 
 export const shape = (id: string, order: number, cat: string, label: L, aliases: string[], description: L, template: string, options: O[], o: ShapeOptions = {}): Attr =>
   ({
-    ...base(id, order, cat, label, aliases, description, "categorical", o.when),
+    ...base(id, order, cat, label, aliases, description, "categorical", o.when, o.scope),
     type: o.multi ? "multi" : "single",
     ...(o.control ? { control: o.control } : {}),
     ...(o.custom === false ? {} : { custom: { nameOnlyNotice: true } }),
@@ -68,9 +71,9 @@ export const shape = (id: string, order: number, cat: string, label: L, aliases:
 /** Band: [ko label, en label, prompt text] — 5 ordered qualitative bands on a 1–5 relative slider. */
 export type B = [string, string, string];
 export type Bands = [B, B, B, B, B];
-export const degree = (id: string, order: number, cat: string, label: L, aliases: string[], description: L, template: string, bands: Bands, when: Condition[] = []): Attr =>
+export const degree = (id: string, order: number, cat: string, label: L, aliases: string[], description: L, template: string, bands: Bands, when: Condition[] = [], scope: Condition[] = forPerson): Attr =>
   ({
-    ...base(id, order, cat, label, aliases, description, "relative", when),
+    ...base(id, order, cat, label, aliases, description, "relative", when, scope),
     type: "number",
     control: "slider",
     semantics: "degree",

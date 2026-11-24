@@ -33,7 +33,11 @@ export const buildFixtureCatalog = (): CatalogInput => {
 
   // Some person areas are "approved" HERE ONLY so the UI can be exercised; others stay draft.
   const approvedHere = new Set(["person", "person_identity", "person_face", "person_eyes", "person_hair", "person_expression", "person_body", "person_makeup", "person_wardrobe"]);
-  c.categories = (c.categories ?? []).map((cat) => (approvedHere.has(cat.id) ? { ...cat, status: "approved" as const } : cat));
+  // Pose & action is approved in the product (2-B.6); it stays DRAFT here only, so the draft placeholder UI keeps being exercised.
+  const draftHere = new Set(["person_pose"]);
+  c.categories = (c.categories ?? []).map((cat) =>
+    approvedHere.has(cat.id) ? { ...cat, status: "approved" as const } : draftHere.has(cat.id) ? { ...cat, status: "draft" as const } : cat,
+  );
 
   const base = (id: string, categoryId: string, order: number, en: string, ko: string) => ({
     id,

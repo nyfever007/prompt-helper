@@ -14,7 +14,8 @@
 | **Sprint 2-B.4 — Body** | 신체 45개 속성(누적 153), 하위 분류 7개, 상대 슬라이더 36개, 등신 비율 숫자 속성, core 카탈로그 0.7.0 | ✅ **승인·병합 (PR #6)** ([보고서](SPRINT_2B4_REPORT.md)) |
 | **Sprint 2-B.5 — Expression, impression, makeup, clothing & accessories** | 표정 10·인상 8·메이크업 16·의상 72(전체 설정 + 의복 7개 카테고리)·액세서리 18 = 124개 속성(누적 277), 메이크업·의상 팔레트, 의복별 적용 가능성, 컴파일 반복 계산 제거(ADR-054), core 카탈로그 0.8.0 | ✅ **승인·병합 (PR #7)** ([보고서](SPRINT_2B5_REPORT.md)) |
 | **TD-11 — 속성 테스트 비용** | 결과가 같은 검사 경로 최적화와 테스트 헬퍼 개선, CI 실측 1.79–3.09초(제한 5초, ADR-055) | ✅ **부분 해결 (PR #8)** — 느린 실행기 3초 기준 미충족, TD-11 열림 |
-| Sprint 2-B.6 이후 — 자세 및 행동 등 | 자세·동작·시선 방향 등(영역별 설계·구현 지침 승인 후) | ⏸ 승인 대기 (자동 시작하지 않음) |
+| **Sprint 2-B.6 — Appearance direction, pose, camera & lighting** | 외모 방향(Basic + Detailed), 자세 22, 카메라 15 + 기존 3, 조명 11 + 기존 7(선택지 추가), core 카탈로그 0.9.0 — 인물 상세 속성 누적 300 | ✅ **승인 — Sprint 2-B 카탈로그 구현 완료** ([보고서](SPRINT_2B6_REPORT.md)) |
+| Sprint 2-C | 통합 개선: TD-08·TD-10·TD-11(부분 해결)·TD-12·TD-13·TD-14·TD-15 등 | ⏸ 새 통합 개선 지침 수령 후 시작 |
 | Sprint 2-C — Detailed accessibility | 카테고리 키보드 탐색(TD-01), 프리셋 대화상자 포커스 관리(TD-02) | ⏳ 예정 |
 | Sprint 3 — Precision editor | 위치와 개수 지정, 부위별 속성, 중요도, 유지/제외 조건, 참조 이미지 역할(메타데이터) | ⏳ 예정 |
 | Sprint 4 — Style taxonomy & non-person | 직교 스타일 축, 카탈로그 확장, 풍경·건축·제품·게임 에셋 | ⏳ 예정 |

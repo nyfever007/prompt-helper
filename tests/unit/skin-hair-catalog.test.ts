@@ -58,7 +58,7 @@ describe("registration and integrity (45 new, 108 cumulative person attributes)"
       expect(a.label.ko && a.label.en && a.aliases?.length, a.id).toBeTruthy();
     }
     // 108 cumulative after 2-B.3; 153 after Sprint 2-B.4 added 45 body attributes; 277 after 2-B.5 (+124)
-    expect(core.attributes().filter((a) => a.id.startsWith("person.") && !a.id.startsWith("person.body.") && !/^person\.(expression|impression|makeup|clothing|accessories)\./.test(a.id) && core.isExposed(a, "detailed"))).toHaveLength(108);
+    expect(core.attributes().filter((a) => a.id.startsWith("person.") && !a.id.startsWith("person.body.") && !/^person\.(expression|impression|makeup|clothing|accessories|appearance|pose)\./.test(a.id) && core.isExposed(a, "detailed"))).toHaveLength(108);
     expect(core.getCategory("person_facial_hair")).toMatchObject({ parentId: "person", status: "approved", docPath: "docs/catalogs/person/facial-hair.md" });
   });
 

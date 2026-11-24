@@ -65,7 +65,8 @@ describe("registration and integrity (18 new attributes, order 460–477; 277 cu
       }
     }
     expect(core.categories.filter((c) => c.parentId === "person_accessories")).toEqual([]);
-    expect(core.attributes().filter((a) => a.id.startsWith("person.") && core.isExposed(a, "detailed"))).toHaveLength(277);
+    // 277 cumulative after 2-B.5; 300 after Sprint 2-B.6 added the appearance direction and 22 pose attributes
+    expect(core.attributes().filter((a) => a.id.startsWith("person.") && !/^person\.(appearance|pose)\./.test(a.id) && core.isExposed(a, "detailed"))).toHaveLength(277);
   });
 
   it("frame and hat colors use the shared 55-color palette in 10 groups", () => {

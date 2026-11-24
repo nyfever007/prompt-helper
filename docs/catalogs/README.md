@@ -22,12 +22,12 @@ Prompter의 속성 카탈로그는 **데이터**(`src/domain/catalog/catalogs/co
 | 인물 › 헤어 (Hair) | [person/hair.md](person/hair.md) | **APPROVED** (Sprint 2-B.3, 23개 속성) |
 | 인물 › 수염 (Facial hair) | [person/facial-hair.md](person/facial-hair.md) | **APPROVED** (Sprint 2-B.3, 6개 속성, 새 영역) |
 | 인물 › 신체 (Body) | [person/body.md](person/body.md) | **APPROVED** (Sprint 2-B.4, 45개 속성, 하위 분류 7개) |
-| 인물 › 표정 및 시각적 인상 (Expression & Appeal) | [person/expression.md](person/expression.md) | **APPROVED** (Sprint 2-B.5, 18개 속성, 하위 분류 2개) |
+| 인물 › 표정 및 시각적 인상 (Expression & Appeal) | [person/expression.md](person/expression.md) | **APPROVED** (Sprint 2-B.5, 18개 속성, 하위 분류 2개 · Sprint 2-B.6 외모 방향 추가) |
 | 인물 › 메이크업 (Makeup) | [person/makeup.md](person/makeup.md) | **APPROVED** (Sprint 2-B.5, 16개 속성) |
 | 인물 › 의상 (Wardrobe) | [person/wardrobe.md](person/wardrobe.md) | **APPROVED** (Sprint 2-B.5, 72개 속성, 하위 분류 8개) |
 | 인물 › 액세서리 (Accessories) | [person/accessories.md](person/accessories.md) | **APPROVED** (Sprint 2-B.5, 18개 속성) |
-| 인물 › 자세 및 행동 (Pose & Action) | [person/pose.md](person/pose.md) | DRAFT |
-| 공통 › 카메라 (Camera) | [shared/camera.md](shared/camera.md) | DRAFT (Sprint 1 승인 속성 존재) |
-| 공통 › 조명 (Lighting) | [shared/lighting.md](shared/lighting.md) | DRAFT (Sprint 1·2-A 승인 속성 존재) |
+| 인물 › 자세 및 행동 (Pose & Action) | [person/pose.md](person/pose.md) | **APPROVED** (Sprint 2-B.6, 22개 속성, 하위 분류 5개) |
+| 공통 › 카메라 (Camera) | [shared/camera.md](shared/camera.md) | **APPROVED** (Sprint 2-B.6, 기존 3 + 신규 15) |
+| 공통 › 조명 (Lighting) | [shared/lighting.md](shared/lighting.md) | **APPROVED** (Sprint 2-B.6, 기존 7 + 신규 11, 기존 속성에 선택지 12개 추가) |
 
 이 목록은 최종 분류 체계가 아닙니다. 영역과 하위 분류는 카탈로그 `categories` 데이터로 추가하거나 재구성할 수 있습니다.
