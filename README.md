@@ -3,7 +3,7 @@
 사용자가 상상한 이미지를 구조화된 명세(**ImageSpec**)로 정밀하게 정의하고, 이를 이미지 생성 모델용 프롬프트로 변환하는 **Visual Prompt Design Tool**입니다.
 
 - 제품 마스터 계획: [PROMPTER_MASTER_PLAN.md](PROMPTER_MASTER_PLAN.md) (원본 보존, 수정 금지)
-- 현재 단계: **Sprint 2-A — Detailed Editor Foundation (구현 완료, 검토 대기)**. 상세 결과는 [docs/SPRINT_2A_REPORT.md](docs/SPRINT_2A_REPORT.md)를 참고하세요. (Sprint 0·1: 승인됨)
+- 현재 단계: **Sprint 2-A — Detailed Editor Foundation (승인·main 병합 완료, 2026-11-24)**. 상세 결과는 [docs/SPRINT_2A_REPORT.md](docs/SPRINT_2A_REPORT.md), 남은 기술 부채는 [docs/TECH_DEBT.md](docs/TECH_DEBT.md)를 참고하세요. 다음 단계(Sprint 2-B)는 카탈로그 설계 문서 승인 후 시작합니다.
 - 이 빌드는 이미지 생성 API나 유료 LLM API를 **호출하지 않습니다**. API 키도 필요 없습니다.
 
 ## 요구 사항

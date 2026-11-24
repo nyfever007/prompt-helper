@@ -7,8 +7,9 @@
 |---|---|---|
 | **Sprint 0 — Foundation** | 독립 저장소, 버전이 붙은 ImageSpec과 카탈로그, 검증기, 결정론적 컴파일러, Basic 최소 기능, JSON 입출력, 로컬 저장, 테스트와 문서 | ✅ **승인됨 (2026-11-24)** ([보고서](SPRINT_0_REPORT.md)) |
 | **Sprint 1 — Basic composer** | 상황별 선택지, 검색 가능한 스타일 프리셋(독립 축 구조), 구도·방향·각도, 장소·배경, 분위기, 조명 프리셋(독립 속성 구조), 화면비, 출처·진단, 충돌 안내, 안전 정책 기준선, 언어 정책, ID 마이그레이션, 부분 복구, 초기화 되돌리기, CI 설정 파일 | ✅ 승인됨 ([보고서](SPRINT_1_REPORT.md)) |
-| **Sprint 2-A — Detailed Editor foundation** | 데이터 기반 탐색과 검색, 범용 컨트롤 9종, 복합 프리셋(계획·확인·되돌리기), 의미 단위 우선순위, 정책 제한, ImageSpec 0.2.0, 카탈로그 형식 0.3.0, 모바일 도구 모음, 테스트 카탈로그 격리, 설계 문서 DRAFT 16개 | ✅ 구현 완료 · **검토 대기** ([보고서](SPRINT_2A_REPORT.md)) |
-| Sprint 2-B — Detailed person catalog | 인물 영역별 실제 속성과 선택지(설계 문서 승인 후 순차 추가) | ⏸ 제품 설계 승인 대기 |
+| **Sprint 2-A — Detailed Editor foundation** | 데이터 기반 탐색과 검색, 범용 컨트롤 9종, 복합 프리셋(계획·확인·되돌리기), 의미 단위 우선순위, 정책 제한, ImageSpec 0.2.0, 카탈로그 형식 0.3.0, 모바일 도구 모음, 테스트 카탈로그 격리, 설계 문서 DRAFT 16개 | ✅ **승인·병합 (2026-11-24, PR #1)** ([보고서](SPRINT_2A_REPORT.md), [기술 부채](TECH_DEBT.md)) |
+| Sprint 2-B — Detailed person catalog | 인물 영역별 실제 속성과 선택지(설계 문서 승인 후 순차 추가), 시각 예시 제작 기준(TD-03) | ⏸ 제품 설계 승인 대기 |
+| Sprint 2-C — Detailed accessibility | 카테고리 키보드 탐색(TD-01), 프리셋 대화상자 포커스 관리(TD-02) | ⏳ 예정 |
 | Sprint 3 — Precision editor | 위치와 개수 지정, 부위별 속성, 중요도, 유지/제외 조건, 참조 이미지 역할(메타데이터) | ⏳ 예정 |
 | Sprint 4 — Style taxonomy & non-person | 직교 스타일 축, 카탈로그 확장, 풍경·건축·제품·게임 에셋 | ⏳ 예정 |
 | Sprint 5 — Image API & live validation | OpenAI provider adapter(서버 측), 비용 가드, 실행 이력, 결과 비교 | ⏳ 예정 |

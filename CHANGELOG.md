@@ -9,7 +9,12 @@
 - 컴파일러(`COMPILER_VERSION`): 0.1.0 / generic-en adapter: 0.1.0
 - 로컬 저장 envelope(`STORAGE_FORMAT_VERSION`): 1
 
-## [Unreleased] — Sprint 2-A: Detailed Editor Foundation (2026-11-24, 검토 대기)
+## [Unreleased]
+
+### Added
+- `docs/TECH_DEBT.md`: 남은 기술 부채(TD-01~07)와 권장 처리 시점 추적
+
+## [0.3.0] — 2026-11-24 — Sprint 2-A: Detailed Editor Foundation (승인됨, PR #1 병합 `4825773`)
 
 버전 변화: ImageSpec 0.1.0 → **0.2.0**, 카탈로그 형식 0.2.0 → **0.3.0**, core 카탈로그 0.2.0 → **0.3.0**(ID 변경 없음), 컴파일러 0.2.0 → **0.3.0**. 안전 정책 0.1.0 유지.
 
