@@ -1,0 +1,202 @@
+[
+  {
+    "kind": "prompter.image-spec",
+    "schemaVersion": "0.1.0",
+    "task": "text-to-image",
+    "catalog": {
+      "id": "prompter.core",
+      "version": "0.1.0"
+    },
+    "selections": {
+      "style.visual": {
+        "value": {
+          "kind": "single",
+          "optionId": "photography"
+        },
+        "source": "user"
+      },
+      "subject.kind": {
+        "value": {
+          "kind": "single",
+          "optionId": "person"
+        },
+        "source": "user"
+      }
+    }
+  },
+  {
+    "kind": "prompter.image-spec",
+    "schemaVersion": "0.1.0",
+    "task": "text-to-image",
+    "catalog": {
+      "id": "prompter.core",
+      "version": "0.1.0"
+    },
+    "selections": {
+      "style.visual": {
+        "value": {
+          "kind": "single",
+          "optionId": "digital_illustration"
+        },
+        "source": "user"
+      },
+      "subject.kind": {
+        "value": {
+          "kind": "single",
+          "optionId": "group"
+        },
+        "source": "user"
+      }
+    }
+  },
+  {
+    "kind": "prompter.image-spec",
+    "schemaVersion": "0.1.0",
+    "task": "text-to-image",
+    "catalog": {
+      "id": "prompter.core",
+      "version": "0.1.0"
+    },
+    "selections": {
+      "style.visual": {
+        "value": {
+          "kind": "single",
+          "optionId": "anime"
+        },
+        "source": "user"
+      },
+      "subject.kind": {
+        "value": {
+          "kind": "single",
+          "optionId": "animal"
+        },
+        "source": "user"
+      }
+    }
+  },
+  {
+    "kind": "prompter.image-spec",
+    "schemaVersion": "0.1.0",
+    "task": "text-to-image",
+    "catalog": {
+      "id": "prompter.core",
+      "version": "0.1.0"
+    },
+    "selections": {
+      "style.visual": {
+        "value": {
+          "kind": "single",
+          "optionId": "render_3d"
+        },
+        "source": "user"
+      },
+      "subject.kind": {
+        "value": {
+          "kind": "single",
+          "optionId": "object"
+        },
+        "source": "user"
+      }
+    }
+  },
+  {
+    "kind": "prompter.image-spec",
+    "schemaVersion": "0.1.0",
+    "task": "text-to-image",
+    "catalog": {
+      "id": "prompter.core",
+      "version": "0.1.0"
+    },
+    "selections": {
+      "style.visual": {
+        "value": {
+          "kind": "single",
+          "optionId": "oil_painting"
+        },
+        "source": "user"
+      },
+      "subject.kind": {
+        "value": {
+          "kind": "single",
+          "optionId": "vehicle"
+        },
+        "source": "user"
+      }
+    }
+  },
+  {
+    "kind": "prompter.image-spec",
+    "schemaVersion": "0.1.0",
+    "task": "text-to-image",
+    "catalog": {
+      "id": "prompter.core",
+      "version": "0.1.0"
+    },
+    "selections": {
+      "style.visual": {
+        "value": {
+          "kind": "single",
+          "optionId": "watercolor"
+        },
+        "source": "user"
+      },
+      "subject.kind": {
+        "value": {
+          "kind": "single",
+          "optionId": "architecture"
+        },
+        "source": "user"
+      }
+    }
+  },
+  {
+    "kind": "prompter.image-spec",
+    "schemaVersion": "0.1.0",
+    "task": "text-to-image",
+    "catalog": {
+      "id": "prompter.core",
+      "version": "0.1.0"
+    },
+    "selections": {
+      "style.visual": {
+        "value": {
+          "kind": "single",
+          "optionId": "pixel_art"
+        },
+        "source": "user"
+      },
+      "subject.kind": {
+        "value": {
+          "kind": "single",
+          "optionId": "landscape"
+        },
+        "source": "user"
+      }
+    }
+  },
+  {
+    "kind": "prompter.image-spec",
+    "schemaVersion": "0.1.0",
+    "task": "text-to-image",
+    "catalog": {
+      "id": "prompter.core",
+      "version": "0.1.0"
+    },
+    "selections": {
+      "style.visual": {
+        "value": {
+          "kind": "single",
+          "optionId": "ink_line_art"
+        },
+        "source": "user"
+      },
+      "subject.kind": {
+        "value": {
+          "kind": "single",
+          "optionId": "abstract"
+        },
+        "source": "user"
+      }
+    }
+  }
+]

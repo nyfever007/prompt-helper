@@ -1,34 +1,70 @@
 "use client";
 
 import { useId, type ReactNode } from "react";
-import { resolveText, type AttributeDefinition, type AttributeSelection, type SelectionValue } from "@/domain";
-import type { Messages } from "@/i18n/messages";
-import { describeValue } from "../format";
+import {
+  isOptionAttribute,
+  resolveText,
+  type AttributeDefinition,
+  type AttributeSelection,
+  type CatalogRegistry,
+  type Diagnostic,
+  type OptionDefinition,
+  type PromptFragment,
+  type SelectionValue,
+} from "@/domain";
+import { fmt, type Messages } from "@/i18n/messages";
+import { describeDiagnostic } from "../diagnostics";
+import { attributeLabel, describeValue, optionLabel } from "../format";
+import { OptionPicker } from "./OptionPicker";
 
 export interface AttributeFieldProps {
+  registry: CatalogRegistry;
   attribute: AttributeDefinition;
   selection: AttributeSelection | undefined;
+  /** Attribute-level applicability. */
   active: boolean;
+  isOptionActive(option: OptionDefinition): boolean;
+  /** Diagnostics that concern this attribute (rules, safety, language…). */
+  diagnostics: Diagnostic[];
+  /** The prompt text this attribute currently contributes, if any. */
+  fragment: PromptFragment | undefined;
+  /** True when the whole prompt output is withheld by the safety policy. */
+  outputBlocked: boolean;
   locale: string;
   t: Messages;
   onSet(value: SelectionValue): void;
   onClear(): void;
+  /** For rule actions that clear another attribute (always user-triggered). */
+  onClearAttribute(attributeId: string): void;
+  isAttributeSet(attributeId: string): boolean;
 }
 
 /**
- * Generic control renderer. It is driven entirely by the AttributeDefinition,
- * so new attributes/options in the catalog appear without UI code changes.
- * Only a brand-new attribute *type* needs a new branch here.
+ * Generic control renderer. Driven entirely by the AttributeDefinition, so new
+ * attributes/options in the catalog appear without UI code changes. Only a
+ * brand-new attribute *type* needs a new branch here.
  */
 export function AttributeField(props: AttributeFieldProps) {
-  const { attribute, selection, active, locale, t, onSet, onClear } = props;
+  const { registry, attribute, selection, active, isOptionActive, diagnostics, fragment, locale, t, onSet, onClear } = props;
   const headingId = useId();
   const label = resolveText(attribute.label, locale);
   const description = resolveText(attribute.description, locale);
   const isSet = selection !== undefined;
 
+  const selectedIds =
+    selection?.value.kind === "single" ? [selection.value.optionId] : selection?.value.kind === "multi" ? selection.value.optionIds : [];
+  const selectedOptions = isOptionAttribute(attribute) ? attribute.options.filter((o) => selectedIds.includes(o.id)) : [];
+  const inactiveOptions = active ? selectedOptions.filter((o) => !isOptionActive(o)) : [];
+  const classified = selectedOptions.filter((o) => o.classification && Object.keys(o.classification).length > 0);
+
   return (
-    <section className="field" aria-labelledby={headingId} data-attribute-id={attribute.id} data-state={isSet ? "set" : "unset"}>
+    <section
+      className="field"
+      aria-labelledby={headingId}
+      data-attribute-id={attribute.id}
+      data-state={isSet ? "set" : "unset"}
+      data-active={active && inactiveOptions.length === 0 ? "true" : "false"}
+    >
       <header className="field__header">
         <h3 id={headingId} className="field__label">
           {label}
@@ -42,56 +78,117 @@ export function AttributeField(props: AttributeFieldProps) {
       </header>
       {description && <p className="field__description">{description}</p>}
       {isSet && !active && <p className="field__inactive">{t.field.inactive}</p>}
-      <Control {...props} label={label} />
+      {inactiveOptions.length > 0 && (
+        <p className="field__inactive">
+          {fmt(t.field.optionInactive, { options: inactiveOptions.map((o) => resolveText(o.label, locale)).join(", ") })}
+        </p>
+      )}
+
+      <Control {...props} label={label} selectedIds={selectedIds} />
+
       {!isSet && attribute.defaultValue && (
         <button type="button" className="link-button" onClick={() => onSet(attribute.defaultValue!)}>
           {t.field.useDefault}: {describeValue(attribute, attribute.defaultValue, locale)}
         </button>
       )}
+
+      {classified.length > 0 && (
+        <div className="classification" data-testid={`classification-${attribute.id}`}>
+          <p className="muted small">{fmt(t.field.presetScope, { label })}</p>
+          <p className="small">{t.field.classification}</p>
+          <ul>
+            {classified.flatMap((o) =>
+              Object.entries(o.classification!).map(([axisId, values]) => (
+                <li key={`${o.id}-${axisId}`}>
+                  <span className="muted">{attributeLabel(registry, axisId, locale)}:</span>{" "}
+                  {values.map((v) => optionLabel(registry, axisId, v, locale)).join(", ")}
+                </li>
+              )),
+            )}
+          </ul>
+        </div>
+      )}
+
+      {diagnostics.length > 0 && (
+        <ul className="field__diagnostics">
+          {diagnostics.map((d, i) => {
+            const desc = describeDiagnostic(d, { registry, locale, t });
+            return (
+              <li key={`${d.code}-${i}`} className={`diag diag--${d.severity}`} data-code={d.code}>
+                <span>{desc.text}</span>
+                {desc.terms && (
+                  <span className="muted small"> ({desc.terms})</span>
+                )}
+                {desc.guidance && (
+                  <span className="diag__guidance">
+                    <strong>{t.field.guidance}:</strong> {desc.guidance}
+                  </span>
+                )}
+                {desc.actions && desc.actions.length > 0 && (
+                  <span className="diag__actions">
+                    {desc.actions
+                      .filter((a) => props.isAttributeSet(a.attributeId))
+                      .map((a) => (
+                        <button key={a.attributeId} type="button" className="button button--small" onClick={() => props.onClearAttribute(a.attributeId)}>
+                          {fmt(t.field.clearOther, { label: attributeLabel(registry, a.attributeId, locale) })}
+                        </button>
+                      ))}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {isSet && (
+        <p className="field__provenance small" data-testid={`provenance-${attribute.id}`}>
+          {fragment ? (
+            <>
+              <span className="muted">{t.field.contributes}:</span> <code lang="en">{fragment.text}</code>
+            </>
+          ) : props.outputBlocked ? (
+            <span className="diag--error">{t.field.blockedProvenance}</span>
+          ) : (
+            <span className="muted">{t.field.notInPrompt}</span>
+          )}
+        </p>
+      )}
     </section>
   );
 }
 
-function Control({ attribute, selection, locale, t, onSet, onClear, label }: AttributeFieldProps & { label: string }): ReactNode {
+function Control({
+  attribute,
+  selection,
+  isOptionActive,
+  locale,
+  t,
+  onSet,
+  onClear,
+  label,
+  selectedIds,
+}: AttributeFieldProps & { label: string; selectedIds: readonly string[] }): ReactNode {
   const value = selection?.value;
   switch (attribute.type) {
-    case "single": {
-      const current = value?.kind === "single" ? value.optionId : undefined;
+    case "single":
+    case "multi":
       return (
-        <div role="radiogroup" aria-label={label} className="chips">
-          {attribute.options.map((o) => (
-            <label key={o.id} className={`chip ${o.parentId ? "chip--child" : ""}`} data-checked={current === o.id}>
-              <input
-                type="radio"
-                name={attribute.id}
-                value={o.id}
-                checked={current === o.id}
-                onChange={() => onSet({ kind: "single", optionId: o.id })}
-              />
-              <span>{resolveText(o.label, locale)}</span>
-            </label>
-          ))}
-        </div>
+        <OptionPicker
+          attribute={attribute}
+          label={label}
+          selectedIds={selectedIds}
+          isActive={isOptionActive}
+          locale={locale}
+          t={t}
+          onSelect={(optionId) => onSet({ kind: "single", optionId })}
+          onToggle={(optionId) => {
+            const next = selectedIds.includes(optionId) ? selectedIds.filter((x) => x !== optionId) : [...selectedIds, optionId];
+            if (next.length === 0) onClear();
+            else onSet({ kind: "multi", optionIds: next });
+          }}
+        />
       );
-    }
-    case "multi": {
-      const current = value?.kind === "multi" ? value.optionIds : [];
-      const toggle = (id: string) => {
-        const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
-        if (next.length === 0) onClear();
-        else onSet({ kind: "multi", optionIds: next });
-      };
-      return (
-        <div role="group" aria-label={label} className="chips">
-          {attribute.options.map((o) => (
-            <label key={o.id} className={`chip ${o.parentId ? "chip--child" : ""}`} data-checked={current.includes(o.id)}>
-              <input type="checkbox" value={o.id} checked={current.includes(o.id)} onChange={() => toggle(o.id)} />
-              <span>{resolveText(o.label, locale)}</span>
-            </label>
-          ))}
-        </div>
-      );
-    }
     case "text": {
       const text = value?.kind === "text" ? value.text : "";
       return (

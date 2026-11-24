@@ -1,60 +1,46 @@
 "use client";
 
 import { useRef } from "react";
-import { exportSpecJson, importSpecJson, type CatalogRegistry, type Diagnostic, type ImageSpec } from "@/domain";
+import { exportSpecJson, importSpecJson, type CatalogRegistry, type ImageSpec, type SpecAnalysis } from "@/domain";
 import type { Messages } from "@/i18n/messages";
-
-export type Notice = { kind: "success" | "error" | "info"; text: string; diagnostics?: Diagnostic[] };
-
-const timestamp = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\..+$/, "").replace("T", "-");
+import { downloadText, timestamp } from "./download";
 
 export function SpecToolbar({
   registry,
   spec,
   t,
-  onImported,
+  hasResetSnapshot,
+  onImportAnalyzed,
   onReset,
-  onNotice,
+  onRestoreResetSnapshot,
 }: {
   registry: CatalogRegistry;
   spec: ImageSpec;
   t: Messages;
-  onImported(spec: ImageSpec): void;
+  hasResetSnapshot: boolean;
+  onImportAnalyzed(analysis: SpecAnalysis, originalText: string, fileName: string): void;
   onReset(): void;
-  onNotice(notice: Notice): void;
+  onRestoreResetSnapshot(): void;
 }) {
   const fileInput = useRef<HTMLInputElement>(null);
 
-  const onExport = () => {
-    const blob = new Blob([exportSpecJson(spec)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `prompter-spec-${timestamp(new Date())}.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 0);
-  };
+  // Spec JSON export is always allowed (data preservation), even when the prompt is blocked.
+  const onExport = () => downloadText(`prompter-spec-${timestamp(new Date())}.json`, exportSpecJson(spec));
 
   const onFile = async (file: File | undefined) => {
     if (!file) return;
     const text = await file.text();
-    const result = importSpecJson(text, registry);
-    if (result.ok) {
-      onImported(result.value);
-      onNotice({ kind: "success", text: t.toolbar.importOk, diagnostics: result.diagnostics.filter((d) => d.severity !== "info") });
-    } else {
-      onNotice({ kind: "error", text: t.toolbar.importFailed, diagnostics: result.diagnostics });
-    }
+    onImportAnalyzed(importSpecJson(text, registry), text, file.name);
     if (fileInput.current) fileInput.current.value = "";
   };
 
   const onResetClick = () => {
-    if (window.confirm(t.toolbar.resetConfirm)) {
-      onReset();
-      onNotice({ kind: "info", text: t.toolbar.resetDone });
-    }
+    if (window.confirm(t.toolbar.resetConfirm)) onReset();
+  };
+
+  const onUndoClick = () => {
+    const hasWork = Object.keys(spec.selections).length > 0;
+    if (!hasWork || window.confirm(t.toolbar.undoConfirm)) onRestoreResetSnapshot();
   };
 
   return (
@@ -76,6 +62,11 @@ export function SpecToolbar({
       <button type="button" className="button button--danger" onClick={onResetClick}>
         {t.toolbar.reset}
       </button>
+      {hasResetSnapshot && (
+        <button type="button" className="button" onClick={onUndoClick}>
+          {t.toolbar.undoReset}
+        </button>
+      )}
     </div>
   );
 }

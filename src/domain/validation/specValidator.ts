@@ -1,3 +1,4 @@
+import { findInactiveSelections } from "../catalog/applicability";
 import { evaluateAll } from "../catalog/conditions";
 import type { CatalogRegistry } from "../catalog/registry";
 import { checkValueForAttribute } from "../catalog/valueCheck";
@@ -65,31 +66,49 @@ export const validateSpecAgainstCatalog = (spec: ImageSpec, registry: CatalogReg
     );
   }
 
+  let valuesOk = true;
   for (const attributeId of Object.keys(spec.selections).sort()) {
     const selection = spec.selections[attributeId]!;
     const attribute = registry.getAttribute(attributeId);
     const path = `selections.${attributeId}`;
     if (!attribute) {
+      valuesOk = false;
       out.push(error("selection.unknown_attribute", `Unknown attribute "${attributeId}"`, { attributeId, path }));
       continue;
     }
-    out.push(...checkValueForAttribute(attribute, selection.value, `${path}.value`));
-    if (!evaluateAll(attribute.appliesWhen, spec)) {
+    const problems = checkValueForAttribute(attribute, selection.value, `${path}.value`);
+    if (problems.length > 0) valuesOk = false;
+    out.push(...problems);
+  }
+
+  // Applicability is only meaningful for values that exist in the catalog.
+  if (valuesOk) {
+    for (const inactive of findInactiveSelections(spec, registry)) {
+      const path = `selections.${inactive.attributeId}`;
       out.push(
-        info("selection.inactive", `"${attributeId}" is set but not applicable to the current spec; it is kept but not compiled`, {
-          attributeId,
-          path,
-        }),
+        inactive.scope === "attribute"
+          ? info("selection.inactive", `"${inactive.attributeId}" is set but not applicable to the current spec; it is kept but not compiled`, {
+              attributeId: inactive.attributeId,
+              path,
+            })
+          : info(
+              "selection.option_inactive",
+              `"${inactive.attributeId}": option(s) ${inactive.optionIds.join(", ")} not applicable to the current spec; kept but not compiled`,
+              { attributeId: inactive.attributeId, path, params: { optionIds: inactive.optionIds.join(",") } },
+            ),
       );
     }
   }
 
   for (const rule of registry.rules) {
-    if (evaluateAll(rule.when, spec)) {
+    if (evaluateAll(rule.when, spec, registry)) {
       out.push({
         code: `rule.${rule.id}`,
         severity: rule.severity,
         message: resolveText(rule.message, "en"),
+        ruleId: rule.id,
+        involves: [...rule.involves],
+        ...(rule.actions ? { actions: rule.actions.map((a) => ({ ...a })) } : {}),
         params: { rule: rule.id, kind: rule.kind, involves: rule.involves.join(",") },
       });
     }

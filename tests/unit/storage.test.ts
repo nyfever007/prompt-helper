@@ -41,21 +41,14 @@ describe("10. local save and restore", () => {
     createSpecStorage(store, core).save(createEmptySpec(core));
     const loaded = createSpecStorage(store, core).load();
     expect(loaded.status === "loaded" && loaded.spec.selections).toEqual({});
+    expect(loaded.status === "loaded" && loaded.migrations).toEqual([]);
   });
 
   it.each([
     ["corrupt JSON", "{not json"],
     ["unknown envelope", JSON.stringify({ hello: "world" })],
     ["future storage version", JSON.stringify({ kind: "prompter.workspace", storageVersion: 99, spec: {} })],
-    [
-      "spec with unknown option",
-      JSON.stringify({
-        kind: "prompter.workspace",
-        storageVersion: 1,
-        savedAt: "x",
-        spec: { ...createEmptySpec(core), selections: { "subject.kind": { value: { kind: "single", optionId: "dragon" }, source: "user" } } },
-      }),
-    ],
+    ["spec of another catalog", JSON.stringify({ kind: "prompter.workspace", storageVersion: 1, savedAt: "x", spec: { ...createEmptySpec(core), catalog: { id: "x.y", version: "1.0.0" } } })],
   ])("%s → invalid, raw data backed up, no throw", (_n, raw) => {
     const store = createMemoryStore({ [WORKSPACE_STORAGE_KEY]: raw });
     const loaded = createSpecStorage(store, core).load();
@@ -64,6 +57,32 @@ describe("10. local save and restore", () => {
       expect(loaded.diagnostics.length).toBeGreaterThan(0);
       expect(store.getItem(loaded.backupKey)).toBe(raw);
     }
+  });
+
+  it("partially invalid saved spec → recoverable proposal; nothing applied; raw kept", () => {
+    const raw = JSON.stringify({
+      kind: "prompter.workspace",
+      storageVersion: 1,
+      savedAt: "2026-11-24T00:00:00.000Z",
+      spec: {
+        ...createEmptySpec(core),
+        selections: {
+          "subject.kind": { value: { kind: "single", optionId: "dragon" }, source: "user" },
+          "intent.description": { value: { kind: "text", text: "Keep me" }, source: "user" },
+          "person.hair": { value: { kind: "text", text: "unknown attr" }, source: "user" },
+        },
+      },
+    });
+    const store = createMemoryStore({ [WORKSPACE_STORAGE_KEY]: raw });
+    const loaded = createSpecStorage(store, core).load();
+    expect(loaded.status).toBe("recoverable");
+    if (loaded.status !== "recoverable") return;
+    expect(loaded.excluded.map((e) => e.path)).toEqual(["selections.person.hair", "selections.subject.kind"]);
+    expect(loaded.excluded.find((e) => e.attributeId === "person.hair")!.original).toEqual({ value: { kind: "text", text: "unknown attr" }, source: "user" });
+    expect(Object.keys(loaded.spec.selections)).toEqual(["intent.description"]);
+    // original untouched in the main key AND copied to the backup key
+    expect(store.getItem(WORKSPACE_STORAGE_KEY)).toBe(raw);
+    expect(store.getItem(loaded.backupKey)).toBe(raw);
   });
 
   it("write failures (e.g. quota) are reported, not thrown", () => {

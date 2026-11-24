@@ -1,14 +1,18 @@
 import { error, fail, fromZodIssues, hasErrors, ok, type Diagnostic, type Result } from "../shared/diagnostics";
+import type { ConditionContext } from "./conditions";
 import {
   CatalogSchema,
+  isOptionAttribute,
   type AttributeDefinition,
   type Catalog,
+  type CatalogMigration,
   type CatalogRule,
   type Condition,
   type GroupDefinition,
   type OptionDefinition,
   type Tier,
 } from "./schema";
+import { compareSemVer } from "./semver";
 import { checkValueForAttribute } from "./valueCheck";
 
 const TIER_RANK: Record<Tier, number> = { basic: 0, detailed: 1, precision: 2 };
@@ -23,13 +27,15 @@ const byOrderThenId = (a: { order: number; id: string }, b: { order: number; id:
  * and options instead of hard-coding them, so adding catalog entries does not
  * require changes to those consumers.
  */
-export class CatalogRegistry {
+export class CatalogRegistry implements ConditionContext {
   private readonly attributesById: ReadonlyMap<string, AttributeDefinition>;
   private readonly sortedAttributes: readonly AttributeDefinition[];
+  private readonly sortedGroups: readonly GroupDefinition[];
 
   private constructor(private readonly catalog: Catalog) {
     this.sortedAttributes = Object.freeze([...catalog.attributes].sort(byOrderThenId));
     this.attributesById = new Map(this.sortedAttributes.map((a) => [a.id, a]));
+    this.sortedGroups = Object.freeze([...catalog.groups].sort(byOrderThenId));
   }
 
   /** Parse + integrity-check an untrusted catalog (e.g. loaded from JSON). */
@@ -62,8 +68,23 @@ export class CatalogRegistry {
   get rules(): readonly CatalogRule[] {
     return this.catalog.rules;
   }
+  /** Groups in deterministic (order, id) order. */
   get groups(): readonly GroupDefinition[] {
-    return this.catalog.groups;
+    return this.sortedGroups;
+  }
+  get migrations(): readonly CatalogMigration[] {
+    return this.catalog.migrations;
+  }
+
+  getGroup(id: string): GroupDefinition | undefined {
+    return this.sortedGroups.find((g) => g.id === id);
+  }
+
+  /** The top-level group an attribute belongs to (walking up `parentId`). */
+  rootGroupOf(attribute: AttributeDefinition): GroupDefinition | undefined {
+    let g = attribute.groupId ? this.getGroup(attribute.groupId) : undefined;
+    while (g?.parentId) g = this.getGroup(g.parentId);
+    return g;
   }
 
   /** All attributes in deterministic (order, id) order. */
@@ -89,6 +110,19 @@ export class CatalogRegistry {
     const attribute = this.attributesById.get(attributeId);
     if (!attribute || (attribute.type !== "single" && attribute.type !== "multi")) return undefined;
     return attribute.options.find((o) => o.id === optionId);
+  }
+
+  /** The option id followed by its ancestors, nearest first (ConditionContext). */
+  lineage(attributeId: string, optionId: string): readonly string[] {
+    const attribute = this.attributesById.get(attributeId);
+    if (!attribute || !isOptionAttribute(attribute)) return [optionId];
+    const out = [optionId];
+    let cur = attribute.options.find((o) => o.id === optionId)?.parentId;
+    while (cur !== undefined && !out.includes(cur)) {
+      out.push(cur);
+      cur = attribute.options.find((o) => o.id === cur)?.parentId;
+    }
+    return out;
   }
 
   /** The underlying catalog (frozen). Useful for building extended catalogs. */
@@ -151,15 +185,96 @@ function checkIntegrity(catalog: Catalog): Diagnostic[] {
     }
   }
 
+  for (const a of catalog.attributes) {
+    const channel = a.prompt.channel ?? "text";
+    if (channel !== "text" && !a.prompt.parameterKey) {
+      out.push(error("catalog.missing_parameter_key", `Attribute "${a.id}" uses channel "${channel}" but has no parameterKey`));
+    }
+    if (!isOptionAttribute(a)) continue;
+    for (const o of a.options) {
+      for (const c of o.appliesWhen ?? []) {
+        if (c.attributeId === a.id) out.push(error("catalog.self_condition", `Option "${a.id}/${o.id}" cannot depend on its own attribute`));
+        out.push(...checkCondition(c, attributes, `option "${a.id}/${o.id}"`));
+      }
+      for (const [axisId, valueIds] of Object.entries(o.classification ?? {})) {
+        const axis = attributes.get(axisId);
+        if (!axis || !isOptionAttribute(axis) || axisId === a.id) {
+          out.push(error("catalog.invalid_classification", `Option "${a.id}/${o.id}" classifies on unknown/invalid axis "${axisId}"`));
+          continue;
+        }
+        for (const v of valueIds) {
+          if (!axis.options.some((x) => x.id === v)) {
+            out.push(error("catalog.invalid_classification", `Option "${a.id}/${o.id}" uses unknown value "${axisId}/${v}"`));
+          }
+        }
+      }
+      if (channel !== "text" && o.parameterValue === undefined) {
+        out.push(error("catalog.missing_parameter_value", `Option "${a.id}/${o.id}" needs a parameterValue (channel "${channel}")`));
+      }
+    }
+  }
+
+  out.push(...checkMigrations(catalog, attributes));
+
   const ruleIds = new Set<string>();
   for (const r of catalog.rules) {
     if (ruleIds.has(r.id)) out.push(error("catalog.duplicate_rule", `Duplicate rule id "${r.id}"`));
     ruleIds.add(r.id);
     for (const c of r.when) out.push(...checkCondition(c, attributes, `rule "${r.id}"`));
-    for (const id of r.involves) {
+    for (const id of [...r.involves, ...(r.actions ?? []).map((x) => x.attributeId)]) {
       if (!attributes.has(id)) out.push(error("catalog.unknown_attribute_ref", `Rule "${r.id}" involves unknown "${id}"`));
     }
   }
+  return out;
+}
+
+/**
+ * Migration chain must be contiguous, ascending, end at the catalog version,
+ * and every rename must resolve to an id that exists in the current catalog.
+ */
+function checkMigrations(catalog: Catalog, attributes: Map<string, AttributeDefinition>): Diagnostic[] {
+  const out: Diagnostic[] = [];
+  const steps = catalog.migrations;
+  if (steps.length === 0) return out;
+  for (let i = 0; i < steps.length; i++) {
+    const m = steps[i]!;
+    if (compareSemVer(m.fromVersion, m.toVersion) >= 0) {
+      out.push(error("catalog.invalid_migration", `Migration ${m.fromVersion} → ${m.toVersion} must go forward`));
+    }
+    if (i > 0 && steps[i - 1]!.toVersion !== m.fromVersion) {
+      out.push(error("catalog.invalid_migration", `Migration chain is not contiguous at ${m.fromVersion}`));
+    }
+  }
+  if (steps[steps.length - 1]!.toVersion !== catalog.version) {
+    out.push(error("catalog.invalid_migration", `Migration chain must end at catalog version ${catalog.version}`));
+  }
+  // Resolve each rename to its final id by replaying later steps.
+  const finalAttr = (id: string, from: number): string => {
+    let cur = id;
+    for (let i = from; i < steps.length; i++) {
+      for (const c of steps[i]!.changes) if (c.op === "renameAttribute" && c.from === cur) cur = c.to;
+    }
+    return cur;
+  };
+  steps.forEach((m, i) => {
+    for (const c of m.changes) {
+      if (c.op === "renameAttribute") {
+        const target = finalAttr(c.to, i + 1);
+        if (!attributes.has(target)) {
+          out.push(error("catalog.invalid_migration", `Rename ${c.from} → ${c.to} resolves to unknown attribute "${target}"`));
+        }
+      } else {
+        const attr = attributes.get(finalAttr(c.attributeId, i + 1));
+        let optionId = c.to;
+        for (let j = i + 1; j < steps.length; j++) {
+          for (const x of steps[j]!.changes) if (x.op === "renameOption" && x.from === optionId) optionId = x.to;
+        }
+        if (!attr || !isOptionAttribute(attr) || !attr.options.some((o) => o.id === optionId)) {
+          out.push(error("catalog.invalid_migration", `Option rename ${c.attributeId}/${c.from} → ${c.to} resolves to an unknown option`));
+        }
+      }
+    }
+  });
   return out;
 }
 
@@ -168,9 +283,9 @@ function checkCondition(c: Condition, attributes: Map<string, AttributeDefinitio
   if (!target) {
     return [error("catalog.unknown_attribute_ref", `${where} references unknown attribute "${c.attributeId}"`)];
   }
-  if (c.op === "anyOf") {
+  if (c.op === "anyOf" || c.op === "noneOf") {
     if (target.type !== "single" && target.type !== "multi") {
-      return [error("catalog.invalid_condition", `${where}: anyOf requires an option attribute ("${c.attributeId}")`)];
+      return [error("catalog.invalid_condition", `${where}: ${c.op} requires an option attribute ("${c.attributeId}")`)];
     }
     return c.optionIds
       .filter((id) => !target.options.some((o) => o.id === id))

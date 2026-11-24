@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import type { PromptCompilation } from "@/domain";
-import { describeDiagnostic, type Messages } from "@/i18n/messages";
+import { exportPromptText, getPromptOutput, type CatalogRegistry, type PromptCompilation } from "@/domain";
+import { fmt, type Messages } from "@/i18n/messages";
+import { describeDiagnostic } from "./diagnostics";
+import { downloadText, timestamp } from "./download";
+import { attributeLabel } from "./format";
 
 async function copyText(text: string): Promise<boolean> {
   try {
@@ -29,61 +32,140 @@ async function copyText(text: string): Promise<boolean> {
   }
 }
 
-export function PromptPreview({ compilation, locale, t }: { compilation: PromptCompilation; locale: string; t: Messages }) {
+/**
+ * All prompt output paths (display, copy, .txt export) go through
+ * `getPromptOutput` / `exportPromptText`, so a blocked compilation can never
+ * leak through any of them.
+ */
+export function PromptPreview({ compilation, registry, locale, t }: { compilation: PromptCompilation; registry: CatalogRegistry; locale: string; t: Messages }) {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
-  const notes = compilation.diagnostics.filter((d) => d.code !== "compiler.empty");
+  const output = getPromptOutput(compilation);
   const { meta } = compilation;
+  const ctx = { registry, locale, t };
+  const safetyDiags = compilation.diagnostics.filter((d) => d.code.startsWith("safety."));
+  const languageDiags = compilation.diagnostics.filter((d) => d.code === "prompt.mixed_language");
+  const notes = compilation.diagnostics.filter(
+    (d) => d.code !== "compiler.empty" && !d.code.startsWith("safety.") && d.code !== "prompt.mixed_language",
+  );
+  const params = Object.entries(compilation.parameters).sort(([a], [b]) => (a < b ? -1 : 1));
 
   const onCopy = async () => {
-    const okCopy = await copyText(compilation.prompt);
+    if (!output.ok) return;
+    const okCopy = await copyText(output.prompt);
     setCopyState(okCopy ? "copied" : "failed");
     window.setTimeout(() => setCopyState("idle"), 2000);
   };
+  const onExportTxt = () => {
+    const text = exportPromptText(compilation);
+    if (text !== null) downloadText(`prompter-prompt-${timestamp(new Date())}.txt`, text, "text/plain");
+  };
 
   return (
-    <section className="preview" aria-labelledby="preview-title">
+    <section className="preview" aria-labelledby="preview-title" data-blocked={compilation.blocked}>
       <header className="preview__header">
         <h2 id="preview-title">{t.preview.title}</h2>
-        <button type="button" className="button button--primary" onClick={onCopy} disabled={!compilation.prompt}>
-          {copyState === "copied" ? t.preview.copied : t.preview.copy}
-        </button>
+        <div className="toolbar">
+          <button type="button" className="button button--primary" onClick={onCopy} disabled={!output.ok}>
+            {copyState === "copied" ? t.preview.copied : t.preview.copy}
+          </button>
+          <button type="button" className="button" onClick={onExportTxt} disabled={!output.ok}>
+            {t.preview.exportTxt}
+          </button>
+        </div>
       </header>
-      <output className="preview__prompt" data-testid="prompt-output" aria-live="polite" lang="en">
-        {compilation.prompt || <span className="muted">{t.preview.empty}</span>}
-      </output>
+
+      {compilation.blocked ? (
+        <div className="blocked" role="alert" data-testid="prompt-blocked">
+          <p className="blocked__title">{t.preview.blockedTitle}</p>
+          <p className="small">{t.preview.blockedBody}</p>
+          <ul>
+            {safetyDiags.map((d, i) => {
+              const desc = describeDiagnostic(d, ctx);
+              return (
+                <li key={i} data-code={d.code}>
+                  <p>{desc.text}</p>
+                  {desc.terms && (
+                    <p className="small">
+                      <strong>{t.preview.matched}:</strong> {desc.terms}
+                      {d.involves && d.involves.length > 0 && <> — {d.involves.map((id) => attributeLabel(registry, id, locale)).join(", ")}</>}
+                    </p>
+                  )}
+                  {desc.guidance && (
+                    <p className="small">
+                      <strong>{t.field.guidance}:</strong> {desc.guidance}
+                    </p>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : (
+        <output className="preview__prompt" data-testid="prompt-output" aria-live="polite" lang="en">
+          {output.ok ? output.prompt : <span className="muted">{t.preview.empty}</span>}
+        </output>
+      )}
+
+      {languageDiags.length > 0 && (
+        <p className="notice notice--warning small" data-testid="mixed-language">
+          {fmt(t.preview.mixedLanguage, { scripts: [...new Set(languageDiags.map((d) => String(d.params?.scripts ?? "")))].join(", ") })}
+          {" — "}
+          {languageDiags.map((d) => attributeLabel(registry, d.attributeId ?? "", locale)).join(", ")}
+        </p>
+      )}
+
       {copyState === "failed" && (
         <p role="alert" className="notice notice--error">
           {t.preview.copyFailed}
         </p>
       )}
+
+      {params.length > 0 && (
+        <div className="small" data-testid="prompt-parameters">
+          <span className="muted">{t.preview.parameters}:</span>{" "}
+          {params.map(([k, v]) => (
+            <code key={k}>
+              {k}={String(v)}
+            </code>
+          ))}
+        </div>
+      )}
+
       <p className="preview__meta muted">
-        {t.preview.language} · {t.preview.meta} {meta.compilerVersion} · {meta.adapterId}@{meta.adapterVersion} · {meta.catalogId}@
-        {meta.catalogVersion} · spec {meta.specSchemaVersion}
+        {t.preview.language} · {t.preview.meta} {meta.compilerVersion} · {meta.adapterId}@{meta.adapterVersion} · {meta.catalogId}@{meta.catalogVersion} · spec{" "}
+        {meta.specSchemaVersion} · {meta.safetyPolicyId}@{meta.safetyPolicyVersion}
       </p>
+
       {compilation.fragments.length > 0 && (
         <details className="preview__sources">
           <summary>{t.preview.sources}</summary>
           <ol>
             {compilation.fragments.map((f) => (
               <li key={f.attributeId}>
-                <code>{f.attributeId}</code> → <span lang="en">{f.text}</span>
+                <span className="muted">{attributeLabel(registry, f.attributeId, locale)}</span> → <span lang="en">{f.text}</span>
               </li>
             ))}
           </ol>
         </details>
       )}
+
       {notes.length > 0 && (
         <div className="preview__notes">
           <h3>{t.diagnostics.title}</h3>
           <ul>
-            {notes.map((d, i) => (
-              <li key={`${d.code}-${i}`} className={`diag diag--${d.severity}`}>
-                {describeDiagnostic(locale, d)}
-              </li>
-            ))}
+            {notes.map((d, i) => {
+              const desc = describeDiagnostic(d, ctx);
+              return (
+                <li key={`${d.code}-${i}`} className={`diag diag--${d.severity}`} data-code={d.code}>
+                  {desc.text}
+                  {desc.guidance && <span className="diag__guidance">{desc.guidance}</span>}
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
+      <p className="muted small">{t.preview.safetyNote}</p>
     </section>
   );
 }

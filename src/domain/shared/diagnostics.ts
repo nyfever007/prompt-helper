@@ -14,6 +14,12 @@ export interface Diagnostic {
   /** Dotted path into the inspected document, when applicable. */
   path?: string;
   attributeId?: string;
+  /** All attributes this diagnostic concerns (rules may involve several). */
+  involves?: string[];
+  /** Catalog rule id, when the diagnostic comes from a catalog rule. */
+  ruleId?: string;
+  /** Suggested user actions. Never applied automatically. */
+  actions?: Array<{ kind: "clear"; attributeId: string }>;
   params?: Record<string, string | number>;
 }
 

@@ -2,10 +2,11 @@
  * UI strings. Catalog content (attribute/option labels) is localized in the
  * catalog itself; this file covers application chrome only.
  * Add a locale by adding a dictionary with the same keys.
+ * Placeholders use `{name}` and are filled with `fmt`.
  */
 const en = {
   appTitle: "Prompter",
-  appTagline: "Visual prompt design — Sprint 0 foundation",
+  appTagline: "Visual prompt design — Basic Composer",
   language: "Language",
   modes: { basic: "Basic", detailed: "Detailed", precision: "Precision" },
   modeHint: "All modes edit the same image specification.",
@@ -14,7 +15,7 @@ const en = {
     tabBadge: "Planned",
     detailedTitle: "Detailed mode is planned (Sprint 2)",
     detailedBody:
-      "Domain-aware sections — face, skin, body, hair, expression, wardrobe, pose, camera, lighting — will appear here. Not implemented yet.",
+      "Domain-aware sections — face, skin, body, hair, expression, wardrobe, pose, camera, and individual lighting properties — will appear here. Not implemented yet.",
     precisionTitle: "Precision mode is planned (Sprint 3)",
     precisionBody:
       "Exact counts and positions, region-specific attributes, priorities, preserve/exclude constraints and reference roles will appear here. Not implemented yet.",
@@ -27,7 +28,20 @@ const en = {
     clear: "Clear",
     useDefault: "Use suggested default",
     inactive: "Not applicable to the current selection — kept, but not used in the prompt.",
+    optionInactive: "“{options}” does not apply to the current selection — kept, but not used in the prompt.",
     chars: "characters",
+    moreSettings: "More settings",
+    search: "Search",
+    searchPlaceholder: "Search in Korean, English or aliases",
+    searchCount: "{n} shown",
+    noResults: "No matches. Try another word or alias.",
+    contributes: "In prompt",
+    notInPrompt: "Not in prompt (not applicable)",
+    blockedProvenance: "Prompt output is blocked by the safety policy",
+    classification: "Characteristics (reference only — nothing else is set automatically)",
+    presetScope: "Choosing a preset sets only “{label}”.",
+    clearOther: "Clear “{label}”",
+    guidance: "How to resolve",
   },
   preview: {
     title: "Prompt preview",
@@ -35,18 +49,31 @@ const en = {
     copy: "Copy prompt",
     copied: "Copied!",
     copyFailed: "Copy failed — select the text and copy manually.",
+    exportTxt: "Export prompt (.txt)",
     sources: "Show where each sentence comes from",
     meta: "compiler",
     language: "Prompt output language: English",
+    parameters: "Structured parameters (for future image APIs)",
+    blockedTitle: "Prompt output blocked by the safety policy",
+    blockedBody:
+      "Your specification is kept unchanged and can still be saved or exported as JSON. Edit the items below to continue.",
+    matched: "Matched wording",
+    mixedLanguage:
+      "The prompt contains non-English text ({scripts}). It is passed through exactly as written — not translated — and some image models may understand it poorly. (AI translation is planned for Sprint 5.)",
+    safetyNote: "Safety checks are local and keyword-based; they cannot catch everything and do not guarantee any provider's policy.",
   },
   toolbar: {
     exportJson: "Export JSON",
     importJson: "Import JSON",
     reset: "Reset all",
-    resetConfirm: "Reset all settings? Every attribute will return to “Not set”.",
+    resetConfirm: "Reset all settings? Every attribute will return to “Not set”. You can restore the previous state afterwards.",
     importOk: "Imported specification.",
     importFailed: "Import failed. Your current settings were not changed.",
     resetDone: "All settings were reset.",
+    undoReset: "Restore state before reset",
+    undoConfirm: "Your current work will be replaced by the state before the reset. Continue?",
+    undoDone: "Restored the state from before the reset.",
+    blockedSpecNote: "Note: the prompt for this specification is blocked by the safety policy.",
   },
   storage: {
     loading: "Loading saved settings…",
@@ -54,9 +81,38 @@ const en = {
     restored: "Restored your last session.",
     invalid: "Saved settings could not be restored and were backed up; starting fresh.",
     saveFailed: "Could not save locally.",
+    savePaused: "Local saving is paused until you decide how to recover your saved work.",
+  },
+  recovery: {
+    titleStorage: "Part of your saved work could not be restored",
+    titleImport: "Part of the imported file cannot be used",
+    body: "The items below are not valid for this version. Everything else can be recovered. Nothing is applied until you confirm.",
+    excluded: "Will be excluded ({n})",
+    reason: "Reason",
+    original: "Original value",
+    apply: "Recover without these items",
+    applyImport: "Import without these items (replaces current work)",
+    download: "Download original",
+    discardStorage: "Don't recover — start fresh",
+    discardImport: "Cancel import",
+    keptNote: "The original data is kept in browser storage under “{key}”.",
+    keptImportNote: "Your original file is not modified.",
+    applied: "Recovery applied. {n} excluded item(s) remain in the original backup.",
+    discarded: "Started fresh. Your original saved data is still kept in the backup.",
+  },
+  migration: {
+    title: "Older data was updated to the current catalog",
+    item: "{from} → {to}",
+    backupNote: "The pre-migration original is kept under “{key}”.",
+    fileNote: "Your original file is not modified.",
+  },
+  transition: {
+    inactive: "No longer applicable: {labels}. Kept as-is and excluded from the prompt; it returns automatically if it applies again.",
+    reactivated: "Applies again and is back in the prompt: {labels}.",
   },
   diagnostics: { title: "Notes" },
   footer: "No image-generation or paid AI API is called in this build.",
+  dismiss: "Dismiss",
 } as const;
 
 type Widen<T> = { [K in keyof T]: T[K] extends string ? string : Widen<T[K]> };
@@ -64,7 +120,7 @@ export type Messages = Widen<typeof en>;
 
 const ko: Messages = {
   appTitle: "Prompter",
-  appTagline: "비주얼 프롬프트 디자인 — Sprint 0 기반 구조",
+  appTagline: "비주얼 프롬프트 디자인 — Basic Composer",
   language: "언어",
   modes: { basic: "Basic", detailed: "Detailed", precision: "Precision" },
   modeHint: "모든 모드는 동일한 이미지 명세(ImageSpec)를 편집합니다.",
@@ -73,7 +129,7 @@ const ko: Messages = {
     tabBadge: "예정",
     detailedTitle: "Detailed 모드는 후속 개발 예정입니다 (Sprint 2)",
     detailedBody:
-      "얼굴, 피부, 체형, 헤어, 표정, 의상, 포즈, 카메라, 조명 등 도메인별 세부 설정이 이곳에 추가됩니다. 아직 구현되지 않았습니다.",
+      "얼굴, 피부, 체형, 헤어, 표정, 의상, 포즈, 카메라, 개별 조명 속성 등 도메인별 세부 설정이 이곳에 추가됩니다. 아직 구현되지 않았습니다.",
     precisionTitle: "Precision 모드는 후속 개발 예정입니다 (Sprint 3)",
     precisionBody:
       "정확한 개수·위치, 부위별 속성, 중요도, 유지/제외 조건, 참조 이미지 역할 등이 이곳에 추가됩니다. 아직 구현되지 않았습니다.",
@@ -86,7 +142,20 @@ const ko: Messages = {
     clear: "선택 해제",
     useDefault: "권장 기본값 사용",
     inactive: "현재 선택에는 적용되지 않습니다 — 값은 유지되지만 프롬프트에는 사용되지 않습니다.",
+    optionInactive: "선택한 ‘{options}’은(는) 현재 선택에 적용되지 않습니다 — 값은 유지되지만 프롬프트에는 사용되지 않습니다.",
     chars: "자",
+    moreSettings: "추가 설정",
+    search: "검색",
+    searchPlaceholder: "검색 (한국어·영어·별칭)",
+    searchCount: "{n}개 표시",
+    noResults: "검색 결과가 없습니다. 다른 단어나 별칭으로 찾아보세요.",
+    contributes: "프롬프트 반영",
+    notInPrompt: "프롬프트에서 제외됨 (적용 불가)",
+    blockedProvenance: "안전 정책에 의해 프롬프트 출력이 차단됨",
+    classification: "포함된 특성 (참고용 — 다른 항목을 자동으로 설정하지 않음)",
+    presetScope: "프리셋을 고르면 ‘{label}’ 항목만 설정됩니다.",
+    clearOther: "‘{label}’ 선택 해제",
+    guidance: "해결 방법",
   },
   preview: {
     title: "프롬프트 미리보기",
@@ -94,18 +163,30 @@ const ko: Messages = {
     copy: "프롬프트 복사",
     copied: "복사됨!",
     copyFailed: "복사에 실패했습니다. 텍스트를 직접 선택해 복사해 주세요.",
+    exportTxt: "프롬프트 .txt 내보내기",
     sources: "각 문장의 출처 보기",
     meta: "컴파일러",
     language: "프롬프트 출력 언어: 영어",
+    parameters: "구조화 파라미터 (향후 이미지 API용)",
+    blockedTitle: "안전 정책에 의해 프롬프트 출력이 차단되었습니다",
+    blockedBody: "명세 원본은 변경되지 않으며 JSON으로 저장·내보낼 수 있습니다. 아래 안내에 따라 내용을 수정하세요.",
+    matched: "감지된 표현",
+    mixedLanguage:
+      "프롬프트에 영어가 아닌 텍스트({scripts})가 포함되어 있습니다. 번역하지 않고 입력한 그대로 전달되므로, 이미지 모델에 따라 이해도가 낮을 수 있습니다. (AI 번역은 Sprint 5 예정)",
+    safetyNote: "안전 검사는 로컬 키워드 기반이며 모든 부적절한 내용을 걸러내지 못하고, 이미지 서비스의 정책 준수를 보장하지 않습니다.",
   },
   toolbar: {
     exportJson: "JSON 내보내기",
     importJson: "JSON 가져오기",
     reset: "설정 초기화",
-    resetConfirm: "모든 설정을 초기화할까요? 모든 항목이 ‘미설정’ 상태로 돌아갑니다.",
+    resetConfirm: "모든 설정을 초기화할까요? 모든 항목이 ‘미설정’ 상태로 돌아갑니다. 초기화 이전 상태는 나중에 복원할 수 있습니다.",
     importOk: "명세를 가져왔습니다.",
     importFailed: "가져오기에 실패했습니다. 현재 설정은 변경되지 않았습니다.",
     resetDone: "모든 설정을 초기화했습니다.",
+    undoReset: "초기화 이전 상태 복원",
+    undoConfirm: "현재 작업 내용이 초기화 이전 상태로 덮어써집니다. 계속할까요?",
+    undoDone: "초기화 이전 상태를 복원했습니다.",
+    blockedSpecNote: "참고: 이 명세의 프롬프트는 안전 정책에 의해 출력이 차단됩니다.",
   },
   storage: {
     loading: "저장된 설정을 불러오는 중…",
@@ -113,9 +194,38 @@ const ko: Messages = {
     restored: "마지막 작업을 복원했습니다.",
     invalid: "저장된 설정을 복원할 수 없어 백업한 뒤 새로 시작합니다.",
     saveFailed: "로컬 저장에 실패했습니다.",
+    savePaused: "복구 방법을 결정할 때까지 로컬 저장이 일시 중지됩니다.",
+  },
+  recovery: {
+    titleStorage: "저장된 작업 일부를 복원할 수 없습니다",
+    titleImport: "가져온 파일 일부를 사용할 수 없습니다",
+    body: "아래 항목은 현재 버전에서 유효하지 않습니다. 나머지는 복구할 수 있습니다. 확인하기 전에는 아무것도 적용되지 않습니다.",
+    excluded: "제외될 항목 ({n})",
+    reason: "사유",
+    original: "원본 값",
+    apply: "이 항목을 제외하고 복구",
+    applyImport: "이 항목을 제외하고 가져오기 (현재 작업을 대체)",
+    download: "원본 다운로드",
+    discardStorage: "복구하지 않고 새로 시작",
+    discardImport: "가져오기 취소",
+    keptNote: "원본 데이터는 브라우저 저장소의 ‘{key}’에 보관됩니다.",
+    keptImportNote: "원본 파일은 변경되지 않습니다.",
+    applied: "복구를 적용했습니다. 제외된 {n}개 항목은 원본 백업에 남아 있습니다.",
+    discarded: "새로 시작했습니다. 원본 저장 데이터는 백업에 그대로 보관됩니다.",
+  },
+  migration: {
+    title: "이전 버전 데이터를 현재 카탈로그에 맞게 변환했습니다",
+    item: "{from} → {to}",
+    backupNote: "변환 전 원본은 ‘{key}’에 보관됩니다.",
+    fileNote: "원본 파일은 변경되지 않습니다.",
+  },
+  transition: {
+    inactive: "현재 선택에 적용되지 않게 됨: {labels}. 값은 그대로 유지되며 프롬프트에서만 제외됩니다. 다시 적용 가능해지면 자동으로 반영됩니다.",
+    reactivated: "다시 적용되어 프롬프트에 반영됨: {labels}.",
   },
   diagnostics: { title: "참고 사항" },
   footer: "이 빌드는 이미지 생성 API나 유료 AI API를 호출하지 않습니다.",
+  dismiss: "닫기",
 };
 
 export const MESSAGES: Record<string, Messages> = { en, ko };
@@ -124,12 +234,16 @@ export const SUPPORTED_LOCALES = [
   { id: "en", label: "English" },
 ] as const;
 export type UiLocale = (typeof SUPPORTED_LOCALES)[number]["id"];
+/** Korean is the default UI language (approved, Sprint 1). */
 export const DEFAULT_LOCALE: UiLocale = "ko";
 
 export const getMessages = (locale: string): Messages => MESSAGES[locale] ?? en;
 
-/** Localized text for known diagnostic codes; falls back to the domain message. */
-const DIAGNOSTIC_TEXT: Record<string, Record<string, string>> = {
+export const fmt = (template: string, params: Record<string, string | number>): string =>
+  template.replace(/\{(\w+)\}/g, (m, k: string) => (k in params ? String(params[k]) : m));
+
+/** Localized text for known generic diagnostic codes. */
+export const DIAGNOSTIC_TEXT: Record<string, Record<string, string>> = {
   ko: {
     "compiler.empty": "선택된 항목이 없어 프롬프트가 비어 있습니다.",
     "import.invalid_json": "올바른 JSON 파일이 아닙니다.",
@@ -137,20 +251,23 @@ const DIAGNOSTIC_TEXT: Record<string, Record<string, string>> = {
     "spec.not_object": "ImageSpec은 JSON 객체여야 합니다.",
     "spec.wrong_kind": "Prompter ImageSpec 파일이 아닙니다.",
     "spec.unsupported_version": "지원하지 않는 스키마 버전입니다.",
+    "spec.missing_version": "스키마 버전 정보가 없습니다.",
     "spec.catalog_mismatch": "다른 카탈로그로 만든 명세입니다.",
     "spec.catalog_version_mismatch": "다른 카탈로그 버전으로 만든 명세입니다.",
-    "selection.unknown_attribute": "알 수 없는 속성이 포함되어 있습니다.",
-    "value.unknown_option": "알 수 없는 선택지가 포함되어 있습니다.",
+    "spec.unknown_field": "알 수 없는 필드입니다.",
+    "spec.schema": "형식이 올바르지 않습니다.",
+    "selection.unknown_attribute": "현재 카탈로그에 없는 속성입니다.",
+    "selection.invalid_id": "올바르지 않은 속성 ID입니다.",
+    "value.unknown_option": "현재 카탈로그에 없는 선택지입니다.",
     "value.kind_mismatch": "속성 유형과 값의 형식이 맞지 않습니다.",
+    "value.out_of_range": "허용 범위를 벗어난 값입니다.",
+    "value.text_too_long": "글자 수 제한을 초과했습니다.",
+    "value.too_many_options": "선택 가능한 개수를 초과했습니다.",
+    "migration.collision": "ID 변환 대상이 이미 존재하여 변환하지 않았습니다.",
+    "migration.no_path": "이 카탈로그 버전에서 현재 버전으로의 변환 경로가 없습니다.",
+    "migration.catalog_newer": "더 새로운 카탈로그 버전으로 만든 명세입니다.",
     "compiler.priority_unsupported": "현재 프롬프트 형식은 중요도를 표현할 수 없어 무시됩니다.",
+    "storage.invalid_json": "저장 데이터가 올바른 JSON이 아닙니다.",
+    "storage.unknown_format": "알 수 없는 저장 형식입니다.",
   },
-};
-
-export const describeDiagnostic = (
-  locale: string,
-  d: { code: string; message: string; path?: string | undefined },
-): string => {
-  const localized = DIAGNOSTIC_TEXT[locale]?.[d.code];
-  if (!localized) return d.message;
-  return d.path ? `${localized} (${d.path})` : localized;
 };

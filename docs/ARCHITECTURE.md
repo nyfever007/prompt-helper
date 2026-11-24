@@ -1,37 +1,41 @@
-# Prompter 아키텍처 (Sprint 0)
+# Prompter 아키텍처 (Sprint 1 기준)
 
-> 기준 문서: [PROMPTER_MASTER_PLAN.md](../PROMPTER_MASTER_PLAN.md) §5, §6, §9, §11
+> 기준 문서: [PROMPTER_MASTER_PLAN.md](../PROMPTER_MASTER_PLAN.md) §5, §6, §7, §9, §11
+> 변경 이력: Sprint 0 기반 구조 → Sprint 1에서 카탈로그 형식 0.2.0, 안전 정책 계층, 마이그레이션과 부분 복구 추가 (ImageSpec 0.1.0은 그대로)
 
 ## 1. 핵심 원칙
 
-1. **ImageSpec이 단일 진실 원천(Single Source of Truth)입니다.** 프롬프트 문자열은 저장하지 않는 파생 결과물입니다.
-2. **unset은 "키 없음"으로 표현합니다.** `selections`에 키가 없으면 unset이고, 키가 있으면 사용자가 명시적으로 선택한 값입니다. 카탈로그 기본값은 자동으로 적용되지 않습니다.
-3. **도메인과 UI를 분리합니다.** `src/domain`은 React와 Next.js를 import하지 않습니다(ESLint `no-restricted-imports`와 테스트로 강제).
-4. **데이터 기반 확장.** 컴파일러, 검증기, UI는 카탈로그에서 속성과 옵션을 읽습니다. 속성이나 옵션을 추가할 때 코드를 바꿀 필요가 없습니다.
-5. **보고만 하고 다시 쓰지 않습니다.** 검증기, 규칙, 컴파일러는 진단(Diagnostic)을 반환할 뿐 명세를 수정하지 않습니다.
+1. **ImageSpec이 단일 진실 원천입니다.** 프롬프트 문자열은 저장하지 않는 파생 결과물입니다.
+2. **unset은 "키 없음" 하나로만 표현합니다.** 카탈로그의 `defaultValue`는 제안일 뿐이며, 프리셋의 `classification`도 다른 속성을 자동으로 설정하지 않습니다.
+3. **보고만 하고 다시 쓰지 않습니다.** 검증기, 규칙, 적용 조건, 안전 정책은 진단(Diagnostic)만 만들고 명세를 고치지 않습니다. 해결 동작(`actions`)은 사용자가 눌러야만 실행됩니다.
+4. **도메인과 UI를 분리합니다.** `src/domain`은 React와 Next.js를 import하지 않습니다(ESLint와 테스트로 강제).
+5. **데이터 기반 확장.** 속성, 선택지, 하위 분류, 적용 조건, 충돌 규칙, 모델별 표현, 다국어 라벨은 모두 카탈로그 데이터입니다.
+6. **원본 데이터를 보존합니다.** 마이그레이션 전 원본, 손상 원본, 가져온 파일은 변경되지 않으며, 복구는 사용자가 확인해야 적용됩니다.
 
 ## 2. 계층 구조
 
 ```text
-┌──────────────────────── UI (src/app, src/components) ────────────────────────┐
-│  PrompterApp ─ ModeTabs(Basic/Detailed/Precision) ─ ModePanel ─ AttributeField │
-│              └ PromptPreview ─ SpecToolbar(Export/Import/Reset)               │
-└───────────────────────────────▲──────────────────────────────────────────────┘
-                                │ props / callbacks
-┌──────────────── State (src/state) ─────────────────┐
-│ useWorkspace: ImageSpec 1개 소유, 복원·자동 저장, │   useUiPrefs: mode/locale
-│               compilePrompt 메모이즈              │   (명세와 분리된 보기 설정)
-└───────────────────────────────▲────────────────────┘
-                                │ 순수 함수 호출
-┌──────────────────────── Domain (src/domain) — 프레임워크 무관 ─────────────────────────┐
-│ spec/        ImageSpec·AttributeSelection·SelectionValue 스키마(Zod), factory,          │
-│              operations(applySelection/clearSelection), migrations                      │
-│ catalog/     AttributeDefinition·Option·Rule 스키마, CatalogRegistry, conditions,       │
-│              valueCheck, catalogs/core.ts                                               │
-│ validation/  SpecValidator: parseImageSpec(구조) + validateSpecAgainstCatalog(의미)     │
-│ compiler/    PromptCompiler: spec → fragments(semantic plan) → PromptAdapter.render     │
-│ persistence/ exportSpecJson/importSpecJson, createSpecStorage(KeyValueStore)            │
-│ providers/   ImageProviderAdapter 인터페이스, disabledImageProvider                     │
+┌──────────────────────────── UI (src/app, src/components) ─────────────────────────────┐
+│ PrompterApp ─ Notices · RecoveryPanel · ModeTabs                                        │
+│   ├ ModePanel ─ BasicComposer ─ GroupSection(핵심 / "추가 설정") ─ AttributeField        │
+│   │                                     └ OptionPicker(검색·비적용 표시)                   │
+│   │            └ (Detailed/Precision) 예정 안내 + SpecSummary                            │
+│   └ PromptPreview(출력 관문·차단·혼합 언어·파라미터) · SpecToolbar(JSON·초기화·되돌리기)   │
+└──────────────────────────────────────────▲─────────────────────────────────────────────┘
+┌──────────────── State (src/state) ───────┴───────────────┐
+│ useWorkspace: ImageSpec 1개, 초기화 스냅샷, 복원·복구 결정, │  useUiPrefs: mode, locale
+│               자동 저장(복구 결정 전에는 중지)             │  (명세와 분리)
+│ workspaceReducer: 순수 함수, 비적용 상태 전환 계산         │
+└──────────────────────────────────────────▲───────────────┘
+┌──────────────────────────── Domain (src/domain) — 프레임워크 무관 ──────────────────────┐
+│ spec/        ImageSpec·Selection·Value(Zod), factory, operations, schema migrations     │
+│ catalog/     schema(형식 0.2.0), registry(무결성·계층), conditions, applicability,        │
+│              search, migrate(ID 변경), valueCheck, catalogs/core.ts(0.2.0)               │
+│ validation/  specValidator(구조+의미+규칙), analyze(valid/recoverable/invalid)          │
+│ safety/      baselinePolicy(0.1.0 데이터), evaluate(태그+어휘 → 신호 → 규칙)            │
+│ compiler/    compiler → adapter → SAFETY GATE → 혼합 언어 진단, output(출력 관문)       │
+│ persistence/ json(export/analyze import), storage(envelope, 백업, 마이그레이션 로그)     │
+│ providers/   ImageProviderAdapter 인터페이스, disabledImageProvider                      │
 └─────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -39,68 +43,95 @@
 
 | 모듈 | 위치 | 책임 |
 |---|---|---|
-| **ImageSpec** | `domain/spec/schema.ts` | 버전이 붙은 명세: `kind`, `schemaVersion`, `task`, `catalog{id,version}`, `selections` |
-| **AttributeSelection** | `domain/spec/schema.ts`, `values.ts` | 명시적으로 선택한 값 1개. `value`(`kind`로 구분: single, multi, number, range, text), `source`(user, preset, import), `priority?`(1~5, 예약) |
-| **AttributeDefinition** | `domain/catalog/schema.ts` | 속성 정의: `type`, `tier`, `order`, 다국어 `label`/`description`, `prompt.template`(+`byAdapter`), `appliesWhen`, `defaultValue`(제안 값), `examples`, 옵션(계층형 `parentId`, `aliases`, 모델별 표현) |
-| **CatalogRegistry** | `domain/catalog/registry.ts` | 카탈로그 파싱, 무결성 검사(중복, 부모 참조, 순환, 기본값, 조건 참조), 결정론적 정렬, 조회 API, 불변(deep freeze) |
-| **SpecValidator** | `domain/validation/specValidator.ts` | 1단계 구조 검증(타입, kind, 버전, 마이그레이션, Zod) → 2단계 카탈로그 검증(속성·옵션 존재, 타입 일치, 범위, 길이, 적용 여부, 규칙) |
-| **PromptCompiler** | `domain/compiler/` | 결정론적 규칙 기반 변환. 설정된 속성과 적용 가능한 속성만 fragment로 만들고, adapter가 최종 문자열을 생성 |
-| **Persistence** | `domain/persistence/` | 정규화된 JSON 내보내기와 전체 검증을 거치는 가져오기, 버전이 붙은 envelope 기반 로컬 저장, 손상 데이터 백업 |
-| **ProviderAdapter** | `domain/providers/` | 이미지 생성 API의 경계 인터페이스(기능, 요청 검증, 비용 추정, 생성). Sprint 0은 비활성 구현만 있음 |
+| ImageSpec | `domain/spec/schema.ts` | 버전 0.1.0 (Sprint 1에서 변경 없음) |
+| AttributeSelection | `domain/spec/*` | 값(`kind`), `source`, 예약 필드 `priority` |
+| AttributeDefinition | `domain/catalog/schema.ts` | type, tier, prominence(핵심/추가), searchable, 다국어 라벨, 템플릿, 채널(text/parameter/both), 적용 조건, 제안 기본값 |
+| Option | 〃 | 계층(`parentId`), 별칭, 선택지별 적용 조건, `classification`(독립 축 분류 정보), `policyTags`, `parameterValue`, 모델별 표현 |
+| Rule | 〃 | conflict/dependency/visibility, severity, `involves`, `guidance`(필수), `actions`(제안) |
+| CatalogRegistry | `domain/catalog/registry.ts` | 파싱, 무결성 검사, 계층 조회(`lineage`), 그룹 트리, 마이그레이션 체인 검증 |
+| Applicability | `domain/catalog/applicability.ts` | 속성·선택지 단위 적용 여부, 비적용 선택 목록 |
+| Search | `domain/catalog/search.ts` | 모든 locale 라벨, 별칭, ID, 설명 검색. 결정론적이며 개수 제한 없음 |
+| Catalog migration | `domain/catalog/migrate.ts` | 선언된 ID 변경만 적용하고 기록(변경 전후, 사유). 덮어쓰기 금지, 추측 매핑 금지 |
+| SpecValidator | `domain/validation/*` | 구조 → 스키마 마이그레이션 → 카탈로그 마이그레이션 → 선택값별 검증 → 정상/부분 복구 가능/복구 불가 |
+| Safety | `domain/safety/*` | 로컬 정책 검사. 카탈로그 검증과 독립된 계층 |
+| PromptCompiler | `domain/compiler/*` | 결정론적 생성, 출처 fragment, 파라미터, 차단, 혼합 언어 진단 |
+| Output gate | `domain/compiler/output.ts` | 모든 프롬프트 출력 경로(미리보기, 복사, .txt, 향후 provider)가 거치는 단일 관문 |
+| Persistence | `domain/persistence/*` | JSON(항상 허용), 로컬 저장, 백업 키, 마이그레이션 로그 |
+| ProviderAdapter | `domain/providers/*` | 인터페이스만 있음. 네트워크 호출 0 |
 
 ## 4. 데이터 흐름
 
+### 편집과 출력
 ```text
-사용자 입력 ─▶ workspaceReducer ─▶ applySelection(spec, registry, id, value)
-                                     │  (값 검증 실패 → 변경 없음)
-                                     ▼
-                             새 ImageSpec (다른 selection은 참조 그대로 유지)
-                                     │
-               ┌─────────────────────┼───────────────────────┐
-               ▼                     ▼                       ▼
-        compilePrompt         createSpecStorage.save   exportSpecJson
-   (validate → fragments     (envelope + canonical)    (canonical JSON)
-     → adapter.render)
-               ▼
-        PromptPreview (prompt, 출처 fragment, 진단, 버전 메타)
+사용자 입력 → reducer → applySelection (검증 실패 시 변경 없음, 다른 selection은 참조 유지)
+            → 새 ImageSpec → (자동 저장) + compilePrompt:
+               validateSpecAgainstCatalog (값, 비적용, 규칙)
+               → fragments: 설정됨 ∧ 속성 적용 ∧ 선택지 적용 (카탈로그 순서)
+               → parameters: channel ∈ {parameter, both}
+               → adapter.render
+               → evaluateSafety(선택지 policyTags + 각 fragment + adapter 최종 출력)
+                    차단이면 prompt/fragments/parameters를 비우고 blocked=true
+               → 혼합 언어 진단(비라틴 문자 체계)
+            → getPromptOutput (미리보기, 복사, .txt 내보내기)
 ```
 
-가져오기와 복원은 반대 방향입니다. 텍스트 → `JSON.parse` → `parseImageSpec` → `validateSpecAgainstCatalog`를 거쳐, 오류가 하나라도 있으면 전체를 거부합니다(현재 명세는 바뀌지 않음).
+### 가져오기와 복원
+```text
+텍스트 → JSON.parse → analyzeSpecInput:
+   객체·kind 검사 → 스키마 마이그레이션 → 헤더(Zod) → catalog.id 확인
+   → migrateCatalogSelections (선언된 rename만, 기록 남김)
+   → 선택값별 검사 (ID 형식, Zod, 속성 존재, 값-정의 일치)
+   → 결과: valid | recoverable(제외 목록: 경로, 원본 값, 사유) | invalid
+UI:  valid → 적용 (+ 마이그레이션 내역 알림)
+     recoverable → RecoveryPanel: [제외하고 적용] / [원본 다운로드] / [취소·새로 시작]
+     invalid → 오류 알림, 현재 명세 유지
+저장소: 손상 원본 → :corrupt-backup, 마이그레이션 전 원본 → :pre-migration-backup,
+        변경 기록 → prompter:v1:migration-log. 복구 결정 전에는 자동 저장을 중지
+```
 
-## 5. 불변 조건 (테스트로 보장)
+## 5. 구조 변경과 영향 (Sprint 1, 승인됨)
+
+| 변경 | 영향 | 호환성 |
+|---|---|---|
+| 카탈로그 형식 0.1.0 → 0.2.0 | 새 필드(선택지 조건, 분류 정보, 정책 태그, 파라미터, prominence, searchable, guidance/actions, migrations, noneOf/whenUnset) | 번들 카탈로그만 해당. 0.1.0 형식 카탈로그는 거부(테스트) |
+| core 카탈로그 내용 0.1.0 → 0.2.0 | `style.visual` → `style.preset` (사유 기록) | Sprint 0 데이터는 자동 변환. 실제 Sprint 0 출력물로 무손실 검증 |
+| ImageSpec 0.1.0 유지 | 없음 | Sprint 0 JSON과 저장 데이터 그대로 읽힘 |
+| 가져오기 반환값 `Result` → `SpecAnalysis` | 부분 복구 지원 | 내부 API. 엄격 검증은 `validateImageSpec`으로 유지 |
+| 컴파일러 0.1.0 → 0.2.0 | 선택지 단위 제외, parameters, blocked, safety meta | Sprint 0 명세의 프롬프트 문장은 동일하게 재현(테스트) |
+| 저장 envelope | 변경 없음(v1). 백업 키와 로그 키 추가 | 그대로 |
+
+## 6. 불변 조건 (테스트로 보장)
 
 | 불변 조건 | 테스트 |
 |---|---|
-| 새 명세는 모든 속성이 unset이고 프롬프트가 빈 문자열 | `tests/unit/unset.test.ts` |
-| 카탈로그 `defaultValue`는 자동 적용되지 않으며, 명시적으로 선택하면 unset과 구별됨 | `unset.test.ts` |
-| 속성 A를 변경하거나 해제해도 다른 모든 속성 B는 참조까지 동일 (모든 속성 쌍) | `independence.test.ts` |
-| 프롬프트는 명시적 선택에서 나온 fragment만으로 구성 (속성 부분집합 전수 검사) | `compiler.test.ts` |
-| 같은 명세에서는 같은 출력. 키 삽입 순서와 복수 선택 클릭 순서에 무관 | `compiler.test.ts` |
-| export → import는 무손실이고 재-export 결과는 바이트 단위로 동일 | `json.test.ts` |
-| 잘못된 입력은 예외 없이 진단으로 거부 | `json.test.ts`, `spec.test.ts`, `storage.test.ts` |
-| 소스 코드에 네트워크·API 클라이언트 호출 없음, 도메인은 UI 프레임워크와 무관 | `provider.test.ts` |
+| 모든 속성은 unset으로 시작하며 기본값이나 분류 정보가 자동 적용되지 않음 | `unset`, `independence` |
+| 속성 A를 변경·해제해도 다른 속성 B는 참조까지 동일 (core 22개, 확장 fixture의 모든 쌍) | `independence` |
+| 비적용 선택은 유지되고, 컴파일에서 제외되며, 진단과 전환 알림이 뜨고, 다시 적용되면 복귀 | `rules`, `reset-undo`, `component`, E2E |
+| 충돌은 관련 항목과 해결 안내를 보고할 뿐 사용자 의도를 바꾸지 않음 | `rules`, `compiler`, `component` |
+| 프롬프트는 명시적이고 적용 가능한 선택에서 나온 fragment로만 구성 (무작위 명세 500개) | `compiler` |
+| 결정론: 동일 명세 → 동일 출력. 키 순서와 클릭 순서 무관 | `compiler` |
+| JSON round-trip 무손실, 재-export 바이트 동일 | `json` |
+| Sprint 0 데이터 무손실 변환, 원본 보존, 로그 기록, 알 수 없는 ID 미변경 | `migration` |
+| 부분 복구: 제외 항목·사유·원본 표시, 확인 전 미적용, 자동 저장 중지 | `recovery`, `storage`, `component`, E2E |
+| 차단 시 모든 출력 경로 차단, 명세·JSON은 원본 그대로 | `safety`, `component`, E2E |
+| 정당한 성인 패션·체형·매력 표현은 허용 | `safety` |
+| core 카탈로그 문구 자체는 안전 신호를 만들지 않음 | `catalog` |
+| 외부 네트워크 호출 0 | `provider`, E2E 네트워크 감시 |
 
-## 6. 확장 지점
+## 7. 확장 지점
 
 | 추가하려는 것 | 변경 위치 | 핵심 코드 변경 |
 |---|---|---|
-| 옵션 | 카탈로그 데이터 + 카탈로그 `version` 올림 | 없음 |
-| 속성 (기존 타입) | 카탈로그 데이터 (`tier`로 표시될 모드 결정) | 없음 |
-| 계층형 옵션 / 그룹 | `parentId`, `groups` 데이터 | 없음 (UI는 들여쓰기만 지원) |
-| 조건부 속성, 의존성·충돌 규칙 | `appliesWhen`, `rules` 데이터 | 없음 |
-| 모델별 표현 | `prompt.byAdapter`(옵션, 속성) + 새 `PromptAdapter` 구현 | adapter 파일 1개 |
-| 다국어 | 카탈로그 `LocalizedText`에 locale 키 추가, `i18n/messages.ts`에 사전 추가 | 사전 1개 |
-| 새 값 타입 (예: `position`, `reference`) | `values.ts` union, `valueCheck.ts`, `compiler.renderValue`, `AttributeField`, `schemaVersion` minor 올림, 필요하면 마이그레이션 | 4곳 (의도된 비용) |
-| 이미지 API | `ImageProviderAdapter` 구현 (서버 측), 승인과 비용 가드 | Sprint 5 |
-
-## 7. 모드 구조
-
-- **Basic, Detailed, Precision**은 모두 `useWorkspace`가 가진 같은 `ImageSpec`을 읽고 씁니다. 모드는 `useUiPrefs`에 저장되는 보기 설정일 뿐이며 명세에 포함되지 않습니다.
-- Basic은 `registry.attributesForTier("basic")`를 범용 `AttributeField`로 그립니다.
-- Detailed와 Precision은 Sprint 0에서 "후속 개발 예정" 안내와, 같은 명세를 보여주는 읽기 전용 요약(`SpecSummary`)만 표시합니다.
+| 선택지, 속성, 하위 분류, 그룹 | 카탈로그 데이터 + `version` 올림 | 없음 |
+| 상황별 선택지, 의존성·충돌 | `appliesWhen`(속성·선택지), `rules` | 없음 |
+| ID 변경·삭제 | `migrations`(renameAttribute/renameOption + 사유) | 없음 |
+| 스타일·조명 독립 축 편집 | 축 속성은 이미 존재(tier detailed) → Detailed/Sprint 4 UI | UI만 |
+| 안전 정책 범주와 어휘 | `baselinePolicy` 데이터 + 버전 올림 | 없음 |
+| 모델별 표현, 새 adapter | `byAdapter` + `PromptAdapter` 구현 | adapter 파일 1개 |
+| 새 값 타입 (position, reference) | values/valueCheck/compiler/AttributeField, ImageSpec minor 올림 | 4곳 (의도된 비용) |
 
 ## 8. 보안과 비용 경계
 
-- 클라이언트 코드에는 네트워크 호출이 없습니다(테스트로 검사).
-- `ImageProviderAdapter`는 서버 측 실행, 명시적 비용 승인(`approvedCostUsd`), 지출 한도를 전제로 설계했습니다. 실제 구현은 Sprint 5에서 진행합니다.
-- `.env.example`에는 Sprint 0에 필요한 환경 변수가 없다고 명시했습니다.
+- 클라이언트 네트워크 호출 0(테스트, E2E 네트워크 감시).
+- 안전 정책은 로컬 키워드 기반 기준선입니다. 의미 기반 검열도 아니고 provider 정책 준수를 보장하지도 않습니다(DECISIONS ADR-019).
+- CI(`.github/workflows/ci.yml`)는 원격 저장소(GitHub) 연결 후 GitHub Actions에서 실행됩니다.

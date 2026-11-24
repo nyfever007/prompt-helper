@@ -117,7 +117,8 @@ textarea { width: 100%; resize: vertical; min-height: 80px; }
 .link-button { background: none; border: 0; color: var(--accent); padding: 0; font-size: 0.85rem; text-decoration: underline; }
 
 .preview { display: flex; flex-direction: column; gap: 10px; }
-.preview__header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.preview__header { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.preview__header h2 { white-space: nowrap; }
 .preview__prompt {
   display: block; min-height: 96px; white-space: pre-wrap; word-break: break-word; background: var(--surface-2);
   border-radius: 8px; padding: 12px; font-family: var(--mono); font-size: 0.85rem;
@@ -151,3 +152,47 @@ textarea { width: 100%; resize: vertical; min-height: 80px; }
 .summary__row { display: grid; grid-template-columns: minmax(120px, 200px) 1fr; gap: 12px; padding: 6px 0; border-top: 1px solid var(--border); }
 .summary__row dt { color: var(--muted); }
 .summary__row dd { margin: 0; word-break: break-word; }
+
+/* ── Sprint 1: Basic Composer ─────────────────────────────────────────── */
+.small { font-size: 0.8rem; }
+.composer { display: flex; flex-direction: column; gap: 20px; }
+.group { display: flex; flex-direction: column; gap: 10px; }
+.group__title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.more { display: flex; flex-direction: column; gap: 10px; }
+.more__toggle {
+  align-self: flex-start; font: inherit; font-size: 0.85rem; color: var(--accent); background: none; border: 0; padding: 4px 0; cursor: pointer;
+}
+.option-picker { display: flex; flex-direction: column; gap: 8px; }
+.option-search { display: flex; align-items: center; gap: 8px; }
+.option-search input {
+  flex: 1; min-width: 0; font: inherit; color: inherit; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px;
+}
+.chip[data-inactive="true"] { border-style: dashed; opacity: 0.75; }
+.chip[data-inactive="true"][data-checked="true"] { background: var(--warn-soft); color: var(--warn); border-color: var(--warn); }
+.classification { margin-top: 10px; padding: 8px 10px; background: var(--surface-2); border-radius: 8px; }
+.classification p { margin: 0 0 4px; }
+.classification ul { margin: 0; padding-left: 18px; font-size: 0.8rem; }
+.field__diagnostics { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem; }
+.field__diagnostics li { border-left: 3px solid var(--border); padding: 4px 8px; background: var(--surface-2); border-radius: 0 6px 6px 0; }
+.field__diagnostics .diag--warning { border-left-color: var(--warn); }
+.field__diagnostics .diag--error { border-left-color: var(--danger); }
+.diag__guidance { display: block; margin-top: 2px; color: var(--text); }
+.diag__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.button--small { padding: 4px 10px; font-size: 0.8rem; }
+.field__provenance { margin: 10px 0 0; word-break: break-word; }
+.field__provenance code { background: var(--surface-2); padding: 1px 4px; border-radius: 4px; }
+.notices { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.notices .notice { margin: 0; }
+.notice__title { font-weight: 600; }
+.notice--warning { background: var(--warn-soft); color: var(--warn); }
+.notice__close { position: absolute; top: 8px; right: 12px; text-decoration: none; font-size: 1.1rem; }
+.blocked { border: 1px solid var(--danger); background: var(--danger-soft); color: var(--danger); border-radius: 8px; padding: 12px; }
+.blocked__title { margin: 0 0 6px; font-weight: 700; }
+.blocked ul { margin: 8px 0 0; padding-left: 18px; }
+.blocked p { margin: 2px 0; }
+.recovery { background: var(--surface); border: 2px solid var(--warn); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
+.recovery h2 { margin-bottom: 6px; }
+.recovery h3 { margin: 12px 0 6px; font-size: 0.9rem; }
+.recovery__list { margin: 0 0 10px; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; }
+.recovery pre { white-space: pre-wrap; word-break: break-word; background: var(--surface-2); padding: 8px; border-radius: 6px; max-height: 160px; overflow: auto; }
+[data-testid="prompt-parameters"] code { margin-right: 6px; background: var(--surface-2); padding: 1px 4px; border-radius: 4px; }

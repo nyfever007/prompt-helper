@@ -1,0 +1,10 @@
+{
+  "kind": "prompter.image-spec",
+  "schemaVersion": "0.1.0",
+  "task": "text-to-image",
+  "catalog": {
+    "id": "prompter.core",
+    "version": "0.1.0"
+  },
+  "selections": {}
+}

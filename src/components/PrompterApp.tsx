@@ -1,13 +1,25 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { getCoreRegistry, type CatalogRegistry, type KeyValueStore } from "@/domain";
-import { describeDiagnostic, getMessages, SUPPORTED_LOCALES, type UiLocale } from "@/i18n/messages";
+import { useCallback, useMemo, useRef, useState } from "react";
+import {
+  compilePrompt,
+  getCoreRegistry,
+  type CatalogMigrationRecord,
+  type CatalogRegistry,
+  type KeyValueStore,
+  type SpecAnalysis,
+} from "@/domain";
+import { fmt, getMessages, SUPPORTED_LOCALES, type Messages, type UiLocale } from "@/i18n/messages";
 import { MODES, useUiPrefs } from "@/state/useUiPrefs";
 import { useWorkspace } from "@/state/useWorkspace";
+import { describeDiagnostic } from "./diagnostics";
+import { downloadText, timestamp } from "./download";
+import { attributeLabel, optionLabel } from "./format";
 import { ModePanel } from "./modes/ModePanel";
+import { Notices, type Notice } from "./Notices";
 import { PromptPreview } from "./PromptPreview";
-import { SpecToolbar, type Notice } from "./SpecToolbar";
+import { RecoveryPanel } from "./RecoveryPanel";
+import { SpecToolbar } from "./SpecToolbar";
 
 const browserStore = (): KeyValueStore | null => {
   if (typeof window === "undefined") return null;
@@ -23,22 +35,119 @@ export interface PrompterAppProps {
   registry?: CatalogRegistry;
   /** Injected for tests. Defaults to `window.localStorage`. `null` disables persistence. */
   store?: KeyValueStore | null;
+  /** Auto-dismiss delay for non-critical notices. */
+  noticeTimeoutMs?: number;
 }
 
-export function PrompterApp({ registry: registryProp, store: storeProp }: PrompterAppProps) {
+const describeMigration = (r: CatalogMigrationRecord, t: Messages, locale: string) => {
+  const what = r.op === "renameAttribute" ? fmt(t.migration.item, { from: r.from, to: r.to }) : `${r.attributeId}: ${fmt(t.migration.item, { from: r.from, to: r.to })}`;
+  return `${what} (${r.fromVersion} → ${r.toVersion}) — ${r.reason[locale] ?? r.reason.en}`;
+};
+
+type PendingImport = { analysis: Extract<SpecAnalysis, { status: "recoverable" }>; text: string; fileName: string };
+
+export function PrompterApp({ registry: registryProp, store: storeProp, noticeTimeoutMs = 6000 }: PrompterAppProps) {
   const registry = useMemo(() => registryProp ?? getCoreRegistry(), [registryProp]);
   const store = useMemo(() => (storeProp !== undefined ? storeProp : browserStore()), [storeProp]);
   const workspace = useWorkspace(registry, store);
   const { mode, setMode, locale, setLocale } = useUiPrefs(store);
   const t = getMessages(locale);
-  const [notice, setNotice] = useState<Notice | null>(null);
+  const ctx = { registry, locale, t };
+
+  const [eventNotices, setEventNotices] = useState<Notice[]>([]);
+  const [dismissed, setDismissed] = useState<ReadonlySet<string>>(new Set());
+  const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
+  const counter = useRef(0);
+  const push = useCallback((n: Omit<Notice, "id">) => setEventNotices((ns) => [...ns, { ...n, id: `event-${++counter.current}` }]), []);
+  const dismiss = useCallback((id: string) => {
+    setDismissed((s) => new Set(s).add(id));
+    setEventNotices((ns) => ns.filter((n) => n.id !== id));
+  }, []);
+
+  // ── Derived notices (no state sync needed) ────────────────────────────────
+  const { hydration, transition } = workspace;
+  const derived: Notice[] = [];
+  if (hydration.status === "loaded" && hydration.migrations.length === 0) {
+    derived.push({ id: "hydration-restored", kind: "info", text: t.storage.restored, autoDismissMs: noticeTimeoutMs });
+  }
+  if (hydration.status === "loaded" && hydration.migrations.length > 0) {
+    derived.push({
+      id: "hydration-migrated",
+      kind: "info",
+      title: t.migration.title,
+      details: hydration.migrations.map((r) => describeMigration(r, t, locale)),
+      ...(hydration.preMigrationBackupKey ? { text: fmt(t.migration.backupNote, { key: hydration.preMigrationBackupKey }) } : {}),
+    });
+  }
+  if (hydration.status === "invalid") {
+    derived.push({ id: "hydration-invalid", kind: "error", text: t.storage.invalid, details: hydration.diagnostics.map((d) => describeDiagnostic(d, ctx).text) });
+  }
+  if (hydration.status === "recovered") {
+    derived.push({ id: "hydration-recovered", kind: "success", text: fmt(t.recovery.applied, { n: hydration.excludedCount }), autoDismissMs: noticeTimeoutMs });
+  }
+  if (hydration.status === "discarded") {
+    derived.push({ id: "hydration-discarded", kind: "info", text: t.recovery.discarded, autoDismissMs: noticeTimeoutMs });
+  }
+  if (transition) {
+    const label = (i: { attributeId: string; optionIds: string[] }) =>
+      i.optionIds.length
+        ? `${attributeLabel(registry, i.attributeId, locale)} (${i.optionIds.map((o) => optionLabel(registry, i.attributeId, o, locale)).join(", ")})`
+        : attributeLabel(registry, i.attributeId, locale);
+    if (transition.newlyInactive.length) {
+      derived.push({
+        id: `transition-${transition.id}-inactive`,
+        kind: "warning",
+        text: fmt(t.transition.inactive, { labels: transition.newlyInactive.map(label).join(", ") }),
+        autoDismissMs: noticeTimeoutMs * 2,
+      });
+    }
+    if (transition.reactivated.length) {
+      derived.push({
+        id: `transition-${transition.id}-reactivated`,
+        kind: "info",
+        text: fmt(t.transition.reactivated, { labels: transition.reactivated.map(label).join(", ") }),
+        autoDismissMs: noticeTimeoutMs,
+      });
+    }
+  }
+  const notices = [...derived, ...eventNotices].filter((n) => !dismissed.has(n.id));
+
+  // ── Import ────────────────────────────────────────────────────────────────
+  const onImportAnalyzed = (analysis: SpecAnalysis, text: string, fileName: string) => {
+    if (analysis.status === "invalid") {
+      push({ kind: "error", text: t.toolbar.importFailed, details: analysis.diagnostics.map((d) => describeDiagnostic(d, ctx).text) });
+      return;
+    }
+    if (analysis.status === "recoverable") {
+      setPendingImport({ analysis, text, fileName });
+      return;
+    }
+    workspace.replace(analysis.spec);
+    const details = [
+      ...analysis.migrations.map((r) => describeMigration(r, t, locale)),
+      ...analysis.diagnostics.filter((d) => d.severity === "warning" && !d.code.startsWith("rule.")).map((d) => describeDiagnostic(d, ctx).text),
+      ...(compilePrompt(analysis.spec, registry).blocked ? [t.toolbar.blockedSpecNote] : []),
+    ];
+    push({
+      kind: "success",
+      text: t.toolbar.importOk,
+      ...(details.length ? { details } : { autoDismissMs: noticeTimeoutMs }),
+      ...(analysis.migrations.length ? { title: t.migration.title } : {}),
+    });
+  };
 
   const storageLine = (() => {
-    if (workspace.hydration.status === "pending") return t.storage.loading;
+    if (hydration.status === "pending") return t.storage.loading;
+    if (hydration.status === "recoverable") return t.storage.savePaused;
     if (workspace.save.status === "failed") return t.storage.saveFailed;
     if (workspace.save.status === "saved") return `${t.storage.savedAt} · ${new Date(workspace.save.savedAt).toLocaleTimeString(locale)}`;
     return "";
   })();
+
+  const downloadBackup = (key: string) => {
+    const raw = workspace.storage?.readBackup(key);
+    if (raw) downloadText(`prompter-saved-original-${timestamp(new Date())}.json`, raw);
+  };
 
   return (
     <div className="app" lang={locale}>
@@ -78,30 +187,48 @@ export function PrompterApp({ registry: registryProp, store: storeProp }: Prompt
       </nav>
       <p className="muted mode-hint">{t.modeHint}</p>
 
-      {workspace.hydration.status === "loaded" && notice === null && (
-        <p className="notice notice--info" role="status">
-          {t.storage.restored}
-        </p>
-      )}
-      {workspace.hydration.status === "invalid" && (
-        <p className="notice notice--error" role="alert">
-          {t.storage.invalid}
-        </p>
-      )}
-      {notice && (
-        <div className={`notice notice--${notice.kind}`} role={notice.kind === "error" ? "alert" : "status"}>
-          <p>{notice.text}</p>
-          {notice.diagnostics && notice.diagnostics.length > 0 && (
-            <ul>
-              {notice.diagnostics.map((d, i) => (
-                <li key={`${d.code}-${i}`}>{describeDiagnostic(locale, d)}</li>
-              ))}
-            </ul>
-          )}
-          <button type="button" className="link-button" onClick={() => setNotice(null)} aria-label="Dismiss">
-            ×
+      <Notices notices={notices} onDismiss={dismiss} dismissLabel={t.dismiss} />
+      {hydration.status === "invalid" && (
+        <p className="small">
+          <button type="button" className="link-button" onClick={() => downloadBackup(hydration.backupKey)}>
+            {t.recovery.download}
           </button>
-        </div>
+        </p>
+      )}
+
+      {hydration.status === "recoverable" && (
+        <RecoveryPanel
+          title={t.recovery.titleStorage}
+          excluded={hydration.excluded}
+          registry={registry}
+          locale={locale}
+          t={t}
+          applyLabel={t.recovery.apply}
+          discardLabel={t.recovery.discardStorage}
+          keptNote={fmt(t.recovery.keptNote, { key: hydration.backupKey })}
+          onApply={workspace.applyRecovery}
+          onDiscard={workspace.discardRecovery}
+          onDownload={() => downloadBackup(hydration.backupKey)}
+        />
+      )}
+      {pendingImport && (
+        <RecoveryPanel
+          title={t.recovery.titleImport}
+          excluded={pendingImport.analysis.excluded}
+          registry={registry}
+          locale={locale}
+          t={t}
+          applyLabel={t.recovery.applyImport}
+          discardLabel={t.recovery.discardImport}
+          keptNote={t.recovery.keptImportNote}
+          onApply={() => {
+            workspace.replace(pendingImport.analysis.spec);
+            push({ kind: "success", text: fmt(t.recovery.applied, { n: pendingImport.analysis.excluded.length }), autoDismissMs: noticeTimeoutMs });
+            setPendingImport(null);
+          }}
+          onDiscard={() => setPendingImport(null)}
+          onDownload={() => downloadText(pendingImport.fileName || "prompter-original.json", pendingImport.text)}
+        />
       )}
 
       <main className="layout">
@@ -109,14 +236,21 @@ export function PrompterApp({ registry: registryProp, store: storeProp }: Prompt
           <ModePanel mode={mode} registry={registry} workspace={workspace} locale={locale} t={t} />
         </div>
         <aside className="layout__preview">
-          <PromptPreview compilation={workspace.compilation} locale={locale} t={t} />
+          <PromptPreview compilation={workspace.compilation} registry={registry} locale={locale} t={t} />
           <SpecToolbar
             registry={registry}
             spec={workspace.spec}
             t={t}
-            onImported={workspace.replace}
-            onReset={workspace.reset}
-            onNotice={setNotice}
+            hasResetSnapshot={workspace.hasResetSnapshot}
+            onImportAnalyzed={onImportAnalyzed}
+            onReset={() => {
+              workspace.reset();
+              push({ kind: "info", text: t.toolbar.resetDone, autoDismissMs: noticeTimeoutMs });
+            }}
+            onRestoreResetSnapshot={() => {
+              workspace.restoreResetSnapshot();
+              push({ kind: "success", text: t.toolbar.undoDone, autoDismissMs: noticeTimeoutMs });
+            }}
           />
           <p className="muted storage-line" data-testid="storage-status">
             {storageLine}

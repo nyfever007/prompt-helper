@@ -1,4 +1,4 @@
-import { resolveText, type AttributeDefinition, type SelectionValue } from "@/domain";
+import { resolveText, type AttributeDefinition, type CatalogRegistry, type SelectionValue } from "@/domain";
 
 /** Human-readable, localized summary of a selection value (UI only). */
 export const describeValue = (attribute: AttributeDefinition, value: SelectionValue, locale: string): string => {
@@ -18,4 +18,14 @@ export const describeValue = (attribute: AttributeDefinition, value: SelectionVa
     case "text":
       return value.text;
   }
+};
+
+export const attributeLabel = (registry: CatalogRegistry, attributeId: string, locale: string): string => {
+  const a = registry.getAttribute(attributeId);
+  return a ? resolveText(a.label, locale) : attributeId;
+};
+
+export const optionLabel = (registry: CatalogRegistry, attributeId: string, optionId: string, locale: string): string => {
+  const o = registry.getOption(attributeId, optionId);
+  return o ? resolveText(o.label, locale) : optionId;
 };

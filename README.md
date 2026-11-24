@@ -3,7 +3,7 @@
 사용자가 상상한 이미지를 구조화된 명세(**ImageSpec**)로 정밀하게 정의하고, 이를 이미지 생성 모델용 프롬프트로 변환하는 **Visual Prompt Design Tool**입니다.
 
 - 제품 마스터 계획: [PROMPTER_MASTER_PLAN.md](PROMPTER_MASTER_PLAN.md) (원본 보존, 수정 금지)
-- 현재 단계: **Sprint 0 — Foundation (승인됨, 2026-11-24)**. 상세 결과는 [docs/SPRINT_0_REPORT.md](docs/SPRINT_0_REPORT.md)를 참고하세요.
+- 현재 단계: **Sprint 1 — Basic Composer (구현 완료, 검토 대기)**. 상세 결과는 [docs/SPRINT_1_REPORT.md](docs/SPRINT_1_REPORT.md)를 참고하세요. (Sprint 0: 승인됨, [보고서](docs/SPRINT_0_REPORT.md))
 - 이 빌드는 이미지 생성 API나 유료 LLM API를 **호출하지 않습니다**. API 키도 필요 없습니다.
 
 ## 요구 사항
@@ -39,6 +39,7 @@ pnpm typecheck      # TypeScript strict 검사 (tsc --noEmit)
 pnpm lint           # ESLint (경고 0개 허용)
 pnpm test           # Vitest: 단위 + 컴포넌트(jsdom) 테스트
 pnpm check          # typecheck → lint → test → build 일괄 실행
+pnpm verify         # check + 브라우저 E2E (CI와 같은 구성)
 ```
 
 실제 브라우저 E2E (Playwright, 데스크톱 Chromium + 모바일 Pixel 7 뷰포트):
@@ -56,18 +57,20 @@ E2E 실행 중 스크린샷을 남기려면 `E2E_SCREENSHOT_DIR=/some/dir pnpm t
 src/
   domain/        UI 프레임워크와 무관한 도메인 로직 (React/Next import 금지, ESLint로 강제)
     spec/        ImageSpec 스키마, 값 타입, 생성/정규화, 불변 연산, 마이그레이션 훅
-    catalog/     카탈로그 스키마, CatalogRegistry, 조건 평가, core 샘플 카탈로그
-    validation/  SpecValidator (구조 + 카탈로그 기반 의미 검증)
-    compiler/    PromptCompiler + PromptAdapter (generic-en)
-    persistence/ JSON export/import, 로컬 저장소
+    catalog/     카탈로그 스키마(0.2.0), CatalogRegistry, 조건·적용 여부, 검색, ID 마이그레이션, core 카탈로그
+    validation/  SpecValidator (구조 + 카탈로그 의미 검증), 가져오기·복원 분석(정상/부분 복구/불가)
+    safety/      로컬 안전 정책 계층 (정책 데이터 + 평가기)
+    compiler/    PromptCompiler + PromptAdapter (generic-en), 출력 관문, 혼합 언어 감지
+    persistence/ JSON export/import, 로컬 저장소(백업 키, 마이그레이션 로그)
     providers/   ImageProviderAdapter 인터페이스 + 비활성 구현
   state/         React 상태 hook (단일 ImageSpec 소유, 자동 저장)
   components/    UI (카탈로그 데이터 기반 범용 컨트롤)
   i18n/          UI 문자열 (ko, en)
   app/           Next.js App Router 진입점
-tests/           Vitest 단위·컴포넌트 테스트, fixture
+tests/           Vitest 단위·컴포넌트 테스트, fixture (Sprint 0 실제 데이터 포함)
 e2e/             Playwright 브라우저 테스트
-docs/            아키텍처, 결정 기록, 로드맵, 스프린트 보고서
+docs/            아키텍처, 결정 기록, 로드맵, 스프린트 보고서, 스크린샷
+.github/         GitHub Actions CI (pnpm verify와 같은 구성)
 ```
 
 ## 문서
@@ -76,9 +79,12 @@ docs/            아키텍처, 결정 기록, 로드맵, 스프린트 보고서
 - [docs/DECISIONS.md](docs/DECISIONS.md): 기술적 결정과 근거 (확정 / 제안 / 미해결)
 - [docs/ROADMAP.md](docs/ROADMAP.md): 단계별 개발 현황
 - [docs/SPRINT_0_REPORT.md](docs/SPRINT_0_REPORT.md): Sprint 0 구현 및 검증 결과
+- [docs/SPRINT_1_REPORT.md](docs/SPRINT_1_REPORT.md): Sprint 1 구현 및 검증 결과
 - [CHANGELOG.md](CHANGELOG.md): 변경 이력
 
 ## 참고
 
 - `AGENTS.md`는 Next.js 16.4의 `next dev`가 자동으로 생성하는 파일입니다. Next.js 버전별 문서 위치를 안내합니다.
 - 로컬 저장 키: `prompter:v1:workspace` (명세), `prompter:v1:ui` (모드, 언어). 브라우저 개발자 도구에서 삭제하면 초기 상태로 돌아갑니다.
+  - 원본 보존용: `prompter:v1:workspace:corrupt-backup` (손상 데이터), `prompter:v1:workspace:pre-migration-backup` (마이그레이션 전), `prompter:v1:migration-log` (ID 변경 기록)
+- 안전 정책은 로컬 키워드 기반 기준선입니다. 한계는 [DECISIONS ADR-019](docs/DECISIONS.md)에 적었습니다.
