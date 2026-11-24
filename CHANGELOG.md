@@ -9,7 +9,7 @@
 - 컴파일러(`COMPILER_VERSION`): 0.1.0 / generic-en adapter: 0.1.0
 - 로컬 저장 envelope(`STORAGE_FORMAT_VERSION`): 1
 
-## [Unreleased] — Sprint 2-B.5: Expression, impression, makeup, clothing & accessories (구현 완료, 검토 대기)
+## [Unreleased] — Sprint 2-B.5: Expression, impression, makeup, clothing & accessories (구현 완료, 검토 대기 — PR #7, CI 통과)
 
 버전 변화: core 카탈로그 0.7.0 → **0.8.0**(속성 추가만, ID 변경 없음). ImageSpec 0.3.0, 카탈로그 형식 0.4.0, 컴파일러 0.4.0, 안전 정책 0.2.0은 그대로.
 
@@ -19,7 +19,7 @@
 - 적용 가능성: 메이크업 없음, 아이라인 없음, 의복 “없음”, 의복 종류별 세부, 플랫 굽, 안경 없음, 모자 없음 — 값 보존·복원
 - 경고 규칙 15개(미소 4, 입·치아 1, 눈·시선 1, 타이츠 비침 2, 액세서리 ‘없음’ + 다른 항목 7). 선택지 총 2,017개(속성별 중복 포함)
 - 테스트: `expression-makeup-catalog`(31), `clothing-catalog`(37), `accessories-catalog`(24), `component/wardrobe`(5), E2E `wardrobe`(데스크톱·모바일), 스크린샷 `docs/screenshots/sprint-2b5/`
-- 문서: `docs/catalogs/person/{expression,makeup,wardrobe,accessories}.md` 1.0.0 APPROVED, ADR-053·054, TD-12·13, `docs/SPRINT_2B5_REPORT.md`
+- 문서: `docs/catalogs/person/{expression,makeup,wardrobe,accessories}.md` 1.0.0 APPROVED, ADR-053·054, TD-12·13, `docs/SPRINT_2B5_REPORT.md`(CI 실측 포함 — 속성 테스트 2.67–4.02초, TD-11 우선순위 상향 권장)
 
 ### Changed
 - 컴파일 반복 계산 제거(ADR-054): 레지스트리 선택지 색인·`lineage` 메모이제이션, 적용 가능성·정책 제한을 컴파일당 1회 계산해 검증기와 공유, 텍스트별 안전 검사 결과 메모이제이션. 출력·진단·안전 결과는 동일

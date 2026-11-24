@@ -1,9 +1,10 @@
 # Sprint 2-B.5 보고서 — 표정·인상·메이크업·의상·액세서리
 
-- 상태: **구현 완료, 검토 대기** — 커밋·push 하지 않음
+- 상태: **구현 완료, 검토 대기** — 커밋 `72ad922`, [PR #7](https://github.com/nyfever007/prompt-helper/pull/7), CI 통과(push·pull_request). 병합하지 않음
 - 브랜치: `feature/sprint-2b5-expression-clothing` (기준 main `12a17ab`)
 - 내부 단계: 2-B.5A(표정·인상·매력·메이크업) → 2-B.5B(의상) → 2-B.5C(액세서리). 단계마다 관련 테스트를 실행했고 중간 승인 없이 진행했습니다.
 - 로컬 전체 검증: `pnpm verify` **종료 코드 0** — 단위·컴포넌트 684개 통과(32개 파일), 격리 검증 통과, E2E 53 통과 / 1 skip
+- CI: push run 45378407495 · pull_request run 45378419729 모두 success — 32개 파일 통과, 격리 검증 통과, E2E 53 통과 / 1 skip
 
 ## 1. 구현 결과
 
@@ -137,7 +138,17 @@ pnpm verify → exit 0
 
 - 최적화(ADR-054, 결과 동일): 레지스트리 선택지 색인과 `lineage` 메모이제이션, 적용 가능성·정책 제한을 컴파일당 1회 계산해 검증기와 공유, 1차 패스 활성 선택지 재사용, 짧은 텍스트의 안전 검사 결과 메모이제이션(전체 프롬프트는 매번 검사). 안전 정책·어휘·검사 범위는 바꾸지 않았습니다.
 - 시험 후 채택하지 않은 정규식 변형 3가지는 ADR-054에 기록했습니다.
-- 명세 1개 컴파일은 예열 후 약 0.6 ms입니다. main의 CI 실측(1.8 s)을 기준으로 이번 CI는 약 2.5 s로 예상합니다(제한 5 s). 남은 비용은 대부분 전체 프롬프트 안전 검사와 검증 반복이며, 테스트 표본 설계와 함께 **TD-11(Sprint 2-C)**로 유지합니다.
+- 명세 1개 컴파일은 예열 후 약 0.6 ms입니다.
+
+**CI 실측 (제한 5 s)** — 구현 당시에는 main의 CI 실측(1.8 s)을 기준으로 약 2.5 s를 예상했지만, 실제로는 실행마다 편차가 크고 pull_request 실행에서 여유가 1 s 미만이었습니다.
+
+| CI 실행 | 커밋 | 속성 테스트 |
+|---|---|---|
+| main 병합 후 (2-B.4, run 45368746568) | `12a17ab` | 1.8 s |
+| push (run 45378407495) | `72ad922` | 2.67 s |
+| pull_request (run 45378419729) | `72ad922` | **4.02 s** |
+
+같은 커밋에서도 실행 환경에 따라 1.5배 차이가 났습니다. 남은 비용은 대부분 전체 프롬프트 안전 검사와 검증 반복입니다. 카탈로그가 더 커지면(Sprint 2-B.6) 느린 실행에서 제한을 넘을 수 있으므로, **TD-11을 2-B.6 전에 처리할 것을 권장**합니다. 후보는 테스트 표본 설계 조정과 전체 프롬프트 안전 검사 비용 개선이며, 제한 시간 완화·테스트 약화·안전 정책 완화는 하지 않습니다.
 
 ### 기존 테스트 수정 (모두 범위 확장 반영이며 검증을 약화하지 않음)
 
@@ -152,7 +163,7 @@ pnpm verify → exit 0
 
 ## 7. 알려진 한계 및 기술 부채
 
-- **TD-11(갱신)**: 속성 테스트 시간이 main 대비 약 +35%(위 표). Sprint 2-C에서 표본 설계·전체 프롬프트 검사 비용을 검토합니다. 제한 시간은 늘리지 않았습니다.
+- **TD-11(갱신, 우선순위 상향 권장)**: 속성 테스트 시간이 같은 기기에서 main 대비 약 +35%, CI 실측 2.67–4.02 s(제한 5 s, 위 표). 2-B.6 전에 표본 설계·전체 프롬프트 검사 비용을 개선할 것을 권장합니다. 제한 시간은 늘리지 않았습니다.
 - **TD-12(신규)**: 기존 안전 어휘의 내의 표현 범위가 일관되지 않습니다(“underwear”·“bra”는 신호, “briefs”·“boxer shorts”·“shapewear”는 신호 없음). 미성년 인물의 “thermal underwear”(내복)는 차단되고 “briefs”는 통과합니다. 정책 변경이 필요해 이번에는 바꾸지 않았습니다.
 - **TD-13(신규)**: 의상 화면에서 의복마다 기본·보조 팔레트(55색)가 모두 펼쳐져 길어집니다(스크린샷 참고). Sprint 2-C UI 검토 대상입니다.
 - 여러 벌의 의복(반복 객체), 좌우 개별 액세서리, 액세서리 소재·보석 설정, 시선 방향·자세(2-B.6), RGB/HEX 직접 입력(Sprint 3), 시각 예시 이미지는 범위 밖입니다.
@@ -161,7 +172,7 @@ pnpm verify → exit 0
 
 ## 8. Git 상태
 
-- 브랜치 `feature/sprint-2b5-expression-clothing`(main `12a17ab`에서 분기), **커밋하지 않음, push하지 않음**
-- 변경: 추적 파일 25개 수정(+604 / −119, 이 보고서 작성 전 `git diff --stat` 기준): 소스 5개(카탈로그 통합 `core.ts` + 최적화 `registry.ts`·`compiler.ts`·`evaluate.ts`·`specValidator.ts`), 테스트 9개, 문서 11개
+- 브랜치 `feature/sprint-2b5-expression-clothing`(main `12a17ab`에서 분기). 구현 커밋 `72ad922`(48개 파일), PR #7, CI 통과. CI 실측 반영은 후속 문서 커밋. **병합하지 않음**
+- 변경(구현 커밋 기준): 추적 파일 25개 수정(+604 / −119, 이 보고서 작성 전 `git diff --stat` 기준): 소스 5개(카탈로그 통합 `core.ts` + 최적화 `registry.ts`·`compiler.ts`·`evaluate.ts`·`specValidator.ts`), 테스트 9개, 문서 11개
 - 새 파일: `src/domain/catalog/catalogs/person/{expression-makeup,clothing,accessories}.ts`, `tests/unit/{expression-makeup,clothing,accessories}-catalog.test.ts`, `tests/component/wardrobe.test.tsx`, `e2e/wardrobe.spec.ts`, `docs/screenshots/sprint-2b5/`(14개), `docs/SPRINT_2B5_REPORT.md`
 - 생성물은 `.gitignore`로 제외. 비밀 값·유료 API·이미지 API 호출 없음. Sprint 2-B.6은 시작하지 않았습니다.
