@@ -216,3 +216,29 @@ describe("safety evaluation pre-filter (Sprint 2-B.2 performance) gives identica
     }
   });
 });
+
+describe("safety evaluation pre-filter with many texts at once gives identical per-source results", () => {
+  it("for multi-text inputs, every (signal, source) pair equals a per-text reference scan", async () => {
+    const { baselinePolicy, evaluateSafety, matchEntry, normalizeForSafety, getCoreRegistry, isOptionAttribute } = await import("@/domain");
+    const probe = { ...baselinePolicy, rules: baselinePolicy.signals.map((sg) => ({ id: sg.id, category: "probe", severity: "warn" as const, allOf: [[sg.id]], message: { en: "" }, guidance: { en: "" } })) };
+    const core = getCoreRegistry();
+    const corpus = [
+      ...baselinePolicy.signals.flatMap((sg) => sg.lexicon.flatMap((e) => [e.term ?? "", ...(e.except ?? [])])),
+      "a 12", "years old", "aged", "15", "17", "세", "nude", "lipstick", "baby", "blue",
+      ...core.attributes().flatMap((a) => (isOptionAttribute(a) ? a.options.map((o) => o.prompt.text) : a.type === "number" ? (a.bands ?? []).map((b) => b.text) : [])),
+    ].filter(Boolean);
+    // deterministic groups of 1–40 texts, including fragments that only match across a boundary
+    let seed = 7;
+    const rand = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+    for (let g = 0; g < 300; g++) {
+      const texts = Array.from({ length: 1 + Math.floor(rand() * 40) }, (_, i) => ({ attributeId: `t${i}`, text: corpus[Math.floor(rand() * corpus.length)]! }));
+      const reference = new Set(
+        texts.flatMap((t) => baselinePolicy.signals.filter((sg) => sg.lexicon.some((e) => matchEntry(e, normalizeForSafety(t.text)).length > 0)).map((sg) => `${sg.id}|${t.attributeId}`)),
+      );
+      const actual = new Set(
+        evaluateSafety({ tags: [], texts }, probe).findings.flatMap((f) => f.signals.flatMap((s) => s.sources.map((src) => `${s.signalId}|${src.attributeId}`))),
+      );
+      expect([...actual].sort()).toEqual([...reference].sort());
+    }
+  });
+});
