@@ -12,10 +12,16 @@ export interface ConditionContext {
   intervalMismatch?(spec: ImageSpec, quantityAttributeId: string, groupAttributeId: string): boolean;
 }
 
-const selectedLineage = (spec: ImageSpec, attributeId: string, ctx?: ConditionContext): string[] | undefined => {
-  const selection = spec.selections[attributeId];
-  if (!selection) return undefined;
-  return selectedOptionIds(selection.value).flatMap((id) => (ctx ? [...ctx.lineage(attributeId, id)] : [id]));
+/** Does any selected option (or one of its ancestors) appear in `optionIds`? Allocation-free; same result as scanning the flattened lineage. */
+const lineageHits = (ids: readonly string[], attributeId: string, optionIds: readonly string[], ctx?: ConditionContext): boolean => {
+  for (const id of ids) {
+    if (!ctx) {
+      if (optionIds.includes(id)) return true;
+      continue;
+    }
+    for (const x of ctx.lineage(attributeId, id)) if (optionIds.includes(x)) return true;
+  }
+  return false;
 };
 
 export const evaluateCondition = (condition: Condition, spec: ImageSpec, ctx?: ConditionContext): boolean => {
@@ -26,13 +32,15 @@ export const evaluateCondition = (condition: Condition, spec: ImageSpec, ctx?: C
       return spec.selections[condition.attributeId] === undefined;
     case "anyOf":
     case "noneOf": {
-      const lineage = selectedLineage(spec, condition.attributeId, ctx);
-      if (lineage === undefined) return condition.whenUnset === "pass";
-      const hit = lineage.some((id) => condition.optionIds.includes(id));
+      const selection = spec.selections[condition.attributeId];
+      if (!selection) return condition.whenUnset === "pass";
+      const ids = selectedOptionIds(selection.value);
+      const hit = lineageHits(ids, condition.attributeId, condition.optionIds, ctx);
       if (condition.op === "anyOf") return hit;
-      // A custom entry is a value that is none of the listed options.
-      const hasCustom = selectedCustomEntries(spec.selections[condition.attributeId]?.value).length > 0;
-      return !hit && (lineage.length > 0 || hasCustom);
+      // A custom entry is a value that is none of the listed options. (Every selected id has a
+      // non-empty lineage, so “some lineage” is the same as “some selected option”.)
+      const hasCustom = selectedCustomEntries(selection.value).length > 0;
+      return !hit && (ids.length > 0 || hasCustom);
     }
     case "derived":
       return ctx?.derivedFact ? condition.anyOf.includes(ctx.derivedFact(condition.fact, spec)) : false;

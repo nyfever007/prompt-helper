@@ -16,5 +16,7 @@ const SCRIPTS: ReadonlyArray<[string, RegExp]> = [
   ["Devanagari", /\p{Script=Devanagari}/u],
 ];
 
+// Printable ASCII contains none of the scripts above (fast path, same result).
+const ASCII_ONLY = /^[\x00-\x7f]*$/;
 export const detectNonLatinScripts = (text: string): string[] =>
-  SCRIPTS.filter(([, re]) => re.test(text)).map(([name]) => name);
+  ASCII_ONLY.test(text) ? [] : SCRIPTS.filter(([, re]) => re.test(text)).map(([name]) => name);
