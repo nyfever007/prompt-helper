@@ -42,6 +42,15 @@ const CLOTHING_IDS = [
   ...["type", "primary_color", "secondary_color", "material", "heel_height", "heel_type", "toe_shape", "closure"].map((x) => `person.clothing.footwear.${x}`),
   ...["type", "primary_color", "pattern", "length", "opacity", "thickness"].map((x) => `person.clothing.hosiery.${x}`),
 ];
+/** Sprint 2-B.6 pose (478–499), camera (1605–1675) and lighting (2025–2095), listed explicitly. */
+const POSE_IDS = [
+  "posture", "body_orientation", "torso_rotation", "torso_lean", "weight_shift", "balance", "tension", "head_direction", "head_tilt", "chin", "gaze_direction",
+  "arms", "elbows", "hand_position", "hand_gesture", "legs", "knees", "feet", "action", "speed", "phase", "support",
+].map((x) => `person.pose.${x}`);
+const CAMERA_IDS = [
+  "camera.distance", "camera.roll", "composition.layout", "composition.negative_space", "composition.subject_position", "camera.lens_type", "camera.focal_length",
+  "camera.projection", "camera.perspective", "camera.aperture", "camera.depth_of_field", "camera.focus_target", "camera.focus_sharpness", "camera.bokeh", "camera.motion_blur",
+];
 const ACCESSORY_IDS = [
   "eyewear", "frame_shape", "frame_color", "hat", "hat_color", "hair_accessories", "earrings", "necklace", "bracelets",
   "rings", "watch", "belt", "bag", "scarf", "gloves", "necktie", "piercings", "decorative",
@@ -59,10 +68,10 @@ const FACIAL_IDS = [
   ...["shape", "mouth_width", "upper_thickness", "lower_thickness", "ratio", "cupids_bow", "corners", "natural_color"].map((x) => `person.lips.${x}`),
 ];
 
-describe("8. core catalog 0.8.0", () => {
+describe("8. core catalog 0.9.0", () => {
   it("is valid, versioned and declares its format", () => {
     expect(core.id).toBe("prompter.core");
-    expect(core.version).toBe("0.8.0");
+    expect(core.version).toBe("0.9.0");
     expect(coreCatalog.formatVersion).toBe("0.4.0");
   });
 
@@ -70,6 +79,7 @@ describe("8. core catalog 0.8.0", () => {
     expect(core.attributesForTier("basic").map((a) => a.id)).toEqual([
       "intent.description",
       "subject.kind",
+      "person.appearance.direction", // Sprint 2-B.6: right after the subject (shown once the subject is a person)
       "style.preset",
       "composition.framing",
       "composition.view_direction",
@@ -111,17 +121,30 @@ describe("8. core catalog 0.8.0", () => {
       ...EXPRESSION_MAKEUP_IDS,
       ...CLOTHING_IDS,
       ...ACCESSORY_IDS,
+      ...POSE_IDS,
       "style.medium",
       "style.realism",
       "style.technique",
       "style.movement",
       "style.aesthetic",
+      ...CAMERA_IDS,
       "lighting.source",
       "lighting.direction",
+      "lighting.key_height",
       "lighting.softness",
       "lighting.intensity",
       "lighting.color_temperature",
+      "lighting.key_color",
       "lighting.contrast",
+      "lighting.fill",
+      "lighting.rim",
+      "lighting.rim_color",
+      "lighting.ambient",
+      "lighting.shadow_strength",
+      "lighting.shadow_edge",
+      "lighting.reflected",
+      "lighting.volumetric",
+      "lighting.source_visibility",
     ]);
   });
 
@@ -151,8 +174,9 @@ describe("8. core catalog 0.8.0", () => {
   // Innerwear (Sprint 2-B.5) is neutral garment wording, but the EXISTING lexicon treats
   // “underwear” / “bra” as appeal wording. The policy is not relaxed and the phrases are not
   // reworded around it: combined with minor/ambiguous-age wording they must keep blocking.
-  const MINOR_PROTECTED = new Set(["thermal", "sports_bra", "everyday_bra", "full_coverage"].map((o) => `person.clothing.innerwear.type/${o}`));
-  it("every option phrase in the catalog alone triggers no safety signal (innerwear: exactly the existing minor-protection block)", () => {
+  // Sprint 2-B.6: the appearance direction “sexy” is sexual-appeal wording by design — same existing protection.
+  const MINOR_PROTECTED = new Set([...["thermal", "sports_bra", "everyday_bra", "full_coverage"].map((o) => `person.clothing.innerwear.type/${o}`), "person.appearance.direction/sexy"]);
+  it("every option phrase in the catalog alone triggers no safety signal (innerwear and appearance “sexy”: exactly the existing minor-protection block)", () => {
     const flagged: string[] = [];
     for (const a of core.attributes()) {
       if (!isOptionAttribute(a)) continue;

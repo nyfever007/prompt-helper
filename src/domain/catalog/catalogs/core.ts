@@ -1,4 +1,8 @@
 import type { CatalogInput, Condition } from "../schema";
+import { appearanceAttribute } from "./person/appearance";
+import { cameraAttributes, cameraRules } from "./shared/camera";
+import { lightingAttributes, lightingRules } from "./shared/lighting";
+import { POSE_CATEGORY_DESCRIPTION, poseAttributes, poseCategories, poseRules } from "./person/pose";
 import { ACCESSORIES_CATEGORY_DESCRIPTION, accessoriesAttributes, accessoriesRules } from "./person/accessories";
 import { BODY_CATEGORY_DESCRIPTION, bodyAttributes, bodyCategories } from "./person/body";
 import { WARDROBE_CATEGORY_DESCRIPTION, clothingAttributes, clothingRules, wardrobeCategories } from "./person/clothing";
@@ -15,6 +19,7 @@ const APPROVED_PERSON_AREAS: Record<string, { en: string; ko: string }> = {
   ...EXPRESSION_MAKEUP_DESCRIPTIONS,
   person_wardrobe: WARDROBE_CATEGORY_DESCRIPTION,
   person_accessories: ACCESSORIES_CATEGORY_DESCRIPTION,
+  person_pose: POSE_CATEGORY_DESCRIPTION,
 };
 
 /**
@@ -28,6 +33,8 @@ const APPROVED_PERSON_AREAS: Record<string, { en: string; ko: string }> = {
  * relative order unchanged, prompts byte-identical).
  * 0.7.0 Sprint 2-B.4 (Person › Body — 45 attributes in 7 subcategories, approved; order 309–353).
  * 0.8.0 Sprint 2-B.5 (Person › Expression & impression, Makeup, Wardrobe, Accessories — approved; order 354–477).
+ * 0.9.0 Sprint 2-B.6 (Appearance direction 195 — subject 200 → 190; Pose & action 478–499; Camera 1605–1675;
+ * Lighting 2025–2095 + options added to the six lighting properties — no ID changes, prompts unchanged).
  *
  * Every list here is an extensible STARTING POINT, not a final scope. No option
  * count limits are implied; add entries as data and bump `version`.
@@ -52,7 +59,7 @@ const NON_ABSTRACT = [...ORIENTED_SUBJECTS, "landscape"];
 export const coreCatalog = {
   formatVersion: "0.4.0",
   id: "prompter.core",
-  version: "0.8.0",
+  version: "0.9.0",
   title: { en: "Prompter core catalog", ko: "Prompter 기본 카탈로그" },
   groups: [
     { id: "what", order: 0, label: { en: "What to depict", ko: "무엇을 그릴까요" } },
@@ -131,6 +138,7 @@ export const coreCatalog = {
     ...bodyCategories,
     ...expressionCategories,
     ...wardrobeCategories,
+    ...poseCategories,
     { id: "shared", order: 40, status: "approved", label: { en: "Shared", ko: "공통" } },
     { id: "shared_camera", parentId: "shared", order: 41, status: "approved", label: { en: "Camera", ko: "카메라" }, docPath: "docs/catalogs/shared/camera.md" },
     { id: "shared_lighting", parentId: "shared", order: 42, status: "approved", label: { en: "Lighting", ko: "조명" }, docPath: "docs/catalogs/shared/lighting.md" },
@@ -167,7 +175,7 @@ export const coreCatalog = {
       groupId: "what",
       type: "single",
       tier: "basic",
-      order: 200,
+      order: 190, // 200 → 190 in 0.9.0 so the appearance direction (195) sits right after it; relative order unchanged
       label: { en: "Main subject", ko: "피사체" },
       description: {
         en: "What kind of subject the image is about. Other options adapt to it. No appearance details are added.",
@@ -697,21 +705,23 @@ export const coreCatalog = {
         ["lighting.source", 2010, { en: "Light source", ko: "광원" }, "Light source: {value}.", [
           ["sun", "Sun", "태양", "direct sunlight"], ["daylight_sky", "Sky / diffuse daylight", "하늘광 (확산광)", "diffuse skylight"], ["moon", "Moon", "달", "moonlight"],
           ["studio", "Studio lights", "스튜디오 조명", "studio lights"], ["practical", "Lamps / practical lights", "실내 조명기구", "practical lamps"], ["neon", "Neon", "네온", "neon signs"], ["fire", "Fire / candles", "불 / 촛불", "firelight"],
+          // 0.9.0 (Sprint 2-B.6): added options; existing ids and phrases unchanged
+          ["softbox", "Softbox", "소프트박스", "softbox lighting"], ["led", "LED light", "LED 조명", "LED lighting"], ["ambient_artificial", "Ambient artificial light", "인공 환경광", "ambient artificial light"],
         ]],
         ["lighting.direction", 2020, { en: "Light direction", ko: "빛의 방향" }, "Light direction: {value}.", [
-          ["front", "Front", "정면광", "front lighting"], ["side", "Side", "측광", "side lighting"], ["back", "Back", "역광", "backlighting"], ["top", "Top", "탑 라이트", "top lighting"], ["bottom", "Below", "아래에서", "lighting from below"], ["ambient", "Ambient / all around", "전방위 (확산)", "ambient all-around light"],
+          ["front", "Front", "정면광", "front lighting"], ["side", "Side", "측광", "side lighting"], ["three_quarter", "Three-quarter", "3/4 측광", "three-quarter lighting"], ["back", "Back", "역광", "backlighting"], ["top", "Top", "탑 라이트", "top lighting"], ["bottom", "Below", "아래에서", "lighting from below"], ["ambient", "Ambient / all around", "전방위 (확산)", "ambient all-around light"],
         ]],
         ["lighting.softness", 2030, { en: "Softness / hardness", ko: "빛의 질감 (부드러움)" }, "Light quality: {value}.", [
-          ["soft", "Soft", "부드러운", "soft light"], ["medium", "Medium", "중간", "moderately soft light"], ["hard", "Hard", "딱딱한", "hard light"],
+          ["very_soft", "Very soft", "아주 부드러운", "very soft light"], ["soft", "Soft", "부드러운", "soft light"], ["medium", "Medium", "중간", "moderately soft light"], ["hard", "Hard", "딱딱한", "hard light"], ["very_hard", "Very hard", "아주 딱딱한", "very hard light"],
         ]],
         ["lighting.intensity", 2040, { en: "Intensity", ko: "밝기" }, "Light intensity: {value}.", [
-          ["dim", "Dim", "어두운", "dim"], ["moderate", "Moderate", "보통", "moderate"], ["bright", "Bright", "밝은", "bright"],
+          ["very_dim", "Very dim", "아주 어두운", "very dim"], ["dim", "Dim", "어두운", "dim"], ["moderate", "Moderate", "보통", "moderate"], ["bright", "Bright", "밝은", "bright"], ["very_bright", "Very bright", "아주 밝은", "very bright"],
         ]],
         ["lighting.color_temperature", 2050, { en: "Color temperature", ko: "색온도" }, "Color temperature: {value}.", [
-          ["warm", "Warm", "따뜻한", "warm"], ["neutral", "Neutral", "중립", "neutral"], ["cool", "Cool", "차가운", "cool"], ["mixed_color", "Mixed colors", "여러 색", "mixed colored light"],
+          ["very_cool", "Very cool", "아주 차가운", "very cool"], ["cool", "Cool", "차가운", "cool"], ["neutral", "Neutral", "중립", "neutral"], ["warm", "Warm", "따뜻한", "warm"], ["very_warm", "Very warm", "아주 따뜻한", "very warm"], ["mixed_color", "Mixed colors", "여러 색", "mixed colored light"],
         ]],
         ["lighting.contrast", 2060, { en: "Contrast", ko: "명암 대비" }, "Lighting contrast: {value}.", [
-          ["low", "Low", "낮음", "low contrast"], ["medium", "Medium", "중간", "medium contrast"], ["high", "High", "높음", "high contrast"],
+          ["very_low", "Very low", "아주 낮음", "very low contrast"], ["low", "Low", "낮음", "low contrast"], ["medium", "Medium", "중간", "medium contrast"], ["high", "High", "높음", "high contrast"], ["very_high", "Very high", "아주 높음", "very high contrast"],
         ]],
       ] as const
     ).map(([id, order, label, template, options]) => ({
@@ -728,7 +738,12 @@ export const coreCatalog = {
       options: options.map(([oid, en, ko, text]) => ({ id: oid, label: { en, ko }, prompt: { text } })),
     })),
 
-    // ── Person › Identity (Sprint 2-B.1, order 201–216 → right after the subject, 200) ──
+    // ── Person › Appearance direction (Sprint 2-B.6, order 195 → right after the subject, 190; Basic + Detailed) ──
+    appearanceAttribute,
+    // ── Camera (Sprint 2-B.6, order 1605–1675) and lighting (2025–2095) additions ──
+    ...cameraAttributes,
+    ...lightingAttributes,
+    // ── Person › Identity (Sprint 2-B.1, order 201–216) ──
     ...identityAttributes,
     // ── Person › Face, Eyes, Eyebrows, Nose, Lips (Sprint 2-B.2, order 217–263) ──
     ...facialAttributes,
@@ -742,6 +757,8 @@ export const coreCatalog = {
     ...clothingAttributes,
     // ── Person › Accessories (Sprint 2-B.5C, order 460–477) ──
     ...accessoriesAttributes,
+    // ── Person › Pose & action (Sprint 2-B.6, order 478–499) ──
+    ...poseAttributes,
 
     // ── Output ──────────────────────────────────────────────────────────────
     {
@@ -894,6 +911,9 @@ export const coreCatalog = {
     ...expressionMakeupRules,
     ...clothingRules,
     ...accessoriesRules,
+    ...poseRules,
+    ...cameraRules,
+    ...lightingRules,
   ],
   migrations: [
     {
@@ -945,6 +965,12 @@ export const coreCatalog = {
       fromVersion: "0.7.0",
       toVersion: "0.8.0",
       // No ID changes: 0.8.0 adds Person › Expression & impression, Makeup, Wardrobe and Accessories.
+      changes: [],
+    },
+    {
+      fromVersion: "0.8.0",
+      toVersion: "0.9.0",
+      // No ID changes: 0.9.0 adds appearance direction, pose, camera and lighting attributes and options.
       changes: [],
     },
   ],

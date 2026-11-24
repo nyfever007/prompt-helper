@@ -280,8 +280,13 @@ describe("Unset / Selected / Excluded states (D3)", () => {
   it("is generic: any attribute of any catalog can be excluded (domain), output toggle UI is opt-in per attribute", () => {
     const spec = setPromptExclusion(buildSpec(core, [["subject.kind", single("person")], ["style.preset", single("anime")]]), "style.preset", true);
     expect(compilePrompt(spec, core).prompt).toBe("Main subject: a single person.");
-    // opt-in per attribute: person attributes (identity 2-B.1, facial 2-B.2) only — no Basic/shared attribute shows the toggle
-    expect(core.attributes().filter((a) => a.outputToggle).every((a) => a.id.startsWith("person."))).toBe(true);
+    // opt-in per attribute: person attributes and the Detailed camera/lighting attributes added in 2-B.6.
+    // The Sprint 1 / 2-A Basic attributes and the six original lighting properties keep their behavior (no toggle).
+    const shared = core.attributes().filter((a) => a.outputToggle && !a.id.startsWith("person.")).map((a) => a.id);
+    expect(shared.every((id) => /^(camera|composition|lighting)\./.test(id) && core.getAttribute(id)!.tier === "detailed")).toBe(true);
+    for (const id of ["composition.framing", "composition.view_direction", "camera.angle", "lighting.preset", "lighting.source", "lighting.direction", "lighting.softness", "lighting.intensity", "lighting.color_temperature", "lighting.contrast", "style.preset", "subject.kind"]) {
+      expect(core.getAttribute(id)!.outputToggle, id).toBeUndefined();
+    }
   });
   it("Metadata role never emits prompt text but is still validated and safety-checked", () => {
     const c = cloneCore();

@@ -1,8 +1,8 @@
 # 표정 및 시각적 인상 (Expression & Appeal) — 카탈로그 설계
 
-- 버전: 1.0.0
+- 버전: 1.1.0
 - 설계 상태: **APPROVED** — Sprint 2-B.5 개발 승인서(2-B.5A)의 초기 제품 카탈로그 (실제 사용·이미지 결과에 따른 후속 개선 허용)
-- 구현: `src/domain/catalog/catalogs/person/expression-makeup.ts` (core 카탈로그 0.8.0), 카테고리 `person_expression` + 하위 분류 2개(표정 10, 인상 및 매력 8)
+- 구현: `src/domain/catalog/catalogs/person/expression-makeup.ts` (core 카탈로그 0.8.0; 외모 방향은 0.9.0 `appearance.ts`), 카테고리 `person_expression` + 하위 분류 2개(표정 10, 인상 및 매력 8 + 외모 방향 1 — Sprint 2-B.6, §2-1)
 - 공통 규격: [../CATALOG_DESIGN_STANDARD.md](../CATALOG_DESIGN_STANDARD.md)
 
 ## 1. 설계 목적과 원칙
@@ -48,6 +48,20 @@
 | 370 | `person.impression.androgyny` | 중성적 인상 / Androgynous impression | 상대 슬라이더 (1–5) | `Androgynous appearance: {value}.` | 1 은은함(Subtle) → subtle; 2 약간(Slight) → slight; 3 보통(Moderate) → moderate; 4 뚜렷함(Notable) → notable; 5 아주 뚜렷함(Pronounced) → pronounced | — | androgynous, 중성적, 젠더리스 |
 | 371 | `person.impression.maturity` | 성숙한 인상 / Mature impression | 단일 · 칩 | `Apparent maturity: {value}.` | 앳된(Youthful-looking) → youthful-looking; 중간(Neutral) → neutral; 성숙한(Mature-looking) → mature-looking; 아주 성숙한(Highly mature-looking) → highly mature-looking | — | maturity, 성숙, 동안, 노안 |
 
+## 2-1. 외모 방향 (Appearance direction) — Sprint 2-B.6
+
+원하는 전체적인 외모 방향을 먼저 정하는 속성입니다(`src/domain/catalog/catalogs/person/appearance.ts`).
+
+- Basic에서는 피사체를 “인물 (1인)”로 고르면 피사체 바로 다음에 나타나고, Detailed에서는 인상 및 매력 화면 맨 앞에 있습니다. 같은 속성 하나이므로 두 화면이 같은 값을 공유합니다. 피사체가 인물이 아니거나 미선택이면 적용되지 않습니다(값 보존).
+- 출력은 피사체 바로 다음 독립 문장(“Appearance direction: beautiful, elegant.”)입니다. 피사체 문구와 합치는 방식은 컴파일러 변경이 필요해 쓰지 않았습니다. 미설정이면 기존 출력이 그대로입니다.
+- 해석적 속성이며 다른 값을 자동 설정하지 않고 성별로 제한하지 않습니다(“잘생긴”·“아름다운” 모두 누구에게나).
+- 의미가 같은 인상 값은 기존 `covers` 규칙으로 한 번만 출력합니다: 매력적인 ↔ 시각적 매력도 “매력적인”, 눈길을 끄는 ↔ “눈에 띄게 매력적인”, 우아한·몽환적인 ↔ 분위기 “우아한”·“몽환적인”, 세련된 ↔ 전체 인상 “세련된”. 저장된 값은 바뀌지 않습니다.
+- 안전: “섹시한(sexy)”은 기존 어휘의 성적 매력 표현이며 `appeal.suggestive` 태그도 가집니다. 미성년·모호 연령과 함께면 기존 규칙으로 차단(프롬프트 제외 값도 검사), 연령 신호가 없으면 기존 정책대로 차단하지 않습니다. 아름다운·잘생긴·예쁜·귀여운·사랑스러운 등은 그 자체로 신호가 없습니다. 외모 방향은 연령 판단을 바꾸지 않습니다.
+
+| 순서 | Attribute ID | 한국어 / English | 단계 | 입력 | 문장 틀 | 선택지 또는 구간 → 프롬프트 표현 | 적용 조건 | 검색 별칭 |
+|---|---|---|---|---|---|---|---|---|
+| 195 | `person.appearance.direction` | 외모 방향 / Appearance direction | Basic+Detailed | 다중 · 검색 목록 + 사용자 정의 | `Appearance direction: {value}.` | 아름다운(Beautiful) → beautiful; 잘생긴(Handsome) → handsome; 예쁜(Pretty) → pretty; 귀여운(Cute) → cute; 눈부시게 아름다운(Stunning) → stunning; 섹시한(Sexy) → sexy; 빼어나게 아름다운(Gorgeous) → gorgeous; 매력적인(Attractive) → attractive; 호감 가는 매력(Charming) → charming; 우아한(Elegant) → elegant; 눈길을 끄는(Striking) → striking; 세련된(Refined) → refined; 사랑스러운(Adorable) → adorable; 투박하고 강인한(Rugged) → rugged; 몽환적인(Ethereal) → ethereal; 중성적인(Androgynous) → androgynous; 평범한 외모(Ordinary-looking) → ordinary-looking; 개성 있는 외모(Distinctive) → distinctive | `subject.kind` ∈ person | appearance, look, 외모, 외모 방향, 미모 |
+
 ## 3. 충돌 안내 (비차단, 값 자동 변경 없음)
 
 | 규칙 ID | 관련 속성 | 안내 문구 |
@@ -69,5 +83,6 @@
 
 | 날짜 | 버전 | 변경 | 승인 |
 |---|---|---|---|
+| 2026-11-25 | 1.1.0 | 외모 방향 추가 (Sprint 2-B.6) | Sprint 2-B.6 개발 승인서 |
 | 2026-11-24 | 1.0.0 | 승인된 초기 카탈로그 구현 (Sprint 2-B.5) | Sprint 2-B.5 개발 승인서 |
 | 2026-11-24 | draft-0 | 문서 구조 생성 (Sprint 2-A) | — |

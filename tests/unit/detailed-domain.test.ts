@@ -36,11 +36,12 @@ const num = (value: number): SelectionValue => ({ kind: "number", value });
 const fixture = (dir: string, name: string) => readFileSync(join(__dirname, "../fixtures", dir, name), "utf8");
 
 describe("product exposure is separate from catalog expressiveness (D1)", () => {
-  it("core: Detailed edits every approved Basic attribute + the 6 lighting properties + the 277 person attributes (identity 16, facial 47, skin/hair 45, body 45, expression/makeup 34, wardrobe 72, accessories 18), nothing else", () => {
+  it("core: Detailed edits every approved Basic attribute + the camera (15 new) and lighting (6 + 11 new) attributes + the 300 person attributes (appearance 1, identity 16, facial 47, skin/hair 45, body 45, expression/makeup 34, wardrobe 72, accessories 18, pose 22), nothing else", () => {
     const ids = core.exposedAttributes("detailed").map((a) => a.id);
     expect(ids).toEqual([
       "intent.description",
       "subject.kind",
+      "person.appearance.direction",
       "person.identity.entity_type",
       "person.identity.species",
       "person.identity.character_origin",
@@ -57,21 +58,28 @@ describe("product exposure is separate from catalog expressiveness (D1)", () => 
       "person.identity.narrative_role",
       "person.identity.social_status",
       "person.identity.description",
-      ...core.attributes().filter((a) => /^person\.(face|eyes|eyebrows|nose|lips|skin|hair|facial_hair|body|expression|impression|makeup|clothing|accessories)\./.test(a.id)).map((a) => a.id),
+      ...core.attributes().filter((a) => /^person\.(face|eyes|eyebrows|nose|lips|skin|hair|facial_hair|body|expression|impression|makeup|clothing|accessories|pose)\./.test(a.id)).map((a) => a.id),
       "style.preset",
       "composition.framing",
       "composition.view_direction",
       "camera.angle",
+      // Sprint 2-B.6 camera additions (order 1605–1675)
+      "camera.distance", "camera.roll", "composition.layout", "composition.negative_space", "composition.subject_position", "camera.lens_type", "camera.focal_length",
+      "camera.projection", "camera.perspective", "camera.aperture", "camera.depth_of_field", "camera.focus_target", "camera.focus_sharpness", "camera.bokeh", "camera.motion_blur",
       "scene.setting",
       "scene.background",
       "mood.tone",
       "lighting.preset",
       "lighting.source",
       "lighting.direction",
+      "lighting.key_height",
       "lighting.softness",
       "lighting.intensity",
       "lighting.color_temperature",
+      "lighting.key_color",
       "lighting.contrast",
+      // Sprint 2-B.6 lighting additions (order 2065–2095)
+      "lighting.fill", "lighting.rim", "lighting.rim_color", "lighting.ambient", "lighting.shadow_strength", "lighting.shadow_edge", "lighting.reflected", "lighting.volumetric", "lighting.source_visibility",
       "output.aspect_ratio",
     ]);
     // independent style axes exist as data but are deferred to Sprint 4
@@ -82,15 +90,15 @@ describe("product exposure is separate from catalog expressiveness (D1)", () => 
     expect(core.exposedAttributes("basic").map((a) => a.id)).toEqual(core.attributesForTier("basic").map((a) => a.id));
   });
 
-  it("core: Identity (2-B.1), Face/Eyes/Eyebrows/Nose/Lips (2-B.2), Skin/Hair/Facial hair (2-B.3), Body (2-B.4), Expression/Makeup/Wardrobe/Accessories (2-B.5) are approved; only Pose stays DRAFT structure", () => {
+  it("core: Identity (2-B.1), Face/Eyes/Eyebrows/Nose/Lips (2-B.2), Skin/Hair/Facial hair (2-B.3), Body (2-B.4), Expression/Makeup/Wardrobe/Accessories (2-B.5) and Pose (2-B.6) are approved — no person area is DRAFT any more", () => {
     const person = core.categories.filter((c) => c.parentId === "person");
     expect(person.map((c) => c.id)).toEqual([
       "person_identity", "person_face", "person_eyes", "person_eyebrows", "person_nose", "person_lips", "person_skin",
       "person_hair", "person_facial_hair", "person_body", "person_expression", "person_makeup", "person_wardrobe", "person_accessories", "person_pose",
     ]);
     expect(core.getCategory("person")?.status).toBe("approved");
-    const approved: Record<string, number> = { person_identity: 16, person_face: 10, person_eyes: 13, person_eyebrows: 8, person_nose: 8, person_lips: 8, person_skin: 16, person_hair: 23, person_facial_hair: 6, person_body: 45, person_expression: 18, person_makeup: 16, person_wardrobe: 72, person_accessories: 18 };
-    expect(Object.values(approved).reduce((a, b) => a + b, 0)).toBe(277); // cumulative person attributes
+    const approved: Record<string, number> = { person_identity: 16, person_face: 10, person_eyes: 13, person_eyebrows: 8, person_nose: 8, person_lips: 8, person_skin: 16, person_hair: 23, person_facial_hair: 6, person_body: 45, person_expression: 19 /* incl. appearance direction (2-B.6) */, person_makeup: 16, person_wardrobe: 72, person_accessories: 18, person_pose: 22 };
+    expect(Object.values(approved).reduce((a, b) => a + b, 0)).toBe(300); // cumulative person attributes
     for (const c of person) {
       expect(c.docPath).toMatch(/^docs\/catalogs\/person\/.+\.md$/);
       const inSubtree = core.attributes().filter((a) => a.categoryId !== undefined && core.categoryPath(a.categoryId).includes(c.id));
@@ -116,6 +124,8 @@ describe("product exposure is separate from catalog expressiveness (D1)", () => 
 
   it("an approved attribute inside a draft category is not exposed", () => {
     const c = cloneCore();
+    // No product person area is draft any more (2-B.6): make one draft in this clone only.
+    c.categories = c.categories!.map((cat) => (cat.id === "person_pose" ? { ...cat, status: "draft" as const } : cat));
     c.attributes.push({ id: "x.face.test", domain: "person", status: "approved", categoryId: "person_pose", type: "text", tier: "detailed", order: 500, maxLength: 10, label: { en: "t" }, prompt: { template: "{value}" } });
     const reg = CatalogRegistry.createOrThrow(c);
     expect(reg.exposedAttributes("detailed").map((a) => a.id)).not.toContain("x.face.test");
@@ -139,7 +149,7 @@ describe("data-driven categories", () => {
     expect(byId("person").applicable).toBe(false); // landscape subject
     expect(byId("person_face").applicable).toBe(false);
     expect(byId("person_face").setCount).toBe(1); // value kept even when not applicable
-    expect(byId("person_pose").approved).toBe(false); // draft in both the product and the fixture catalog
+    expect(byId("person_pose").approved).toBe(false); // draft in the fixture catalog only (approved in the product since 2-B.6)
   });
 
   it("warning and block badges follow diagnostics for attributes in the subtree", () => {
@@ -486,7 +496,7 @@ describe("ImageSpec 0.2.0 compatibility (D2)", () => {
     expect(r.status).toBe("valid");
     if (r.status !== "valid") return;
     expect(r.spec.schemaVersion).toBe("0.3.0"); // migrated 0.1.0 → 0.2.0 → 0.3.0 (version-only steps)
-    expect(r.spec.catalog).toEqual({ id: "prompter.core", version: "0.8.0" });
+    expect(r.spec.catalog).toEqual({ id: "prompter.core", version: "0.9.0" });
     expect(r.spec.selections).toEqual(raw.selections);
     expect(r.migrations).toEqual([]);
     expect(r.diagnostics.filter((d) => d.severity !== "info")).toEqual([]);

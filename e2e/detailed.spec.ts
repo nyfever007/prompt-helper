@@ -49,9 +49,8 @@ test.describe("product catalog (/)", () => {
     await expect(field(page, "style.preset")).toBeVisible();
     await expect(field(page, "style.medium")).toHaveCount(0); // deferred until Sprint 4
 
-    await go(page, "자세 및 행동"); // face (2-B.2) and skin (2-B.3) were approved; pose stays DRAFT
-    await expect(page.getByTestId("draft-placeholder")).toContainText("docs/catalogs/person/pose.md");
-    await shot(page, "detailed-draft", info.project.name);
+    await go(page, "자세 및 행동"); // every product person area is approved since 2-B.6 (draft placeholder: fixture test below)
+    await expect(page.getByTestId("draft-placeholder")).toHaveCount(0);
 
     // back to Basic: same values, lighting properties stay (not editable in Basic, but in the prompt)
     await page.getByRole("tab", { name: /Basic/ }).click();
@@ -122,6 +121,9 @@ test.describe("E2E-only fixture catalog (/e2e-fixtures)", () => {
   test("generic controls: cards with zoom, color, searchable list, dropdown, slider, number, range", async ({ page, baseURL }, info) => {
     const external = guardNetwork(page, baseURL!);
     await openFixture(page);
+    await go(page, "자세 및 행동"); // DRAFT in the fixture catalog only: honest placeholder with its design document
+    await expect(page.getByTestId("draft-placeholder")).toContainText("docs/catalogs/person/pose.md");
+    await shot(page, "detailed-draft", info.project.name);
     await go(page, "얼굴");
     await expect(field(page, "x.face.shape").getByText("예시 이미지 준비 중").first()).toBeVisible();
     await field(page, "x.face.shape").getByRole("button", { name: "예시 크게 보기" }).click();

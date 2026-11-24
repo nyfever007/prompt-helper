@@ -323,3 +323,24 @@ CatalogRegistry: optionsById 색인, lineage 메모이즈(deep-frozen 카탈로�
 | 성숙한 인상은 연령 판단을 바꾸지 않음, 매력·귀여움은 미성년과 함께여도 차단되지 않음, 성적 표현 + 앳된 인상은 차단 | `expression-makeup-catalog` |
 | 의복 “없음”·커버리지·핏은 노출 표현을 만들지 않음, 내의 어휘는 기존 미성년자 보호 규칙만 따름(성인 미차단) | `clothing-catalog`, `catalog` |
 | 컴파일 최적화 전후 결과 동일 | 기존 골든·회귀·독립성 테스트, `safety` 동일성 테스트 |
+
+## 15. Sprint 2-B.6: 외모 방향·자세·카메라·조명
+
+카탈로그 데이터 추가(core 카탈로그 0.9.0). 스키마·컴파일러·안전 정책 변경 없음.
+
+```text
+catalogs/person/appearance.ts ── person.appearance.direction (tier basic, group "what", category person_expression_impression, order 195)
+  → Basic: 피사체 = 인물일 때 피사체 바로 다음 / Detailed: 인상 및 매력 — 같은 속성, 같은 값
+  → covers: attractive·striking·elegant·ethereal·refined → 같은 의미의 인상 값은 한 번만 출력
+catalogs/person/pose.ts       ── 22개 (person_pose_*, order 478–499)
+catalogs/shared/camera.ts     ── 15개 (shared_camera, order 1605–1675) + core.ts의 Basic 3개 재사용
+catalogs/shared/lighting.ts   ── 11개 (shared_lighting, order 2025–2095) + core.ts의 프리셋·속성 6개(선택지만 추가)
+person/builders.ts            ── scope 인자(기본: 1인 인물, 공통 속성은 [])와 비인물 ID의 domain 규칙
+testing/fixtureCatalog.ts     ── person_pose를 테스트 카탈로그에서만 DRAFT로 유지
+```
+
+| 추가 불변 조건 | 테스트 |
+|---|---|
+| 외모 방향은 Basic·Detailed가 같은 값, 미설정이면 기존 출력 동일, 인물이 아니면 미적용(값 보존), 성별 무관, 연령 판단 불변, “섹시한”만 기존 미성년자 보호 규칙 | `appearance-pose-catalog`, `component/pose-camera-lighting`, `catalog`, E2E |
+| 자세 22개·카메라 15개·조명 11개 등록·문장·적용 조건·충돌, 신체 방향 ↔ 관찰 방향, 머리 ↔ 시선 방향 ↔ 시선 상태 독립 | `appearance-pose-catalog`, `camera-lighting-catalog` |
+| Basic 카메라 3개·조명 프리셋 12개·조명 속성 6개의 ID·문구·출력·의미 단위 대체 불변 | `camera-lighting-catalog`, 기존 회귀 테스트 |
