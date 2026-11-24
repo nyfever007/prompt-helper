@@ -78,7 +78,7 @@ describe("identity catalog: approved structure (D2, D12, N2)", () => {
       "entity_type", "species", "gender", "gender_presentation", "nationality", "ethnic_background", "cultural_background",
       "historical_period", "occupation", "narrative_role", "social_status",
     ]);
-    const nameOnly = core.attributes().filter((a) => isOptionAttribute(a) && a.custom?.nameOnlyNotice).map((a) => a.id.slice(P.length));
+    const nameOnly = core.attributes().filter((a) => a.id.startsWith(P) && isOptionAttribute(a) && a.custom?.nameOnlyNotice).map((a) => a.id.slice(P.length));
     expect(nameOnly).toEqual(["entity_type", "species", "gender_presentation"]); // Direct roles
   });
 
@@ -120,12 +120,15 @@ describe("identity catalog: approved structure (D2, D12, N2)", () => {
     expect(core.lineage(P + "species", "catfolk")).toEqual(["catfolk", "beastfolk"]);
   });
 
-  it("only Identity (and its 6 subcategories) is editable among person areas", () => {
+  it("Identity has its 6 subcategories; approved person areas are exactly Identity (2-B.1) and the 5 facial areas (2-B.2)", () => {
     expect(core.categories.filter((c) => c.parentId === "person_identity").map((c) => c.id)).toEqual([
       "person_identity_being", "person_identity_age", "person_identity_gender", "person_identity_background", "person_identity_social", "person_identity_other",
     ]);
     const approvedPerson = core.categories.filter((c) => core.categoryPath(c.id)[0] === "person" && core.isCategoryApproved(c.id)).map((c) => c.id);
-    expect(approvedPerson.sort()).toEqual(["person", "person_identity", "person_identity_being", "person_identity_age", "person_identity_gender", "person_identity_background", "person_identity_social", "person_identity_other"].sort());
+    expect(approvedPerson.sort()).toEqual(
+      ["person", "person_identity", "person_identity_being", "person_identity_age", "person_identity_gender", "person_identity_background", "person_identity_social", "person_identity_other",
+        "person_face", "person_eyes", "person_eyebrows", "person_nose", "person_lips"].sort(),
+    );
   });
 });
 

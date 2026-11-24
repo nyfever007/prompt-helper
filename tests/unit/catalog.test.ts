@@ -17,11 +17,18 @@ import { buildExtendedCatalog, cloneCore, coreAttr, extendedRegistry } from "../
 import { buildSpec, multi, single } from "../fixtures/specs";
 
 const core = getCoreRegistry();
+const FACIAL_IDS = [
+  ...["shape", "length", "width", "forehead_height", "forehead_width", "cheekbones", "jawline", "chin", "cheeks", "symmetry"].map((x) => `person.face.${x}`),
+  ...["shape", "size", "width", "height", "spacing", "outer_corner_angle", "depth", "eyelids", "iris_color", "iris_size", "pupil_shape", "lash_length", "lash_density"].map((x) => `person.eyes.${x}`),
+  ...["shape", "thickness", "length", "density", "angle", "height", "spacing", "color"].map((x) => `person.eyebrows.${x}`),
+  ...["shape", "length", "width", "bridge_height", "bridge_shape", "tip_shape", "tip_angle", "alar_width"].map((x) => `person.nose.${x}`),
+  ...["shape", "mouth_width", "upper_thickness", "lower_thickness", "ratio", "cupids_bow", "corners", "natural_color"].map((x) => `person.lips.${x}`),
+];
 
-describe("8. core catalog 0.4.0", () => {
+describe("8. core catalog 0.5.0", () => {
   it("is valid, versioned and declares its format", () => {
     expect(core.id).toBe("prompter.core");
-    expect(core.version).toBe("0.4.0");
+    expect(core.version).toBe("0.5.0");
     expect(coreCatalog.formatVersion).toBe("0.4.0");
   });
 
@@ -60,6 +67,8 @@ describe("8. core catalog 0.4.0", () => {
       "person.identity.narrative_role",
       "person.identity.social_status",
       "person.identity.description",
+      // Person › Face, Eyes, Eyebrows, Nose, Lips (Sprint 2-B.2, order 217–263)
+      ...FACIAL_IDS,
       "style.medium",
       "style.realism",
       "style.technique",

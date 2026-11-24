@@ -73,8 +73,8 @@ describe("Detailed navigation (data-driven)", () => {
 
   it("draft areas are honest placeholders with their design document", async () => {
     const { user } = await open();
-    await go(user, "눈썹");
-    expect(screen.getByTestId("draft-placeholder")).toHaveTextContent("docs/catalogs/person/eyebrows.md");
+    await go(user, "피부"); // eyebrows were approved in Sprint 2-B.2; skin stays DRAFT
+    expect(screen.getByTestId("draft-placeholder")).toHaveTextContent("docs/catalogs/person/skin.md");
     expect(document.querySelectorAll(".cat-panel [data-attribute-id]")).toHaveLength(0);
   });
 
@@ -158,7 +158,9 @@ describe("generic controls and unset", () => {
     expect(saved(store)["x.expression.smile"]).toBeUndefined();
     expect(field("x.expression.smile").dataset.state).toBe("unset");
     fireEvent.change(slider, { target: { value: "35" } });
-    expect(screen.getByTestId("slider-value-x.expression.smile")).toHaveTextContent("35 · 부드럽게");
+    // degree sliders show only the qualitative band, never the number (Sprint 2-B.2 §5)
+    expect(screen.getByTestId("slider-value-x.expression.smile")).toHaveTextContent(/^부드럽게$/);
+    expect(slider).toHaveAttribute("aria-valuetext", "부드럽게");
     expect(prompt()).toBe("Expression: a gentle smile.");
     await waitFor(() => expect(saved(store)["x.expression.smile"]?.value).toEqual({ kind: "number", value: 35 }));
     await user.click(within(field("x.expression.smile")).getByRole("button", { name: /선택 해제/ }));

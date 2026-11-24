@@ -280,7 +280,8 @@ describe("Unset / Selected / Excluded states (D3)", () => {
   it("is generic: any attribute of any catalog can be excluded (domain), output toggle UI is opt-in per attribute", () => {
     const spec = setPromptExclusion(buildSpec(core, [["subject.kind", single("person")], ["style.preset", single("anime")]]), "style.preset", true);
     expect(compilePrompt(spec, core).prompt).toBe("Main subject: a single person.");
-    expect(core.attributes().filter((a) => a.outputToggle).every((a) => a.id.startsWith(P))).toBe(true);
+    // opt-in per attribute: person attributes (identity 2-B.1, facial 2-B.2) only — no Basic/shared attribute shows the toggle
+    expect(core.attributes().filter((a) => a.outputToggle).every((a) => a.id.startsWith("person."))).toBe(true);
   });
   it("Metadata role never emits prompt text but is still validated and safety-checked", () => {
     const c = cloneCore();

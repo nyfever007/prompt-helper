@@ -239,3 +239,21 @@ catalogs/person/regions.ts  ── 국가·지역 199개 정적 데이터 (출�
 | 사용자 정의 값은 등록 선택지와 병합·대체되지 않음 | `identity-semantics`, `component/identity` |
 | 카테고리 초기화는 저장 값 전체(검색·제외·적용 여부 무관), 복원은 이후 편집과 다른 카테고리를 바꾸지 않음 | `category-reset`, `component/identity`, E2E |
 | Sprint 0·1·2-A 실제 데이터 무손실, 기존 프롬프트 글자 단위 동일 | `migration`, `detailed-domain`, `identity-semantics` (sprint2a fixture) |
+
+## 11. Sprint 2-B.2: 얼굴 및 이목구비
+
+새 아키텍처 없이 2-B.1 공통 기능만 재사용했습니다(스키마·컴파일러·안전 정책 버전 그대로, core 카탈로그 0.5.0).
+
+```text
+catalogs/person/facial.ts ── 47개 속성 (order 217–263) + 반대 특징 규칙 26개 + 코 모양 covers
+  모양  → single/multi 칩 (+ CustomEntry)       예: Cheekbones: prominent, high.
+  정도  → number + degree + bands(1–5) 슬라이더  예: Eye size: large.   (숫자는 출력·표시 안 함)
+  색상  → color 팔레트 (+ CustomEntry)           예: Iris color: dark brown.
+```
+
+| 추가 불변 조건 | 테스트 |
+|---|---|
+| 47개 속성·선택지·구간 표현이 승인 목록과 정확히 같고 모든 선택지가 해당 문장 하나만 출력 | `facial-catalog` |
+| 한 속성 선택이 다른 속성을 설정하지 않음(정체성 → 얼굴 포함), 외형↔표정·인상·성별·민족 연결 표현 없음 | `facial-catalog`, `independence` |
+| 함께 존재하는 특징은 경고 없음, 반대 특징은 경고만(값 유지) | `facial-catalog`, `component/facial` |
+| 슬라이더 표시·포커스는 저장하지 않고, 구간 이름만 표시 | `component/facial`, `component/detailed`, E2E |

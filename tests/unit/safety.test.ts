@@ -196,3 +196,23 @@ describe("safety: every output path is gated; original data is preserved", () =>
     expect(a.meta.safetyPolicyVersion).toBe(baselinePolicy.version);
   });
 });
+
+describe("safety evaluation pre-filter (Sprint 2-B.2 performance) gives identical results", () => {
+  it("every signal is detected exactly as by a per-entry reference scan, over lexicon terms, exceptions, near-misses and all catalog phrases", async () => {
+    const { baselinePolicy, evaluateSafety, matchEntry, normalizeForSafety, getCoreRegistry, isOptionAttribute } = await import("@/domain");
+    // One rule per signal exposes the detected signals through findings.
+    const probe = { ...baselinePolicy, rules: baselinePolicy.signals.map((sg) => ({ id: sg.id, category: "probe", severity: "warn" as const, allOf: [[sg.id]], message: { en: "" }, guidance: { en: "" } })) };
+    const core = getCoreRegistry();
+    const corpus = [
+      ...baselinePolicy.signals.flatMap((sg) => sg.lexicon.flatMap((e) => [e.term ?? "", ...(e.except ?? []), `x${e.term ?? ""}x`, `the ${e.term ?? ""}s here`])),
+      "a 12 years old", "aged 15", "a 7yo", "17세", "300 years old", "28–32 years old", "baby blue sky", "칼로리 계산", "nude lipstick and nudes",
+      ...core.attributes().flatMap((a) => (isOptionAttribute(a) ? a.options.flatMap((o) => [o.prompt.text, ...(o.prompt.variants ?? []).map((v) => v.text)]) : a.type === "number" ? (a.bands ?? []).map((b) => b.text) : [])),
+    ].filter(Boolean);
+    expect(corpus.length).toBeGreaterThan(900);
+    for (const text of corpus) {
+      const reference = baselinePolicy.signals.filter((sg) => sg.lexicon.some((e) => matchEntry(e, normalizeForSafety(text)).length > 0)).map((sg) => sg.id);
+      const actual = evaluateSafety({ tags: [], texts: [{ attributeId: "t", text }] }, probe).findings.map((f) => f.ruleId);
+      expect(actual, text).toEqual(reference);
+    }
+  });
+});

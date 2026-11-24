@@ -1,4 +1,5 @@
 import type { CatalogInput, Condition } from "../schema";
+import { FACIAL_CATEGORY_DESCRIPTIONS, facialAttributes, facialRules } from "./person/facial";
 import { identityAgeModel, identityAttributes, identityCategories, identityRules } from "./person/identity";
 
 /**
@@ -6,6 +7,7 @@ import { identityAgeModel, identityAttributes, identityCategories, identityRules
  * 0.2.0 Sprint 1 (Basic Composer) · 0.3.0 Sprint 2-A (Detailed foundation) ·
  * 0.4.0 Sprint 2-B.1 (Person › Identity, approved; attribute `order` ×10 so new
  * areas can sit between existing attributes — relative order unchanged).
+ * 0.5.0 Sprint 2-B.2 (Person › Face, Eyes, Eyebrows, Nose, Lips — 47 attributes, approved).
  *
  * Every list here is an extensible STARTING POINT, not a final scope. No option
  * count limits are implied; add entries as data and bump `version`.
@@ -30,7 +32,7 @@ const NON_ABSTRACT = [...ORIENTED_SUBJECTS, "landscape"];
 export const coreCatalog = {
   formatVersion: "0.4.0",
   id: "prompter.core",
-  version: "0.4.0",
+  version: "0.5.0",
   title: { en: "Prompter core catalog", ko: "Prompter 기본 카탈로그" },
   groups: [
     { id: "what", order: 0, label: { en: "What to depict", ko: "무엇을 그릴까요" } },
@@ -56,7 +58,8 @@ export const coreCatalog = {
   ],
   categories: [
     // Detailed navigation (expert taxonomy). Person areas are approved one by one after
-    // their catalog design is approved (docs/catalogs/). Identity: approved (Sprint 2-B.1).
+    // their catalog design is approved (docs/catalogs/). Identity: approved (Sprint 2-B.1);
+    // face, eyes, eyebrows, nose, lips: approved (Sprint 2-B.2).
     { id: "essentials", order: 0, status: "approved", label: { en: "Essentials", ko: "기본" }, description: { en: "What the image is about.", ko: "이미지의 기본 내용입니다." } },
     {
       id: "person",
@@ -87,7 +90,7 @@ export const coreCatalog = {
       id: `person_${id}`,
       parentId: "person",
       order: 11 + i,
-      status: id === "identity" ? ("approved" as const) : ("draft" as const),
+      status: id === "identity" || `person_${id}` in FACIAL_CATEGORY_DESCRIPTIONS ? ("approved" as const) : ("draft" as const),
       label: { en, ko },
       docPath: `docs/catalogs/person/${id === "expression" ? "expression" : id}.md`,
       ...(id === "identity"
@@ -98,7 +101,9 @@ export const coreCatalog = {
             },
             appliesWhen: forSubjects("person"),
           }
-        : {}),
+        : `person_${id}` in FACIAL_CATEGORY_DESCRIPTIONS
+          ? { description: FACIAL_CATEGORY_DESCRIPTIONS[`person_${id}`]!, appliesWhen: forSubjects("person") }
+          : {}),
     })),
     ...identityCategories,
     { id: "shared", order: 40, status: "approved", label: { en: "Shared", ko: "공통" } },
@@ -700,6 +705,8 @@ export const coreCatalog = {
 
     // ── Person › Identity (Sprint 2-B.1, order 201–216 → right after the subject, 200) ──
     ...identityAttributes,
+    // ── Person › Face, Eyes, Eyebrows, Nose, Lips (Sprint 2-B.2, order 217–263) ──
+    ...facialAttributes,
 
     // ── Output ──────────────────────────────────────────────────────────────
     {
@@ -847,6 +854,7 @@ export const coreCatalog = {
       },
     },
     ...identityRules,
+    ...facialRules,
   ],
   migrations: [
     {
@@ -874,6 +882,12 @@ export const coreCatalog = {
       fromVersion: "0.3.0",
       toVersion: "0.4.0",
       // No ID changes: 0.4.0 adds Person › Identity and renumbers `order` (relative order kept).
+      changes: [],
+    },
+    {
+      fromVersion: "0.4.0",
+      toVersion: "0.5.0",
+      // No ID changes: 0.5.0 adds Person › Face, Eyes, Eyebrows, Nose and Lips.
       changes: [],
     },
   ],

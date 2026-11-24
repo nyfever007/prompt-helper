@@ -49,8 +49,8 @@ test.describe("product catalog (/)", () => {
     await expect(field(page, "style.preset")).toBeVisible();
     await expect(field(page, "style.medium")).toHaveCount(0); // deferred until Sprint 4
 
-    await go(page, "얼굴");
-    await expect(page.getByTestId("draft-placeholder")).toContainText("docs/catalogs/person/face.md");
+    await go(page, "피부"); // face was approved in Sprint 2-B.2; skin stays DRAFT
+    await expect(page.getByTestId("draft-placeholder")).toContainText("docs/catalogs/person/skin.md");
     await shot(page, "detailed-draft", info.project.name);
 
     // back to Basic: same values, lighting properties stay (not editable in Basic, but in the prompt)
@@ -147,7 +147,8 @@ test.describe("E2E-only fixture catalog (/e2e-fixtures)", () => {
     await expect(field(page, "x.expression.smile")).toHaveAttribute("data-state", "unset");
     await slider.press("ArrowRight"); // an explicit user input
     await expect(field(page, "x.expression.smile")).toHaveAttribute("data-state", "set");
-    await expect(page.getByTestId("slider-value-x.expression.smile")).toContainText("55");
+    // 50 → 55 by one ArrowRight step: the “Clear” band (≤ 80); degree sliders show the band, not the number
+    await expect(page.getByTestId("slider-value-x.expression.smile")).toHaveText("또렷하게");
     await shot(page, "fixture-slider", info.project.name);
 
     // range: half input is not stored
