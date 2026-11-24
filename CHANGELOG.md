@@ -9,7 +9,23 @@
 - 컴파일러(`COMPILER_VERSION`): 0.1.0 / generic-en adapter: 0.1.0
 - 로컬 저장 envelope(`STORAGE_FORMAT_VERSION`): 1
 
-## [Unreleased] — Sprint 2-B.2: Face & facial features (구현 완료, 검토 대기)
+## [Unreleased] — Sprint 2-B.3: Skin, hair & facial hair (구현 완료, 검토 대기)
+
+버전 변화: core 카탈로그 0.5.0 → **0.6.0**(속성 추가만, ID 변경 없음). ImageSpec 0.3.0, 카탈로그 형식 0.4.0, 컴파일러 0.4.0, 안전 정책 0.2.0은 그대로.
+
+### Added
+- 인물 › 피부(16)·헤어(23)·수염(6, 새 카테고리) 45개 속성 — 누적 인물 상세 속성 108개
+- 피부색 팔레트 20색(자연 12·판타지 8), 헤어 색상 팔레트 38색(6개 그룹, 기본·보조·수염 색상이 공유), 헤어스타일 74개(11개 표시 그룹, 검색)
+- 명시적 ‘없음’ 선택지(주근깨·점·주름·흉터·앞머리·레이어·잔머리·수염), 적용 가능성(대머리·삭발·앞머리 없음·주근깨/점/주름 없음·수염 없음)과 값 보존·복원
+- 경고 규칙 21개(‘없음’ + 다른 항목 3, 반대 상태 쌍 15, 스타일 ↔ 길이 2, 묶는 위치 ↔ 묶지 않는 스타일 1)
+- 테스트: `skin-hair-catalog`(39), `component/skin-hair`(4), E2E `skin-hair`(데스크톱·모바일), 스크린샷 `docs/screenshots/sprint-2b3/`
+- 문서: `docs/catalogs/person/{skin,hair,facial-hair}.md` 1.0.0 APPROVED, ADR-050·051, `docs/SPRINT_2B3_REPORT.md`
+
+### Changed
+- 비인물 속성 출력 순서 번호(300 이상) +1000(상대 순서 불변, 프롬프트 동일, ADR-051)
+- 색상 팔레트 컨트롤이 표시 그룹을 지원(ADR-051), 데이터 도우미 공통화(`person/builders.ts`)
+
+## [0.5.0] — 2026-11-24 — Sprint 2-B.2: Face & facial features (승인됨, PR #4 병합 `26ec465`)
 
 버전 변화: core 카탈로그 0.4.0 → **0.5.0**(속성 추가만, ID 변경 없음). ImageSpec 0.3.0, 카탈로그 형식 0.4.0, 컴파일러 0.4.0, 안전 정책 0.2.0은 그대로.
 

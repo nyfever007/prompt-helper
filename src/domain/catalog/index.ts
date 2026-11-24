@@ -9,4 +9,4 @@ export const getCoreRegistry = (): CatalogRegistry => (cached ??= CatalogRegistr
 export { CatalogRegistry } from "./registry";
 export { coreCatalog } from "./catalogs/core";
 export * from "./schema";
-export { evaluateCondition, evaluateAll } from "./conditions";
+export { conditionAttributeIds, evaluateCondition, evaluateAll } from "./conditions";

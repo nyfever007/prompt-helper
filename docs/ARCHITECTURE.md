@@ -257,3 +257,23 @@ catalogs/person/facial.ts ── 47개 속성 (order 217–263) + 반대 특징 
 | 한 속성 선택이 다른 속성을 설정하지 않음(정체성 → 얼굴 포함), 외형↔표정·인상·성별·민족 연결 표현 없음 | `facial-catalog`, `independence` |
 | 함께 존재하는 특징은 경고 없음, 반대 특징은 경고만(값 유지) | `facial-catalog`, `component/facial` |
 | 슬라이더 표시·포커스는 저장하지 않고, 구간 이름만 표시 | `component/facial`, `component/detailed`, E2E |
+
+## 12. Sprint 2-B.3: 피부·헤어·수염
+
+스키마·컴파일러·안전 정책 변경 없이 카탈로그 데이터와 기존 공통 기능만 사용했습니다(core 카탈로그 0.6.0).
+
+```text
+catalogs/person/builders.ts  ── 인물 카탈로그 공통 데이터 도우미 (shape · degree · opposite · noneWithOthers)
+catalogs/person/skin-hair.ts ── 45개 속성 (order 264–308) + 경고 규칙 21개
+  적용 가능성: appliesWhen noneOf — 예) hair.style 은 hair.presence ∉ {bald, shaved} 일 때만 출력
+               (적용되지 않아도 값은 명세에 보존, 다시 적용되면 출력, 안전 검사는 계속)
+  ‘없음’ 선택지: 명시적 값으로 출력(“Freckles: none.”), 미설정은 출력 없음
+  팔레트 그룹: 색상 컨트롤이 optionGroups를 제목 행으로 표시(출력 없음)
+```
+
+| 추가 불변 조건 | 테스트 |
+|---|---|
+| 45개 속성(누적 108)·팔레트·헤어스타일 그룹이 승인 목록과 같고 모든 선택지가 해당 문장만 출력 | `skin-hair-catalog` |
+| 피부·헤어·수염 속성은 정체성(연령·성별·국적·민족)을 참조하지 않음 | `skin-hair-catalog` |
+| 대머리·삭발·부분 탈모·앞머리 없음·주근깨/점/주름 없음·수염 없음에 따른 출력 제어와 값 보존·복원 | `skin-hair-catalog`, `component/skin-hair`, E2E |
+| 비인물 속성 순서 오프셋 후에도 기존 프롬프트 동일 | 기존 골든·sprint2a fixture 테스트 |

@@ -1,6 +1,10 @@
 import type { CatalogInput, Condition } from "../schema";
 import { FACIAL_CATEGORY_DESCRIPTIONS, facialAttributes, facialRules } from "./person/facial";
 import { identityAgeModel, identityAttributes, identityCategories, identityRules } from "./person/identity";
+import { SKIN_HAIR_CATEGORY_DESCRIPTIONS, skinHairAttributes, skinHairRules } from "./person/skin-hair";
+
+/** Approved person areas beyond Identity (descriptions shown in the Detailed editor). */
+const APPROVED_PERSON_AREAS: Record<string, { en: string; ko: string }> = { ...FACIAL_CATEGORY_DESCRIPTIONS, ...SKIN_HAIR_CATEGORY_DESCRIPTIONS };
 
 /**
  * prompter.core — catalog content v0.4.0.
@@ -8,6 +12,9 @@ import { identityAgeModel, identityAttributes, identityCategories, identityRules
  * 0.4.0 Sprint 2-B.1 (Person › Identity, approved; attribute `order` ×10 so new
  * areas can sit between existing attributes — relative order unchanged).
  * 0.5.0 Sprint 2-B.2 (Person › Face, Eyes, Eyebrows, Nose, Lips — 47 attributes, approved).
+ * 0.6.0 Sprint 2-B.3 (Person › Skin, Hair, Facial hair — 45 attributes, approved; non-person
+ * attributes from order 300 up shifted by +1000 so person attributes fit at 201–308 —
+ * relative order unchanged, prompts byte-identical).
  *
  * Every list here is an extensible STARTING POINT, not a final scope. No option
  * count limits are implied; add entries as data and bump `version`.
@@ -32,7 +39,7 @@ const NON_ABSTRACT = [...ORIENTED_SUBJECTS, "landscape"];
 export const coreCatalog = {
   formatVersion: "0.4.0",
   id: "prompter.core",
-  version: "0.5.0",
+  version: "0.6.0",
   title: { en: "Prompter core catalog", ko: "Prompter 기본 카탈로그" },
   groups: [
     { id: "what", order: 0, label: { en: "What to depict", ko: "무엇을 그릴까요" } },
@@ -59,7 +66,7 @@ export const coreCatalog = {
   categories: [
     // Detailed navigation (expert taxonomy). Person areas are approved one by one after
     // their catalog design is approved (docs/catalogs/). Identity: approved (Sprint 2-B.1);
-    // face, eyes, eyebrows, nose, lips: approved (Sprint 2-B.2).
+    // face, eyes, eyebrows, nose, lips: approved (Sprint 2-B.2); skin, hair, facial hair: approved (Sprint 2-B.3).
     { id: "essentials", order: 0, status: "approved", label: { en: "Essentials", ko: "기본" }, description: { en: "What the image is about.", ko: "이미지의 기본 내용입니다." } },
     {
       id: "person",
@@ -79,6 +86,7 @@ export const coreCatalog = {
         ["lips", "Lips", "입술"],
         ["skin", "Skin", "피부"],
         ["hair", "Hair", "헤어"],
+        ["facial_hair", "Facial hair", "수염"],
         ["body", "Body", "신체"],
         ["expression", "Expression & appeal", "표정 및 시각적 인상"],
         ["makeup", "Makeup", "메이크업"],
@@ -90,9 +98,9 @@ export const coreCatalog = {
       id: `person_${id}`,
       parentId: "person",
       order: 11 + i,
-      status: id === "identity" || `person_${id}` in FACIAL_CATEGORY_DESCRIPTIONS ? ("approved" as const) : ("draft" as const),
+      status: id === "identity" || `person_${id}` in APPROVED_PERSON_AREAS ? ("approved" as const) : ("draft" as const),
       label: { en, ko },
-      docPath: `docs/catalogs/person/${id === "expression" ? "expression" : id}.md`,
+      docPath: `docs/catalogs/person/${id === "facial_hair" ? "facial-hair" : id}.md`,
       ...(id === "identity"
         ? {
             description: {
@@ -101,8 +109,8 @@ export const coreCatalog = {
             },
             appliesWhen: forSubjects("person"),
           }
-        : `person_${id}` in FACIAL_CATEGORY_DESCRIPTIONS
-          ? { description: FACIAL_CATEGORY_DESCRIPTIONS[`person_${id}`]!, appliesWhen: forSubjects("person") }
+        : `person_${id}` in APPROVED_PERSON_AREAS
+          ? { description: APPROVED_PERSON_AREAS[`person_${id}`]!, appliesWhen: forSubjects("person") }
           : {}),
     })),
     ...identityCategories,
@@ -170,7 +178,7 @@ export const coreCatalog = {
       groupId: "style",
       type: "single",
       tier: "basic",
-      order: 300,
+      order: 1300,
       searchable: true,
       label: { en: "Image style", ko: "이미지 스타일" },
       description: {
@@ -369,7 +377,7 @@ export const coreCatalog = {
       groupId: "style_axes",
       type: "single",
       tier: "detailed",
-      order: 310,
+      order: 1310,
       label: { en: "Medium", ko: "매체" },
       prompt: { template: "Medium: {value}." },
       options: [
@@ -394,7 +402,7 @@ export const coreCatalog = {
       groupId: "style_axes",
       type: "single",
       tier: "detailed",
-      order: 320,
+      order: 1320,
       label: { en: "Realism", ko: "사실감" },
       prompt: { template: "Realism: {value}." },
       options: [
@@ -412,7 +420,7 @@ export const coreCatalog = {
       groupId: "style_axes",
       type: "multi",
       tier: "detailed",
-      order: 330,
+      order: 1330,
       label: { en: "Technique", ko: "기법" },
       prompt: { template: "Technique: {value}." },
       options: [
@@ -433,7 +441,7 @@ export const coreCatalog = {
       groupId: "style_axes",
       type: "single",
       tier: "detailed",
-      order: 340,
+      order: 1340,
       label: { en: "Art movement", ko: "미술 사조" },
       prompt: { template: "Art movement: {value}." },
       options: [
@@ -452,7 +460,7 @@ export const coreCatalog = {
       groupId: "style_axes",
       type: "multi",
       tier: "detailed",
-      order: 350,
+      order: 1350,
       label: { en: "Aesthetic / genre", ko: "미학 / 장르" },
       prompt: { template: "Aesthetic: {value}." },
       options: [
@@ -475,7 +483,7 @@ export const coreCatalog = {
       groupId: "composition",
       type: "single",
       tier: "basic",
-      order: 400,
+      order: 1400,
       label: { en: "Framing", ko: "구도 (화면에 담는 범위)" },
       description: {
         en: "How much of the subject is in frame. Choices depend on the subject.",
@@ -506,7 +514,7 @@ export const coreCatalog = {
       type: "single",
       tier: "basic",
       prominence: "secondary",
-      order: 500,
+      order: 1500,
       label: { en: "Viewing direction", ko: "보는 방향" },
       description: {
         en: "Which side of the subject faces the camera. Independent of framing and camera angle.",
@@ -530,7 +538,7 @@ export const coreCatalog = {
       type: "single",
       tier: "basic",
       prominence: "secondary",
-      order: 600,
+      order: 1600,
       label: { en: "Camera angle", ko: "카메라 각도 (높이)" },
       description: {
         en: "Camera height relative to the subject. Independent of viewing direction.",
@@ -556,7 +564,7 @@ export const coreCatalog = {
       groupId: "scene",
       type: "single",
       tier: "basic",
-      order: 700,
+      order: 1700,
       searchable: true,
       label: { en: "Place / environment", ko: "장소 / 환경" },
       description: { en: "Where the scene takes place.", ko: "장면이 펼쳐지는 장소입니다." },
@@ -592,7 +600,7 @@ export const coreCatalog = {
       type: "single",
       tier: "basic",
       prominence: "secondary",
-      order: 800,
+      order: 1800,
       label: { en: "Background treatment", ko: "배경 처리" },
       description: {
         en: "How the background is rendered — independent of where the scene is.",
@@ -617,7 +625,7 @@ export const coreCatalog = {
       groupId: "atmosphere",
       type: "multi",
       tier: "basic",
-      order: 900,
+      order: 1900,
       label: { en: "Mood", ko: "분위기" },
       description: { en: "Choose any number. Mood never changes clothing, body or other settings.", ko: "여러 개를 고를 수 있습니다. 분위기는 의상·체형 등 다른 설정을 바꾸지 않습니다." },
       prompt: { template: "Mood: {value}." },
@@ -645,7 +653,7 @@ export const coreCatalog = {
       groupId: "atmosphere",
       type: "single",
       tier: "basic",
-      order: 1000,
+      order: 2000,
       label: { en: "Lighting (quick preset)", ko: "조명 (빠른 프리셋)" },
       description: {
         en: "Sets only this item. The listed light properties are for reference; they are not applied to any other setting.",
@@ -669,23 +677,23 @@ export const coreCatalog = {
     },
     ...(
       [
-        ["lighting.source", 1010, { en: "Light source", ko: "광원" }, "Light source: {value}.", [
+        ["lighting.source", 2010, { en: "Light source", ko: "광원" }, "Light source: {value}.", [
           ["sun", "Sun", "태양", "direct sunlight"], ["daylight_sky", "Sky / diffuse daylight", "하늘광 (확산광)", "diffuse skylight"], ["moon", "Moon", "달", "moonlight"],
           ["studio", "Studio lights", "스튜디오 조명", "studio lights"], ["practical", "Lamps / practical lights", "실내 조명기구", "practical lamps"], ["neon", "Neon", "네온", "neon signs"], ["fire", "Fire / candles", "불 / 촛불", "firelight"],
         ]],
-        ["lighting.direction", 1020, { en: "Light direction", ko: "빛의 방향" }, "Light direction: {value}.", [
+        ["lighting.direction", 2020, { en: "Light direction", ko: "빛의 방향" }, "Light direction: {value}.", [
           ["front", "Front", "정면광", "front lighting"], ["side", "Side", "측광", "side lighting"], ["back", "Back", "역광", "backlighting"], ["top", "Top", "탑 라이트", "top lighting"], ["bottom", "Below", "아래에서", "lighting from below"], ["ambient", "Ambient / all around", "전방위 (확산)", "ambient all-around light"],
         ]],
-        ["lighting.softness", 1030, { en: "Softness / hardness", ko: "빛의 질감 (부드러움)" }, "Light quality: {value}.", [
+        ["lighting.softness", 2030, { en: "Softness / hardness", ko: "빛의 질감 (부드러움)" }, "Light quality: {value}.", [
           ["soft", "Soft", "부드러운", "soft light"], ["medium", "Medium", "중간", "moderately soft light"], ["hard", "Hard", "딱딱한", "hard light"],
         ]],
-        ["lighting.intensity", 1040, { en: "Intensity", ko: "밝기" }, "Light intensity: {value}.", [
+        ["lighting.intensity", 2040, { en: "Intensity", ko: "밝기" }, "Light intensity: {value}.", [
           ["dim", "Dim", "어두운", "dim"], ["moderate", "Moderate", "보통", "moderate"], ["bright", "Bright", "밝은", "bright"],
         ]],
-        ["lighting.color_temperature", 1050, { en: "Color temperature", ko: "색온도" }, "Color temperature: {value}.", [
+        ["lighting.color_temperature", 2050, { en: "Color temperature", ko: "색온도" }, "Color temperature: {value}.", [
           ["warm", "Warm", "따뜻한", "warm"], ["neutral", "Neutral", "중립", "neutral"], ["cool", "Cool", "차가운", "cool"], ["mixed_color", "Mixed colors", "여러 색", "mixed colored light"],
         ]],
-        ["lighting.contrast", 1060, { en: "Contrast", ko: "명암 대비" }, "Lighting contrast: {value}.", [
+        ["lighting.contrast", 2060, { en: "Contrast", ko: "명암 대비" }, "Lighting contrast: {value}.", [
           ["low", "Low", "낮음", "low contrast"], ["medium", "Medium", "중간", "medium contrast"], ["high", "High", "높음", "high contrast"],
         ]],
       ] as const
@@ -707,6 +715,8 @@ export const coreCatalog = {
     ...identityAttributes,
     // ── Person › Face, Eyes, Eyebrows, Nose, Lips (Sprint 2-B.2, order 217–263) ──
     ...facialAttributes,
+    // ── Person › Skin, Hair, Facial hair (Sprint 2-B.3, order 264–308) ──
+    ...skinHairAttributes,
 
     // ── Output ──────────────────────────────────────────────────────────────
     {
@@ -717,7 +727,7 @@ export const coreCatalog = {
       groupId: "output",
       type: "single",
       tier: "basic",
-      order: 1100,
+      order: 2100,
       label: { en: "Aspect ratio", ko: "화면비" },
       description: {
         en: "Optional. Also exported as a structured parameter for future image APIs.",
@@ -855,6 +865,7 @@ export const coreCatalog = {
     },
     ...identityRules,
     ...facialRules,
+    ...skinHairRules,
   ],
   migrations: [
     {
@@ -888,6 +899,12 @@ export const coreCatalog = {
       fromVersion: "0.4.0",
       toVersion: "0.5.0",
       // No ID changes: 0.5.0 adds Person › Face, Eyes, Eyebrows, Nose and Lips.
+      changes: [],
+    },
+    {
+      fromVersion: "0.5.0",
+      toVersion: "0.6.0",
+      // No ID changes: 0.6.0 adds Person › Skin, Hair, Facial hair (+ non-person order offset).
       changes: [],
     },
   ],

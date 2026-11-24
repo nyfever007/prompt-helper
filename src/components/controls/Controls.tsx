@@ -308,23 +308,48 @@ export function SearchableListControl(p: OptionControlProps) {
   );
 }
 
+/**
+ * Palette swatches (visual references, not exact output colors). Display-only
+ * option groups (e.g. natural / fantasy) become labelled rows; groups are never output.
+ */
 export function ColorControl(p: OptionControlProps) {
   const isMulti = p.attribute.type === "multi";
+  const offered = offeredOptions(p);
+  const swatch = (o: OptionDefinition) => (
+    <label key={o.id} className="chip chip--swatch" data-checked={p.selectedIds.includes(o.id)} data-option-id={o.id} data-restricted={p.isRestricted(o) || undefined}>
+      <input
+        type={isMulti ? "checkbox" : "radio"}
+        name={isMulti ? undefined : p.attribute.id}
+        checked={p.selectedIds.includes(o.id)}
+        disabled={p.isRestricted(o) && !p.selectedIds.includes(o.id)}
+        onChange={() => (isMulti ? p.onToggle(o.id) : p.onSelect(o.id))}
+      />
+      <span className="swatch" style={{ background: o.swatch }} aria-hidden="true" />
+      <span>{resolveText(o.label, p.locale)}</span>
+    </label>
+  );
+  const groups = p.attribute.optionGroups ? [...p.attribute.optionGroups].sort((a, b) => a.order - b.order) : null;
+  if (!groups) {
+    return (
+      <div className="chips" role={isMulti ? "group" : "radiogroup"} aria-label={p.label}>
+        {offered.map(swatch)}
+      </div>
+    );
+  }
+  const ungrouped = offered.filter((o) => !o.group || !groups.some((g) => g.id === o.group));
   return (
-    <div className="chips" role={isMulti ? "group" : "radiogroup"} aria-label={p.label}>
-      {offeredOptions(p).map((o) => (
-        <label key={o.id} className="chip chip--swatch" data-checked={p.selectedIds.includes(o.id)} data-option-id={o.id} data-restricted={p.isRestricted(o) || undefined}>
-          <input
-            type={isMulti ? "checkbox" : "radio"}
-            name={isMulti ? undefined : p.attribute.id}
-            checked={p.selectedIds.includes(o.id)}
-            disabled={p.isRestricted(o) && !p.selectedIds.includes(o.id)}
-            onChange={() => (isMulti ? p.onToggle(o.id) : p.onSelect(o.id))}
-          />
-          <span className="swatch" style={{ background: o.swatch }} aria-hidden="true" />
-          <span>{resolveText(o.label, p.locale)}</span>
-        </label>
-      ))}
+    <div className="swatch-groups" role={isMulti ? "group" : "radiogroup"} aria-label={p.label}>
+      {groups.map((g) => {
+        const members = offered.filter((o) => o.group === g.id);
+        if (members.length === 0) return null;
+        return (
+          <div key={g.id} className="swatch-group" data-group-id={g.id}>
+            <span className="swatch-group__title small muted">{resolveText(g.label, p.locale)}</span>
+            <div className="chips">{members.map(swatch)}</div>
+          </div>
+        );
+      })}
+      {ungrouped.length > 0 && <div className="chips">{ungrouped.map(swatch)}</div>}
     </div>
   );
 }

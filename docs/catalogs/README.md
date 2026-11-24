@@ -18,8 +18,9 @@ Prompter의 속성 카탈로그는 **데이터**(`src/domain/catalog/catalogs/co
 | 인물 › 눈썹 (Eyebrows) | [person/eyebrows.md](person/eyebrows.md) | **APPROVED** (Sprint 2-B.2, 8개 속성) |
 | 인물 › 코 (Nose) | [person/nose.md](person/nose.md) | **APPROVED** (Sprint 2-B.2, 8개 속성) |
 | 인물 › 입술 (Lips) | [person/lips.md](person/lips.md) | **APPROVED** (Sprint 2-B.2, 8개 속성) |
-| 인물 › 피부 (Skin) | [person/skin.md](person/skin.md) | DRAFT |
-| 인물 › 헤어 (Hair) | [person/hair.md](person/hair.md) | DRAFT |
+| 인물 › 피부 (Skin) | [person/skin.md](person/skin.md) | **APPROVED** (Sprint 2-B.3, 16개 속성) |
+| 인물 › 헤어 (Hair) | [person/hair.md](person/hair.md) | **APPROVED** (Sprint 2-B.3, 23개 속성) |
+| 인물 › 수염 (Facial hair) | [person/facial-hair.md](person/facial-hair.md) | **APPROVED** (Sprint 2-B.3, 6개 속성, 새 영역) |
 | 인물 › 신체 (Body) | [person/body.md](person/body.md) | DRAFT |
 | 인물 › 표정 및 시각적 인상 (Expression & Appeal) | [person/expression.md](person/expression.md) | DRAFT |
 | 인물 › 메이크업 (Makeup) | [person/makeup.md](person/makeup.md) | DRAFT |
