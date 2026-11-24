@@ -36,7 +36,7 @@ const num = (value: number): SelectionValue => ({ kind: "number", value });
 const fixture = (dir: string, name: string) => readFileSync(join(__dirname, "../fixtures", dir, name), "utf8");
 
 describe("product exposure is separate from catalog expressiveness (D1)", () => {
-  it("core: Detailed edits every approved Basic attribute + the 6 lighting properties + the 153 person attributes (identity 16, facial 47, skin/hair 45, body 45), nothing else", () => {
+  it("core: Detailed edits every approved Basic attribute + the 6 lighting properties + the 277 person attributes (identity 16, facial 47, skin/hair 45, body 45, expression/makeup 34, wardrobe 72, accessories 18), nothing else", () => {
     const ids = core.exposedAttributes("detailed").map((a) => a.id);
     expect(ids).toEqual([
       "intent.description",
@@ -57,7 +57,7 @@ describe("product exposure is separate from catalog expressiveness (D1)", () => 
       "person.identity.narrative_role",
       "person.identity.social_status",
       "person.identity.description",
-      ...core.attributes().filter((a) => /^person\.(face|eyes|eyebrows|nose|lips|skin|hair|facial_hair|body)\./.test(a.id)).map((a) => a.id),
+      ...core.attributes().filter((a) => /^person\.(face|eyes|eyebrows|nose|lips|skin|hair|facial_hair|body|expression|impression|makeup|clothing|accessories)\./.test(a.id)).map((a) => a.id),
       "style.preset",
       "composition.framing",
       "composition.view_direction",
@@ -82,15 +82,15 @@ describe("product exposure is separate from catalog expressiveness (D1)", () => 
     expect(core.exposedAttributes("basic").map((a) => a.id)).toEqual(core.attributesForTier("basic").map((a) => a.id));
   });
 
-  it("core: Identity (2-B.1), Face/Eyes/Eyebrows/Nose/Lips (2-B.2), Skin/Hair/Facial hair (2-B.3) and Body (2-B.4) are approved; the other 5 person areas stay DRAFT structure only", () => {
+  it("core: Identity (2-B.1), Face/Eyes/Eyebrows/Nose/Lips (2-B.2), Skin/Hair/Facial hair (2-B.3), Body (2-B.4), Expression/Makeup/Wardrobe/Accessories (2-B.5) are approved; only Pose stays DRAFT structure", () => {
     const person = core.categories.filter((c) => c.parentId === "person");
     expect(person.map((c) => c.id)).toEqual([
       "person_identity", "person_face", "person_eyes", "person_eyebrows", "person_nose", "person_lips", "person_skin",
       "person_hair", "person_facial_hair", "person_body", "person_expression", "person_makeup", "person_wardrobe", "person_accessories", "person_pose",
     ]);
     expect(core.getCategory("person")?.status).toBe("approved");
-    const approved: Record<string, number> = { person_identity: 16, person_face: 10, person_eyes: 13, person_eyebrows: 8, person_nose: 8, person_lips: 8, person_skin: 16, person_hair: 23, person_facial_hair: 6, person_body: 45 };
-    expect(Object.values(approved).reduce((a, b) => a + b, 0)).toBe(153); // cumulative person attributes
+    const approved: Record<string, number> = { person_identity: 16, person_face: 10, person_eyes: 13, person_eyebrows: 8, person_nose: 8, person_lips: 8, person_skin: 16, person_hair: 23, person_facial_hair: 6, person_body: 45, person_expression: 18, person_makeup: 16, person_wardrobe: 72, person_accessories: 18 };
+    expect(Object.values(approved).reduce((a, b) => a + b, 0)).toBe(277); // cumulative person attributes
     for (const c of person) {
       expect(c.docPath).toMatch(/^docs\/catalogs\/person\/.+\.md$/);
       const inSubtree = core.attributes().filter((a) => a.categoryId !== undefined && core.categoryPath(a.categoryId).includes(c.id));
@@ -172,7 +172,8 @@ describe("catalog-wide search (ko/en/aliases)", () => {
     ["golden hour", "option", "lighting.preset", "golden_hour"],
     ["색온도", "attribute", "lighting.color_temperature", undefined],
     ["윤곽", "attribute", "person.face.shape", undefined], // product attribute alias (Sprint 2-B.2) ranks before the test-only one
-    ["정장", "option", "x.wardrobe.style", "business_suit"],
+    ["business suit", "option", "x.wardrobe.style", "business_suit"], // “정장” alone now also matches the product fashion style “business” (2-B.5)
+    ["정장", "option", "person.clothing.fashion_style", "business"],
   ])("%s → %s %s %s", (q, kind, attributeId, optionId) => {
     const h = first(q)!;
     expect(h.kind).toBe(kind);
@@ -485,7 +486,7 @@ describe("ImageSpec 0.2.0 compatibility (D2)", () => {
     expect(r.status).toBe("valid");
     if (r.status !== "valid") return;
     expect(r.spec.schemaVersion).toBe("0.3.0"); // migrated 0.1.0 → 0.2.0 → 0.3.0 (version-only steps)
-    expect(r.spec.catalog).toEqual({ id: "prompter.core", version: "0.7.0" });
+    expect(r.spec.catalog).toEqual({ id: "prompter.core", version: "0.8.0" });
     expect(r.spec.selections).toEqual(raw.selections);
     expect(r.migrations).toEqual([]);
     expect(r.diagnostics.filter((d) => d.severity !== "info")).toEqual([]);

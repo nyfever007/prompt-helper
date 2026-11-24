@@ -58,10 +58,17 @@ export class CatalogRegistry implements ConditionContext {
   private readonly sortedAttributes: readonly AttributeDefinition[];
   private readonly sortedGroups: readonly GroupDefinition[];
   private readonly sortedCategories: readonly CategoryDefinition[];
+  /** Option lookup by id per option attribute (the catalog is deep-frozen, so indexes never go stale). */
+  private readonly optionsById: ReadonlyMap<string, ReadonlyMap<string, OptionDefinition>>;
+  /** Memoized `lineage` of registered options (pure function of the frozen catalog). */
+  private readonly lineageCache = new Map<string, Map<string, readonly string[]>>();
 
   private constructor(private readonly catalog: Catalog) {
     this.sortedAttributes = Object.freeze([...catalog.attributes].sort(byOrderThenId));
     this.attributesById = new Map(this.sortedAttributes.map((a) => [a.id, a]));
+    this.optionsById = new Map(
+      this.sortedAttributes.filter(isOptionAttribute).map((a) => [a.id, new Map(a.options.map((o) => [o.id, o] as const))] as const),
+    );
     this.sortedGroups = Object.freeze([...catalog.groups].sort(byOrderThenId));
     this.sortedCategories = Object.freeze([...catalog.categories].sort(byOrderThenId));
   }
@@ -197,20 +204,29 @@ export class CatalogRegistry implements ConditionContext {
   }
 
   getOption(attributeId: string, optionId: string): OptionDefinition | undefined {
-    const attribute = this.attributesById.get(attributeId);
-    if (!attribute || (attribute.type !== "single" && attribute.type !== "multi")) return undefined;
-    return attribute.options.find((o) => o.id === optionId);
+    return this.optionsById.get(attributeId)?.get(optionId);
   }
 
-  /** The option id followed by its ancestors, nearest first (ConditionContext). */
+  /**
+   * The option id followed by its ancestors, nearest first (ConditionContext).
+   * Registered options are memoized (frozen result); unknown ids are computed, never cached.
+   */
   lineage(attributeId: string, optionId: string): readonly string[] {
-    const attribute = this.attributesById.get(attributeId);
-    if (!attribute || !isOptionAttribute(attribute)) return [optionId];
-    const out = [optionId];
-    let cur = attribute.options.find((o) => o.id === optionId)?.parentId;
-    while (cur !== undefined && !out.includes(cur)) {
-      out.push(cur);
-      cur = attribute.options.find((o) => o.id === cur)?.parentId;
+    const options = this.optionsById.get(attributeId);
+    if (!options) return [optionId];
+    if (!options.has(optionId)) return [optionId];
+    let byOption = this.lineageCache.get(attributeId);
+    if (!byOption) this.lineageCache.set(attributeId, (byOption = new Map()));
+    let out = byOption.get(optionId);
+    if (!out) {
+      const chain = [optionId];
+      let cur = options.get(optionId)?.parentId;
+      while (cur !== undefined && !chain.includes(cur)) {
+        chain.push(cur);
+        cur = options.get(cur)?.parentId;
+      }
+      out = Object.freeze(chain);
+      byOption.set(optionId, out);
     }
     return out;
   }

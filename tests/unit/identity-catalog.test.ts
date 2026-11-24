@@ -120,7 +120,7 @@ describe("identity catalog: approved structure (D2, D12, N2)", () => {
     expect(core.lineage(P + "species", "catfolk")).toEqual(["catfolk", "beastfolk"]);
   });
 
-  it("Identity has its 6 subcategories; approved person areas are exactly Identity (2-B.1), the 5 facial areas (2-B.2) skin, hair, facial hair (2-B.3) and body + its 7 subcategories (2-B.4)", () => {
+  it("Identity has its 6 subcategories; approved person areas are exactly Identity (2-B.1), the 5 facial areas (2-B.2) skin, hair, facial hair (2-B.3), body + its 7 subcategories (2-B.4), expression + 2, makeup, wardrobe + 8 and accessories (2-B.5)", () => {
     expect(core.categories.filter((c) => c.parentId === "person_identity").map((c) => c.id)).toEqual([
       "person_identity_being", "person_identity_age", "person_identity_gender", "person_identity_background", "person_identity_social", "person_identity_other",
     ]);
@@ -128,7 +128,10 @@ describe("identity catalog: approved structure (D2, D12, N2)", () => {
     expect(approvedPerson.sort()).toEqual(
       ["person", "person_identity", "person_identity_being", "person_identity_age", "person_identity_gender", "person_identity_background", "person_identity_social", "person_identity_other",
         "person_face", "person_eyes", "person_eyebrows", "person_nose", "person_lips", "person_skin", "person_hair", "person_facial_hair",
-        "person_body", "person_body_general", "person_body_proportions", "person_body_neck_shoulders", "person_body_torso", "person_body_hips", "person_body_arms_hands", "person_body_legs_feet"].sort(),
+        "person_body", "person_body_general", "person_body_proportions", "person_body_neck_shoulders", "person_body_torso", "person_body_hips", "person_body_arms_hands", "person_body_legs_feet",
+        "person_expression", "person_expression_face", "person_expression_impression", "person_makeup",
+        "person_wardrobe", "person_wardrobe_general", "person_wardrobe_tops", "person_wardrobe_bottoms", "person_wardrobe_one_piece", "person_wardrobe_outerwear",
+        "person_wardrobe_innerwear", "person_wardrobe_footwear", "person_wardrobe_hosiery", "person_accessories"].sort(),
     );
   });
 });

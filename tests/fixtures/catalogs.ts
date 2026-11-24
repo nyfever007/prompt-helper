@@ -24,7 +24,7 @@ export const coreAttr = (c: CatalogInput, id: string): MutableSingle => {
  */
 export const buildExtendedCatalog = (): CatalogInput => {
   const c = cloneCore();
-  c.version = "0.8.0";
+  c.version = "0.9.0";
 
   // Hierarchical subject sub-categories (Sprint 4 will expand these for real).
   coreAttr(c, "subject.kind").options.push(
@@ -118,8 +118,8 @@ export const buildExtendedCatalog = (): CatalogInput => {
   c.migrations = [
     ...(c.migrations ?? []),
     {
-      fromVersion: "0.7.0",
-      toVersion: "0.8.0",
+      fromVersion: "0.8.0",
+      toVersion: "0.9.0",
       changes: [
         { op: "renameOption", attributeId: "style.preset", from: "render_3d", to: "cgi_render", reason: { en: "Clearer id", ko: "더 명확한 ID" } },
         { op: "renameOption", attributeId: "mood.tone", from: "eerie", to: "uncanny", reason: { en: "Clearer id", ko: "더 명확한 ID" } },

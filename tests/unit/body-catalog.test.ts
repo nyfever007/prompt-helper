@@ -96,7 +96,8 @@ describe("registration and integrity (45 new, 153 cumulative person attributes)"
       expect(a.outputToggle, a.id).toBe(true);
       expect(a.label.ko && a.label.en && a.aliases?.length, a.id).toBeTruthy();
     }
-    expect(core.attributes().filter((a) => a.id.startsWith("person.") && core.isExposed(a, "detailed"))).toHaveLength(153);
+    // 153 cumulative after 2-B.4; 277 after Sprint 2-B.5 added 124 expression/makeup/wardrobe/accessory attributes
+    expect(core.attributes().filter((a) => a.id.startsWith("person.") && !/^person\.(expression|impression|makeup|clothing|accessories)\./.test(a.id) && core.isExposed(a, "detailed"))).toHaveLength(153);
   });
 
   it("shapes keep their approved expressions; relative sizes are 1–5 degree sliders with the approved bands", () => {
