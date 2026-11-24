@@ -9,7 +9,34 @@
 - 컴파일러(`COMPILER_VERSION`): 0.1.0 / generic-en adapter: 0.1.0
 - 로컬 저장 envelope(`STORAGE_FORMAT_VERSION`): 1
 
-## [Unreleased] — Sprint 1: Basic Composer (2026-11-24, 검토 대기)
+## [Unreleased] — Sprint 2-A: Detailed Editor Foundation (2026-11-24, 검토 대기)
+
+버전 변화: ImageSpec 0.1.0 → **0.2.0**, 카탈로그 형식 0.2.0 → **0.3.0**, core 카탈로그 0.2.0 → **0.3.0**(ID 변경 없음), 컴파일러 0.2.0 → **0.3.0**. 안전 정책 0.1.0 유지.
+
+### Added
+- Detailed Editor: 카탈로그 데이터 기반 카테고리 트리(펼침·접기, 설정 개수, 경고·차단·DRAFT 배지), 한·영·별칭 검색과 바로 이동, 범용 카테고리 패널, 3단·반응형 레이아웃
+- 범용 컨트롤: 칩, 드롭다운, 시각 카드(예시 이미지, 확대, 미등록 표시), 검색 목록, 팔레트 색상, 슬라이더(unset 표시, 입력할 때만 저장), 숫자 입력, 범위, 한 줄 텍스트
+- 카탈로그 형식 0.3.0: `status`, `control`, `categories`, `aliases`, `swatch`, `restriction`, `parts`, `semantics`, `bands`, `presets`
+- 승인 상태 기반 노출(Detailed = Basic 11 + 조명 속성 6, 스타일 축은 보류, 인물 14개 영역은 DRAFT 구조)
+- 복합 프리셋: 적용 계획(new/change/same/inapplicable/restricted, 유지되는 설정, 예상 충돌), 덮어쓰기 확인, 비어 있는 항목만 적용, 세션 내 마지막 1회 되돌리기(사용자 편집 보호)
+- ImageSpec 0.2.0 `origin`(프리셋 출처), 0.1.0 → 0.2.0 무손실 마이그레이션
+- 의미 단위 컴파일: 같은 의미는 한 번 출력, 직접 선택 우선, 조명 프리셋 8종 분해(Sprint 1 문구 보존), 실제 충돌 규칙 `backlight-vs-direction`
+- 정책 제한: 비활성과 사유 표시, 도메인 검증 오류, 출력 차단(모든 출력 경로)
+- 모바일 하단 고정 도구 모음과 미리보기 패널(Basic·Detailed)
+- 테스트 전용 카탈로그와 E2E 전용 빌드(`/e2e-fixtures`), `pnpm verify:isolation`
+- `docs/catalogs/` 템플릿과 DRAFT 16개, Sprint 1 실제 데이터 fixture
+- 테스트: 단위·컴포넌트 344개(+70), E2E 40건(39 통과, 1 skip: 모바일 전용 테스트의 데스크톱 실행 제외)
+
+### Changed
+- Detailed 탭: 예정 안내 → 실제 편집기 ("예정" 배지는 Precision에만)
+- 범위 컨트롤: 최소·최대가 모두 유효할 때만 저장(Sprint 0 결함 수정). 숫자 입력은 유효하지 않은 값을 저장하지 않음
+- GitHub Actions: checkout·setup-node·upload-artifact v7, pnpm/action-setup v5(node24), 격리 검증 단계, `feature/**` 트리거
+
+### Fixed
+- 모바일 Detailed 레이아웃에서 편집 영역 폭이 0이 되던 CSS 우선순위 문제(E2E로 발견)
+- 정책 제한으로 차단될 때 미리보기에 사유가 표시되지 않던 문제
+
+## [0.2.0] — 2026-11-24 — Sprint 1: Basic Composer (승인됨)
 
 버전 변화: core 카탈로그 0.1.0 → **0.2.0**, 카탈로그 형식 0.1.0 → **0.2.0**, 컴파일러 0.1.0 → **0.2.0**, 안전 정책 **0.1.0** 신설. ImageSpec **0.1.0 유지**, 저장 envelope v1 유지.
 

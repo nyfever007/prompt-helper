@@ -1,4 +1,5 @@
-import { isAttributeActive, isOptionActive } from "../catalog/applicability";
+import { findRestrictedSelections, isAttributeActive, isOptionActive } from "../catalog/applicability";
+import { phraseUnits, renderPhraseParts } from "../catalog/phrase";
 import type { CatalogRegistry } from "../catalog/registry";
 import type { AttributeDefinition, OptionDefinition } from "../catalog/schema";
 import { checkValueForAttribute } from "../catalog/valueCheck";
@@ -13,14 +14,24 @@ import { genericEnglishAdapter } from "./adapters/generic";
 import { detectNonLatinScripts } from "./language";
 import type { PromptAdapter, PromptCompilation, PromptFragment, PromptParameterValue } from "./types";
 
-/** Bump when the compiler's output for an unchanged spec can change. */
-export const COMPILER_VERSION = "0.2.0";
+/**
+ * Bump when the compiler's output for an unchanged spec can change.
+ * 0.3.0: numeric semantics (degree → bands), policy restrictions block output,
+ * direct selections take over semantic units of preset phrases. Specs that use
+ * none of these compile exactly as with 0.2.0 (regression-tested).
+ */
+export const COMPILER_VERSION = "0.3.0";
 
 /** Collapse whitespace for prompt output. The stored spec is never modified. */
 export const normalizeWhitespace = (text: string): string => text.replace(/\s+/gu, " ").trim();
 
-const phrase = (option: OptionDefinition, adapterId: string): string =>
-  option.prompt.byAdapter?.[adapterId] ?? option.prompt.text;
+/** Option phrase; adapter-specific text is opaque (no unit takeover). */
+const phrase = (option: OptionDefinition, adapterId: string, takenOver: ReadonlySet<string>): string => {
+  const byAdapter = option.prompt.byAdapter?.[adapterId];
+  if (byAdapter) return byAdapter;
+  if (option.prompt.parts && takenOver.size > 0) return renderPhraseParts(option.prompt.parts, takenOver);
+  return option.prompt.text;
+};
 
 interface Rendered {
   text: string;
@@ -29,30 +40,54 @@ interface Rendered {
   parameter?: PromptParameterValue;
 }
 
+/** Applicable selected options of an option attribute (catalog order). */
+const activeOptions = (registry: CatalogRegistry, spec: ImageSpec, attribute: AttributeDefinition, value: SelectionValue): OptionDefinition[] => {
+  if (attribute.type === "single" && value.kind === "single") {
+    const o = attribute.options.find((x) => x.id === value.optionId);
+    return o && isOptionActive(registry, o, spec) ? [o] : [];
+  }
+  if (attribute.type === "multi" && value.kind === "multi") {
+    // Catalog order, not click order: the same set always yields the same text.
+    return attribute.options.filter((o) => value.optionIds.includes(o.id) && isOptionActive(registry, o, spec));
+  }
+  return [];
+};
+
 const renderValue = (
   registry: CatalogRegistry,
   spec: ImageSpec,
   attribute: AttributeDefinition,
   value: SelectionValue,
   adapterId: string,
+  takenOver: ReadonlySet<string>,
 ): Rendered | null => {
   switch (value.kind) {
     case "single": {
-      if (attribute.type !== "single") return null;
-      const option = attribute.options.find((o) => o.id === value.optionId);
-      if (!option || !isOptionActive(registry, option, spec)) return null; // inactive option: kept, not compiled
-      return { text: phrase(option, adapterId), options: [option], ...(option.parameterValue !== undefined ? { parameter: option.parameterValue } : {}) };
+      const [option] = activeOptions(registry, spec, attribute, value);
+      if (!option) return null; // inactive option: kept, not compiled
+      return { text: phrase(option, adapterId, takenOver), options: [option], ...(option.parameterValue !== undefined ? { parameter: option.parameterValue } : {}) };
     }
     case "multi": {
-      if (attribute.type !== "multi") return null;
-      // Catalog order, not click order: the same set always yields the same text.
-      const options = attribute.options.filter((o) => value.optionIds.includes(o.id) && isOptionActive(registry, o, spec));
+      const options = activeOptions(registry, spec, attribute, value);
       if (options.length === 0) return null;
       const params = options.map((o) => o.parameterValue).filter((p) => p !== undefined);
-      return { text: options.map((o) => phrase(o, adapterId)).join(", "), options, ...(params.length ? { parameter: params.join(",") } : {}) };
+      return {
+        text: options
+          .map((o) => phrase(o, adapterId, takenOver))
+          .filter(Boolean)
+          .join(", "),
+        options,
+        ...(params.length ? { parameter: params.join(",") } : {}),
+      };
     }
     case "number": {
-      const unit = attribute.type === "number" && attribute.unit ? ` ${attribute.unit}` : "";
+      if (attribute.type !== "number") return null;
+      // The raw number is stored losslessly in the spec; only its EXPRESSION depends on semantics.
+      if ((attribute.semantics ?? "physical") === "degree" && attribute.bands) {
+        const band = attribute.bands.find((b) => value.value <= b.upTo) ?? attribute.bands[attribute.bands.length - 1]!;
+        return { text: band.text, options: [], parameter: value.value };
+      }
+      const unit = attribute.unit ? (attribute.unit === "%" ? "%" : ` ${attribute.unit}`) : "";
       return { text: `${value.value}${unit}`, options: [], parameter: value.value };
     }
     case "range": {
@@ -99,34 +134,67 @@ export const compilePrompt = (
   const tags: Array<{ attributeId: string; optionId: string; tag: string }> = [];
   const catalogUsable = !diagnostics.some((d) => d.code === "spec.catalog_mismatch");
 
+  // Pass 1 — which attributes will state their own meaning (set, applicable, valid).
+  const producing = new Map<string, OptionDefinition[]>();
   if (catalogUsable) {
     for (const attribute of registry.attributes()) {
       const selection = spec.selections[attribute.id];
       if (!selection) continue; // unset → nothing
       if (!isAttributeActive(registry, attribute, spec)) continue; // kept in spec, not compiled
       if (hasErrors(checkValueForAttribute(attribute, selection.value, ""))) continue; // already reported
-
-      const rendered = renderValue(registry, spec, attribute, selection.value, adapter.id);
-      if (!rendered || !rendered.text) continue;
-      for (const o of rendered.options) for (const tag of o.policyTags ?? []) tags.push({ attributeId: attribute.id, optionId: o.id, tag });
-
-      const channel = attribute.prompt.channel ?? "text";
-      if (channel !== "text" && attribute.prompt.parameterKey && rendered.parameter !== undefined) {
-        parameters[attribute.prompt.parameterKey] = rendered.parameter;
-        parameterSources[attribute.prompt.parameterKey] = attribute.id;
-      }
-      if (channel === "parameter") continue;
-
-      const template = attribute.prompt.byAdapter?.[adapter.id] ?? attribute.prompt.template;
-      // split/join: no regex replacement patterns, so user text like "$&" or "{value}" is inert.
-      const text = normalizeWhitespace(template.split("{value}").join(rendered.text));
-      fragments.push({
-        attributeId: attribute.id,
-        text,
-        ...(rendered.options.length ? { optionIds: rendered.options.map((o) => o.id) } : {}),
-        ...(selection.priority !== undefined ? { priority: selection.priority } : {}),
-      });
+      const options = activeOptions(registry, spec, attribute, selection.value);
+      if ((attribute.type === "single" || attribute.type === "multi") && options.length === 0) continue;
+      producing.set(attribute.id, options);
     }
+  }
+
+  // Pass 2 — fragments. A semantic unit of a preset phrase whose axis is stated by a
+  // direct selection is taken over by that selection (output once, direct choice wins).
+  for (const attribute of registry.attributes()) {
+    if (!producing.has(attribute.id)) continue;
+    const selection = spec.selections[attribute.id]!;
+    const takenOver = new Set<string>();
+    const takenOverBy: NonNullable<PromptFragment["takenOverBy"]> = [];
+    for (const o of producing.get(attribute.id)!) {
+      for (const unit of phraseUnits(o.prompt.parts)) {
+        const axisOptions = producing.get(unit.axis);
+        if (!axisOptions || unit.axis === attribute.id || takenOver.has(unit.axis)) continue;
+        takenOver.add(unit.axis);
+        const relation = axisOptions.every((x) => unit.values.includes(x.id)) ? "equivalent" : "override";
+        takenOverBy.push({ attributeId: unit.axis, relation });
+        if (relation === "override") {
+          diagnostics.push(
+            info("preset.unit_overridden", `"${unit.axis}" (direct selection) replaces the matching part of "${attribute.id}" (${o.id})`, {
+              attributeId: unit.axis,
+              involves: [attribute.id, unit.axis],
+              params: { preset: attribute.id, option: o.id, axis: unit.axis },
+            }),
+          );
+        }
+      }
+    }
+
+    const rendered = renderValue(registry, spec, attribute, selection.value, adapter.id, takenOver);
+    if (!rendered || !rendered.text) continue;
+    for (const o of rendered.options) for (const tag of o.policyTags ?? []) tags.push({ attributeId: attribute.id, optionId: o.id, tag });
+
+    const channel = attribute.prompt.channel ?? "text";
+    if (channel !== "text" && attribute.prompt.parameterKey && rendered.parameter !== undefined) {
+      parameters[attribute.prompt.parameterKey] = rendered.parameter;
+      parameterSources[attribute.prompt.parameterKey] = attribute.id;
+    }
+    if (channel === "parameter") continue;
+
+    const template = attribute.prompt.byAdapter?.[adapter.id] ?? attribute.prompt.template;
+    // split/join: no regex replacement patterns, so user text like "$&" or "{value}" is inert.
+    const text = normalizeWhitespace(template.split("{value}").join(rendered.text));
+    fragments.push({
+      attributeId: attribute.id,
+      text,
+      ...(rendered.options.length ? { optionIds: rendered.options.map((o) => o.id) } : {}),
+      ...(selection.priority !== undefined ? { priority: selection.priority } : {}),
+      ...(takenOverBy.length ? { takenOverBy } : {}),
+    });
   }
 
   const rendered = adapter.render(fragments);
@@ -157,7 +225,25 @@ export const compilePrompt = (
     );
   }
 
-  if (safety.blocked) {
+  // Policy restrictions (catalog `restriction`): if a restricted option is present
+  // (e.g. via import) the whole output is withheld; the spec itself is preserved.
+  const restricted = catalogUsable ? findRestrictedSelections(spec, registry) : [];
+  for (const r of restricted) {
+    const attribute = registry.getAttribute(r.attributeId)!;
+    const option = attribute.type === "single" || attribute.type === "multi" ? attribute.options.find((o) => o.id === r.optionIds[0]) : undefined;
+    diagnostics.push(
+      error("policy.restricted_selection", `"${r.attributeId}" has a restricted option (${r.optionIds.join(", ")}); prompt output is withheld`, {
+        attributeId: r.attributeId,
+        involves: [r.attributeId],
+        params: {
+          optionIds: r.optionIds.join(","),
+          ...(option?.restriction?.policyRuleId ? { policyRuleId: option.restriction.policyRuleId } : {}),
+        },
+      }),
+    );
+  }
+
+  if (safety.blocked || restricted.length > 0) {
     return {
       prompt: "",
       negativePrompt: "",

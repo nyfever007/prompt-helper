@@ -4,14 +4,17 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import {
   compilePrompt,
   getCoreRegistry,
+  getPromptOutput,
   type CatalogMigrationRecord,
   type CatalogRegistry,
   type KeyValueStore,
   type SpecAnalysis,
+  resolveText,
 } from "@/domain";
 import { fmt, getMessages, SUPPORTED_LOCALES, type Messages, type UiLocale } from "@/i18n/messages";
 import { MODES, useUiPrefs } from "@/state/useUiPrefs";
 import { useWorkspace } from "@/state/useWorkspace";
+import { copyText } from "./clipboard";
 import { describeDiagnostic } from "./diagnostics";
 import { downloadText, timestamp } from "./download";
 import { attributeLabel, optionLabel } from "./format";
@@ -57,6 +60,8 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
   const [eventNotices, setEventNotices] = useState<Notice[]>([]);
   const [dismissed, setDismissed] = useState<ReadonlySet<string>>(new Set());
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [mobileCopied, setMobileCopied] = useState<"idle" | "copied" | "failed">("idle");
   const counter = useRef(0);
   const push = useCallback((n: Omit<Notice, "id">) => setEventNotices((ns) => [...ns, { ...n, id: `event-${++counter.current}` }]), []);
   const dismiss = useCallback((id: string) => {
@@ -110,7 +115,30 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
       });
     }
   }
+  const undo = workspace.lastPresetUndo;
+  if (undo) {
+    const name = resolveText(registry.getPreset(undo.presetId)?.label, locale) || undo.presetId;
+    const labels = (ids: string[]) => ids.map((id) => attributeLabel(registry, id, locale)).join(", ");
+    derived.push({
+      id: `preset-undo-${undo.id}`,
+      kind: "info",
+      text: fmt(t.presetDialog.undone, { name, restored: undo.restored.length ? labels(undo.restored) : t.presetDialog.nothingRestored }),
+      ...(undo.kept.length ? { details: [fmt(t.presetDialog.undoneKept, { kept: labels(undo.kept) })] } : { autoDismissMs: noticeTimeoutMs }),
+    });
+  }
   const notices = [...derived, ...eventNotices].filter((n) => !dismissed.has(n.id));
+
+  // Mobile toolbar status — same gate as every other output path.
+  const output = getPromptOutput(workspace.compilation);
+  const warningCount = workspace.compilation.diagnostics.filter(
+    (d) => (d.severity === "warning" || d.severity === "error") && !d.code.startsWith("safety.") && !d.code.startsWith("policy."),
+  ).length;
+  const onMobileCopy = async () => {
+    if (!output.ok) return;
+    const done = await copyText(output.prompt);
+    setMobileCopied(done ? "copied" : "failed");
+    window.setTimeout(() => setMobileCopied("idle"), 2000);
+  };
 
   // ── Import ────────────────────────────────────────────────────────────────
   const onImportAnalyzed = (analysis: SpecAnalysis, text: string, fileName: string) => {
@@ -150,7 +178,7 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
   };
 
   return (
-    <div className="app" lang={locale}>
+    <div className="app" lang={locale} data-mode={mode} data-preview-open={previewOpen}>
       <header className="app__header">
         <div>
           <h1>{t.appTitle}</h1>
@@ -181,7 +209,7 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
             onClick={() => setMode(m)}
           >
             {t.modes[m]}
-            {m !== "basic" && <span className="tab__planned">{t.planned.tabBadge}</span>}
+            {m === "precision" && <span className="tab__planned">{t.planned.tabBadge}</span>}
           </button>
         ))}
       </nav>
@@ -233,10 +261,17 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
 
       <main className="layout">
         <div id="mode-panel" role="tabpanel" aria-labelledby={`tab-${mode}`} className="layout__editor">
-          <ModePanel mode={mode} registry={registry} workspace={workspace} locale={locale} t={t} />
+          <ModePanel
+            mode={mode}
+            registry={registry}
+            workspace={workspace}
+            locale={locale}
+            t={t}
+            onPresetApplied={(name, count) => push({ kind: "success", text: fmt(t.presetDialog.applied, { name, n: count }), autoDismissMs: noticeTimeoutMs })}
+          />
         </div>
         <aside className="layout__preview">
-          <PromptPreview compilation={workspace.compilation} registry={registry} locale={locale} t={t} />
+          <PromptPreview compilation={workspace.compilation} registry={registry} locale={locale} t={t} onClose={() => setPreviewOpen(false)} />
           <SpecToolbar
             registry={registry}
             spec={workspace.spec}
@@ -258,6 +293,24 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
         </aside>
       </main>
       <footer className="app__footer muted">{t.footer}</footer>
+
+      <div className="mobile-bar" role="toolbar" aria-label={t.mobile.toolbar}>
+        <span className="mobile-bar__count" data-testid="mobile-applied">
+          {fmt(t.mobile.applied, { n: Object.keys(workspace.spec.selections).length })}
+        </span>
+        <span
+          className={`mobile-bar__status ${workspace.compilation.blocked ? "is-blocked" : warningCount ? "is-warn" : "is-ok"}`}
+          data-testid="mobile-status"
+        >
+          {workspace.compilation.blocked ? t.mobile.blocked : warningCount ? fmt(t.mobile.warnings, { n: warningCount }) : t.mobile.ok}
+        </span>
+        <button type="button" className="button button--small" aria-expanded={previewOpen} aria-controls="preview-panel" onClick={() => setPreviewOpen(!previewOpen)}>
+          {previewOpen ? t.mobile.hidePreview : t.mobile.preview}
+        </button>
+        <button type="button" className="button button--small button--primary" aria-label={t.mobile.copyLabel} disabled={!output.ok} onClick={onMobileCopy}>
+          {mobileCopied === "copied" ? t.preview.copied : t.mobile.copy}
+        </button>
+      </div>
     </div>
   );
 }

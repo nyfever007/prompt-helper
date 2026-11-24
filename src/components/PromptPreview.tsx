@@ -3,49 +3,39 @@
 import { useState } from "react";
 import { exportPromptText, getPromptOutput, type CatalogRegistry, type PromptCompilation } from "@/domain";
 import { fmt, type Messages } from "@/i18n/messages";
+import { copyText } from "./clipboard";
 import { describeDiagnostic } from "./diagnostics";
 import { downloadText, timestamp } from "./download";
 import { attributeLabel } from "./format";
-
-async function copyText(text: string): Promise<boolean> {
-  try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-  } catch {
-    // fall through to legacy path
-  }
-  try {
-    const el = document.createElement("textarea");
-    el.value = text;
-    el.setAttribute("readonly", "");
-    el.style.position = "fixed";
-    el.style.opacity = "0";
-    document.body.appendChild(el);
-    el.select();
-    const done = document.execCommand("copy");
-    el.remove();
-    return done;
-  } catch {
-    return false;
-  }
-}
 
 /**
  * All prompt output paths (display, copy, .txt export) go through
  * `getPromptOutput` / `exportPromptText`, so a blocked compilation can never
  * leak through any of them.
  */
-export function PromptPreview({ compilation, registry, locale, t }: { compilation: PromptCompilation; registry: CatalogRegistry; locale: string; t: Messages }) {
+export function PromptPreview({
+  compilation,
+  registry,
+  locale,
+  t,
+  onClose,
+}: {
+  compilation: PromptCompilation;
+  registry: CatalogRegistry;
+  locale: string;
+  t: Messages;
+  /** Mobile bottom-sheet close (the button is only visible on small screens). */
+  onClose?(): void;
+}) {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
   const output = getPromptOutput(compilation);
   const { meta } = compilation;
   const ctx = { registry, locale, t };
-  const safetyDiags = compilation.diagnostics.filter((d) => d.code.startsWith("safety."));
+  // Everything that withholds output: safety policy findings and catalog policy restrictions.
+  const safetyDiags = compilation.diagnostics.filter((d) => d.code.startsWith("safety.") || d.code.startsWith("policy."));
   const languageDiags = compilation.diagnostics.filter((d) => d.code === "prompt.mixed_language");
   const notes = compilation.diagnostics.filter(
-    (d) => d.code !== "compiler.empty" && !d.code.startsWith("safety.") && d.code !== "prompt.mixed_language",
+    (d) => d.code !== "compiler.empty" && !d.code.startsWith("safety.") && !d.code.startsWith("policy.") && d.code !== "prompt.mixed_language",
   );
   const params = Object.entries(compilation.parameters).sort(([a], [b]) => (a < b ? -1 : 1));
 
@@ -61,9 +51,14 @@ export function PromptPreview({ compilation, registry, locale, t }: { compilatio
   };
 
   return (
-    <section className="preview" aria-labelledby="preview-title" data-blocked={compilation.blocked}>
+    <section className="preview" id="preview-panel" aria-labelledby="preview-title" data-blocked={compilation.blocked}>
       <header className="preview__header">
         <h2 id="preview-title">{t.preview.title}</h2>
+        {onClose && (
+          <button type="button" className="link-button preview__close" onClick={onClose}>
+            {t.mobile.hidePreview}
+          </button>
+        )}
         <div className="toolbar">
           <button type="button" className="button button--primary" onClick={onCopy} disabled={!output.ok}>
             {copyState === "copied" ? t.preview.copied : t.preview.copy}

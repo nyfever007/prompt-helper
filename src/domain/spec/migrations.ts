@@ -3,8 +3,7 @@ import { IMAGE_SPEC_SCHEMA_VERSION } from "./schema";
 
 /**
  * Schema migration hook. Each migration upgrades raw JSON from one schema
- * version to the next. Sprint 0 has a single version (0.1.0), so the list is
- * empty; the hook exists so future versions can import older files.
+ * version to the next (pure; the input object is never mutated).
  */
 export interface SpecMigration {
   from: string;
@@ -12,7 +11,10 @@ export interface SpecMigration {
   migrate(raw: Record<string, unknown>): Record<string, unknown>;
 }
 
-export const SPEC_MIGRATIONS: readonly SpecMigration[] = [];
+export const SPEC_MIGRATIONS: readonly SpecMigration[] = [
+  // 0.2.0 only ADDS the optional `origin` field; 0.1.0 data is valid as-is (lossless).
+  { from: "0.1.0", to: "0.2.0", migrate: (raw) => ({ ...raw, schemaVersion: "0.2.0" }) },
+];
 
 export const migrateRawSpec = (
   raw: Record<string, unknown>,

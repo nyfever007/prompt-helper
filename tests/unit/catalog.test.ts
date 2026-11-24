@@ -18,11 +18,11 @@ import { buildSpec, multi, single } from "../fixtures/specs";
 
 const core = getCoreRegistry();
 
-describe("8. core catalog 0.2.0", () => {
+describe("8. core catalog 0.3.0", () => {
   it("is valid, versioned and declares its format", () => {
     expect(core.id).toBe("prompter.core");
-    expect(core.version).toBe("0.2.0");
-    expect(coreCatalog.formatVersion).toBe("0.2.0");
+    expect(core.version).toBe("0.3.0");
+    expect(coreCatalog.formatVersion).toBe("0.3.0");
   });
 
   it("Basic tier attributes in order", () => {

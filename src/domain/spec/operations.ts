@@ -1,7 +1,7 @@
 import type { CatalogRegistry } from "../catalog/registry";
 import { checkValueForAttribute } from "../catalog/valueCheck";
 import { error, fail, ok, type Result } from "../shared/diagnostics";
-import type { AttributeSelection, ImageSpec, SelectionSource } from "./schema";
+import type { AttributeSelection, ImageSpec, SelectionOrigin, SelectionSource } from "./schema";
 import type { SelectionValue } from "./values";
 
 /**
@@ -25,6 +25,7 @@ export const applySelection = (
   attributeId: string,
   value: SelectionValue,
   source: SelectionSource = "user",
+  origin?: SelectionOrigin,
 ): Result<ImageSpec> => {
   const attribute = registry.getAttribute(attributeId);
   if (!attribute) {
@@ -45,6 +46,8 @@ export const applySelection = (
     source,
     // Changing a value keeps the user's emphasis for that attribute.
     ...(previous?.priority !== undefined ? { priority: previous.priority } : {}),
+    // Provenance: only preset writes carry an origin; any direct edit drops it (user > preset).
+    ...(source === "preset" && origin ? { origin } : {}),
   };
   return ok({ ...spec, selections: { ...spec.selections, [attributeId]: next } });
 };

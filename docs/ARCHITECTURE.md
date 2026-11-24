@@ -1,7 +1,7 @@
-# Prompter 아키텍처 (Sprint 1 기준)
+# Prompter 아키텍처 (Sprint 2-A 기준)
 
 > 기준 문서: [PROMPTER_MASTER_PLAN.md](../PROMPTER_MASTER_PLAN.md) §5, §6, §7, §9, §11
-> 변경 이력: Sprint 0 기반 구조 → Sprint 1에서 카탈로그 형식 0.2.0, 안전 정책 계층, 마이그레이션과 부분 복구 추가 (ImageSpec 0.1.0은 그대로)
+> 변경 이력: Sprint 0 기반 구조 → Sprint 1에서 카탈로그 형식 0.2.0, 안전 정책 계층, 마이그레이션과 부분 복구 추가 → **Sprint 2-A에서 카탈로그 형식 0.3.0, ImageSpec 0.2.0, Detailed Editor 기반, 복합 프리셋, 테스트 카탈로그 격리 추가 (§9)**
 
 ## 1. 핵심 원칙
 
@@ -135,3 +135,55 @@ UI:  valid → 적용 (+ 마이그레이션 내역 알림)
 - 클라이언트 네트워크 호출 0(테스트, E2E 네트워크 감시).
 - 안전 정책은 로컬 키워드 기반 기준선입니다. 의미 기반 검열도 아니고 provider 정책 준수를 보장하지도 않습니다(DECISIONS ADR-019).
 - CI(`.github/workflows/ci.yml`)는 원격 저장소(GitHub) 연결 후 GitHub Actions에서 실행됩니다.
+
+## 9. Sprint 2-A: Detailed Editor 기반
+
+### 9.1 추가·변경된 모듈
+| 모듈 | 위치 | 책임 |
+|---|---|---|
+| 노출 규칙 | `catalog/registry.ts` `isExposed` / `exposedAttributes` | 제품 승인 상태(`status`) + tier + 카테고리 승인 → 편집 가능 여부. 데이터가 있다고 노출하지 않음 |
+| 카테고리 | `catalog/categories.ts` | `categories` 데이터 → 트리(적용 여부, 하위 포함 설정 개수, 경고·차단 배지), 카탈로그 전체 검색 |
+| 의미 단위 | `catalog/phrase.ts` | `parts` 렌더링(대체된 축 제외). 레지스트리가 "parts 렌더링 결과 == text"를 강제 |
+| 정책 제한 | `catalog/applicability.ts` `isOptionRestricted` / `findRestrictedSelections` | 조건부 비활성 + 사유. 검증기 오류, 컴파일 차단 |
+| 프리셋 | `presets/presets.ts` | `planPreset` → `applyPresetPlan` → `undoPresetTransaction`, `markUserEdited` |
+| 컴파일러 0.3.0 | `compiler/compiler.ts` | 2단계(출력 속성 결정 → 의미 단위 대체), 수치 의미(degree → bands), 제한 시 차단 |
+| ImageSpec 0.2.0 | `spec/schema.ts`, `spec/migrations.ts` | `origin`(preset일 때만), 0.1.0 → 0.2.0 무손실 |
+| 범용 컨트롤 | `components/controls/Controls.tsx`, `AttributeField.tsx` | `control`에 따라 칩, 드롭다운, 카드, 검색 목록, 색상, 슬라이더, 숫자, 범위, 텍스트 |
+| Detailed Editor | `components/detailed/*` | 탐색(트리와 검색), 카테고리 패널(범용 필드, 프리셋, DRAFT 안내), 프리셋 확인 대화상자 |
+| 모바일 도구 모음 | `components/PrompterApp.tsx` + CSS | 860px 미만: 개수, 상태, 미리보기 패널, 복사(출력 관문) |
+| 테스트 카탈로그 | `src/testing/*`, `src/app/e2e-fixtures`, `scripts/verify-prod-isolation.mjs` | E2E 전용 빌드에서만 존재. 일반 빌드에서는 404이며 번들에 없음 |
+
+### 9.2 화면 구조
+```text
+≥1100px  [탐색 240px] [카테고리 패널] [미리보기 380px, sticky]
+860–1100 [☰ 카테고리 → 접히는 탐색] [카테고리 패널] [미리보기]
+<860     [☰ 카테고리] [카테고리 패널] … [하단 고정 도구 모음] + 아래에서 올라오는 미리보기 패널
+```
+모든 카테고리 화면은 하나의 범용 패널이 카탈로그 데이터로 만듭니다. 카테고리별로 따로 작성한 화면은 없습니다.
+
+### 9.3 우선순위와 출처
+```text
+사용자 직접 선택 (source=user)            ← 항상 우선, origin 없음
+명시적으로 적용한 프리셋 값 (source=preset, origin=presetId@version)
+분류·검색 메타데이터 (classification, aliases) ← 선택값이 아님, 출력에 쓰이지 않음
+unset (키 없음)
+```
+- 세션 트랜잭션(마지막 프리셋 1회): 적용 전·후 값, 변경된 속성, `userEdited`.
+- 되돌리기는 `userEdited`가 아니고 현재 값이 적용 직후와 같은 객체일 때만 복원합니다.
+
+### 9.4 빌드 종류
+| 빌드 | 명령 | 테스트 카탈로그 | 출력 폴더 |
+|---|---|---|---|
+| 일반 프로덕션 | `pnpm build` | 없음(번들에서 제거, `/e2e-fixtures` 404) — `pnpm verify:isolation`으로 검증 | `.next` |
+| E2E 전용 | Playwright webServer (`PROMPTER_E2E_FIXTURES=1`, `PROMPTER_DIST_DIR=.next-e2e`) | `/e2e-fixtures` 페이지(테스트 전용 배너, 분리된 저장 키) | `.next-e2e` |
+
+### 9.5 추가 불변 조건 (테스트로 보장)
+| 불변 조건 | 테스트 |
+|---|---|
+| 미승인(draft·deferred)·precision 속성은 제품 UI에 나타나지 않음 | `detailed-domain`, `component/detailed`, E2E |
+| 슬라이더 표시 위치와 범위의 절반 입력은 저장되지 않음 | `component/detailed`, E2E |
+| 프리셋 계획은 명세를 바꾸지 않고, 적용은 목록에 있는 속성만 바꿈 | `detailed-domain`, `component/detailed`, E2E |
+| 되돌리기는 사용자 편집(같은 값으로 되돌린 경우 포함)을 보호 | `detailed-domain`, `component/detailed`, E2E |
+| 같은 의미는 한 번만 출력, 직접 선택 우선, 다른 축은 충돌 아님 | `detailed-domain`, `component/detailed`, E2E |
+| Sprint 0·1 실제 데이터 무손실, Sprint 1 프롬프트 동일 | `migration`, `detailed-domain`, E2E |
+| 일반 빌드에서 테스트 카탈로그 접근 불가 | `verify:isolation` |

@@ -11,7 +11,8 @@ export function SpecSummary({ registry, spec, locale, t }: { registry: CatalogRe
       <h3>{t.planned.sharedSpec}</h3>
       <p className="muted">{t.planned.sharedSpecHint}</p>
       <dl>
-        {registry.attributes().map((a) => {
+        {/* Only product-exposed attributes, plus anything that is actually set (values must never be hidden). */}
+        {registry.attributes().filter((a) => registry.isExposed(a, "detailed") || a.id in spec.selections).map((a) => {
           const s = spec.selections[a.id];
           return (
             <div key={a.id} className="summary__row" data-attribute-id={a.id} data-state={s ? "set" : "unset"}>

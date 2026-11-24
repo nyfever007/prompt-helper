@@ -1,5 +1,6 @@
 import { error, fail, fromZodIssues, hasErrors, ok, type Diagnostic, type Result } from "../shared/diagnostics";
 import type { ConditionContext } from "./conditions";
+import { phraseUnits, renderPhraseParts } from "./phrase";
 import {
   CatalogSchema,
   isOptionAttribute,
@@ -7,15 +8,35 @@ import {
   type Catalog,
   type CatalogMigration,
   type CatalogRule,
+  type CategoryDefinition,
   type Condition,
+  type Control,
   type GroupDefinition,
   type OptionDefinition,
+  type PresetDefinition,
   type Tier,
 } from "./schema";
 import { compareSemVer } from "./semver";
 import { checkValueForAttribute } from "./valueCheck";
 
-const TIER_RANK: Record<Tier, number> = { basic: 0, detailed: 1, precision: 2 };
+export const TIER_RANK: Record<Tier, number> = { basic: 0, detailed: 1, precision: 2 };
+
+/** Which controls can represent which data types. */
+export const CONTROL_TYPES: Record<Control, ReadonlyArray<AttributeDefinition["type"]>> = {
+  chips: ["single", "multi"],
+  dropdown: ["single"],
+  cards: ["single", "multi"],
+  searchable: ["single", "multi"],
+  color: ["single", "multi"],
+  slider: ["number"],
+  number: ["number"],
+  range: ["range"],
+  text: ["text"],
+  textarea: ["text"],
+};
+
+export const defaultControl = (a: AttributeDefinition): Control =>
+  a.control ?? (a.type === "single" || a.type === "multi" ? "chips" : a.type === "text" ? "textarea" : a.type);
 
 const byOrderThenId = (a: { order: number; id: string }, b: { order: number; id: string }) =>
   a.order - b.order || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
@@ -31,11 +52,13 @@ export class CatalogRegistry implements ConditionContext {
   private readonly attributesById: ReadonlyMap<string, AttributeDefinition>;
   private readonly sortedAttributes: readonly AttributeDefinition[];
   private readonly sortedGroups: readonly GroupDefinition[];
+  private readonly sortedCategories: readonly CategoryDefinition[];
 
   private constructor(private readonly catalog: Catalog) {
     this.sortedAttributes = Object.freeze([...catalog.attributes].sort(byOrderThenId));
     this.attributesById = new Map(this.sortedAttributes.map((a) => [a.id, a]));
     this.sortedGroups = Object.freeze([...catalog.groups].sort(byOrderThenId));
+    this.sortedCategories = Object.freeze([...catalog.categories].sort(byOrderThenId));
   }
 
   /** Parse + integrity-check an untrusted catalog (e.g. loaded from JSON). */
@@ -75,6 +98,49 @@ export class CatalogRegistry implements ConditionContext {
   get migrations(): readonly CatalogMigration[] {
     return this.catalog.migrations;
   }
+  /** Detailed navigation categories in deterministic (order, id) order. */
+  get categories(): readonly CategoryDefinition[] {
+    return this.sortedCategories;
+  }
+  get presets(): readonly PresetDefinition[] {
+    return this.catalog.presets;
+  }
+
+  getCategory(id: string): CategoryDefinition | undefined {
+    return this.sortedCategories.find((c) => c.id === id);
+  }
+
+  getPreset(id: string): PresetDefinition | undefined {
+    return this.catalog.presets.find((p) => p.id === id);
+  }
+
+  /** Category ids from the root down to `id` (inclusive). */
+  categoryPath(id: string): string[] {
+    const path: string[] = [];
+    let cur = this.getCategory(id);
+    while (cur && !path.includes(cur.id)) {
+      path.unshift(cur.id);
+      cur = cur.parentId ? this.getCategory(cur.parentId) : undefined;
+    }
+    return path;
+  }
+
+  /** Is the category (and every ancestor) approved for the product UI? */
+  isCategoryApproved(id: string): boolean {
+    const path = this.categoryPath(id);
+    return path.length > 0 && path.every((c) => this.getCategory(c)?.status === "approved");
+  }
+
+  /**
+   * Product exposure: an attribute is editable in a mode only if it is
+   * APPROVED, its tier is within the mode, and (for Detailed) its category
+   * chain is approved. Technical presence in the catalog is not enough.
+   */
+  isExposed(attribute: AttributeDefinition, mode: Tier): boolean {
+    if (attribute.status !== "approved" || TIER_RANK[attribute.tier] > TIER_RANK[mode]) return false;
+    if (mode === "basic") return true;
+    return attribute.categoryId !== undefined && this.isCategoryApproved(attribute.categoryId);
+  }
 
   getGroup(id: string): GroupDefinition | undefined {
     return this.sortedGroups.find((g) => g.id === id);
@@ -92,9 +158,14 @@ export class CatalogRegistry implements ConditionContext {
     return this.sortedAttributes;
   }
 
-  /** Attributes first offered at exactly this tier. */
+  /** Attributes first offered at exactly this tier (regardless of approval status). */
   attributesForTier(tier: Tier): AttributeDefinition[] {
     return this.sortedAttributes.filter((a) => a.tier === tier);
+  }
+
+  /** Attributes editable in a mode's product UI (see `isExposed`). */
+  exposedAttributes(mode: Tier): AttributeDefinition[] {
+    return this.sortedAttributes.filter((a) => this.isExposed(a, mode));
   }
 
   /** Attributes visible in a mode (a mode shows its tier and all simpler tiers). */
@@ -214,6 +285,9 @@ function checkIntegrity(catalog: Catalog): Diagnostic[] {
     }
   }
 
+  out.push(...checkCategories(catalog));
+  for (const a of catalog.attributes) out.push(...checkAttributeUi(a, attributes, catalog));
+  out.push(...checkPresets(catalog, attributes));
   out.push(...checkMigrations(catalog, attributes));
 
   const ruleIds = new Set<string>();
@@ -223,6 +297,114 @@ function checkIntegrity(catalog: Catalog): Diagnostic[] {
     for (const c of r.when) out.push(...checkCondition(c, attributes, `rule "${r.id}"`));
     for (const id of [...r.involves, ...(r.actions ?? []).map((x) => x.attributeId)]) {
       if (!attributes.has(id)) out.push(error("catalog.unknown_attribute_ref", `Rule "${r.id}" involves unknown "${id}"`));
+    }
+  }
+  return out;
+}
+
+function checkCategories(catalog: Catalog): Diagnostic[] {
+  const out: Diagnostic[] = [];
+  const ids = new Set<string>();
+  for (const c of catalog.categories) {
+    if (ids.has(c.id)) out.push(error("catalog.duplicate_category", `Duplicate category id "${c.id}"`));
+    ids.add(c.id);
+  }
+  for (const c of catalog.categories) {
+    if (c.parentId !== undefined && !ids.has(c.parentId)) {
+      out.push(error("catalog.unknown_category_parent", `Category "${c.id}" has unknown parent "${c.parentId}"`));
+    }
+  }
+  out.push(...findCycles(catalog.categories, (id) => `Category hierarchy cycle at "${id}"`));
+  for (const a of catalog.attributes) {
+    if (a.categoryId !== undefined && !ids.has(a.categoryId)) {
+      out.push(error("catalog.unknown_category", `Attribute "${a.id}" references unknown category "${a.categoryId}"`));
+    }
+  }
+  return out;
+}
+
+function checkAttributeUi(a: AttributeDefinition, attributes: Map<string, AttributeDefinition>, catalog: Catalog): Diagnostic[] {
+  const out: Diagnostic[] = [];
+  const control = defaultControl(a);
+  if (!CONTROL_TYPES[control].includes(a.type)) {
+    out.push(error("catalog.control_type_mismatch", `Attribute "${a.id}": control "${control}" cannot represent type "${a.type}"`));
+  }
+  if (control === "color" && isOptionAttribute(a) && a.options.some((o) => !o.swatch)) {
+    out.push(error("catalog.missing_swatch", `Attribute "${a.id}": every option needs a swatch for control "color"`));
+  }
+  if (a.type === "number" || a.type === "range") {
+    const semantics = a.semantics ?? "physical";
+    if (semantics === "degree") {
+      if (a.type !== "number" || !a.bands) {
+        out.push(error("catalog.missing_bands", `Attribute "${a.id}": "degree" numbers need qualitative bands`));
+      } else {
+        const ups = a.bands.map((b) => b.upTo);
+        if (ups.some((u, i) => i > 0 && u <= ups[i - 1]!) || ups[ups.length - 1]! < a.max || ups[0]! < a.min) {
+          out.push(error("catalog.invalid_bands", `Attribute "${a.id}": bands must ascend and cover ${a.min}..${a.max}`));
+        }
+      }
+    } else if (a.bands) {
+      out.push(error("catalog.invalid_bands", `Attribute "${a.id}": bands are only for "degree" semantics`));
+    }
+    if (semantics === "physical" && !a.unit) {
+      out.push(error("catalog.missing_unit", `Attribute "${a.id}": "physical" numbers need a unit`));
+    }
+  }
+  if (!isOptionAttribute(a)) return out;
+  for (const o of a.options) {
+    const where = `option "${a.id}/${o.id}"`;
+    for (const c of o.restriction?.when ?? []) {
+      if (c.attributeId === a.id) out.push(error("catalog.self_condition", `${where}: restriction cannot depend on its own attribute`));
+      out.push(...checkCondition(c, attributes, where));
+    }
+    if (o.prompt.parts) {
+      const rendered = renderPhraseParts(o.prompt.parts);
+      if (rendered !== o.prompt.text) {
+        out.push(error("catalog.parts_mismatch", `${where}: parts render to "${rendered}" but text is "${o.prompt.text}"`));
+      }
+      for (const unit of phraseUnits(o.prompt.parts)) {
+        const axis = attributes.get(unit.axis);
+        if (!axis || !isOptionAttribute(axis) || axis.id === a.id) {
+          out.push(error("catalog.invalid_parts", `${where}: unit axis "${unit.axis}" is not another option attribute`));
+          continue;
+        }
+        for (const v of unit.values) {
+          if (!axis.options.some((x) => x.id === v)) out.push(error("catalog.invalid_parts", `${where}: unknown value "${unit.axis}/${v}"`));
+          const declared = o.classification?.[unit.axis];
+          if (declared && !declared.includes(v)) {
+            out.push(error("catalog.invalid_parts", `${where}: unit value "${v}" is not in its classification for "${unit.axis}"`));
+          }
+        }
+      }
+    }
+  }
+  void catalog;
+  return out;
+}
+
+function checkPresets(catalog: Catalog, attributes: Map<string, AttributeDefinition>): Diagnostic[] {
+  const out: Diagnostic[] = [];
+  const ids = new Set<string>();
+  const categoryIds = new Set(catalog.categories.map((c) => c.id));
+  for (const p of catalog.presets) {
+    if (ids.has(p.id)) out.push(error("catalog.duplicate_preset", `Duplicate preset id "${p.id}"`));
+    ids.add(p.id);
+    if (p.categoryId !== undefined && !categoryIds.has(p.categoryId)) {
+      out.push(error("catalog.unknown_category", `Preset "${p.id}" references unknown category "${p.categoryId}"`));
+    }
+    for (const c of p.appliesWhen ?? []) out.push(...checkCondition(c, attributes, `preset "${p.id}"`));
+    const seen = new Set<string>();
+    for (const patch of p.patches) {
+      if (seen.has(patch.attributeId)) out.push(error("catalog.invalid_preset", `Preset "${p.id}" patches "${patch.attributeId}" twice`));
+      seen.add(patch.attributeId);
+      const attr = attributes.get(patch.attributeId);
+      if (!attr) {
+        out.push(error("catalog.invalid_preset", `Preset "${p.id}" patches unknown attribute "${patch.attributeId}"`));
+        continue;
+      }
+      for (const d of checkValueForAttribute(attr, patch.value, `presets.${p.id}.${patch.attributeId}`)) {
+        out.push({ ...d, code: "catalog.invalid_preset", message: `Preset "${p.id}": ${d.message}` });
+      }
     }
   }
   return out;
