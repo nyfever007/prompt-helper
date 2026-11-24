@@ -20,7 +20,7 @@ describe("1. ImageSpec creation and validation", () => {
       kind: IMAGE_SPEC_KIND,
       schemaVersion: IMAGE_SPEC_SCHEMA_VERSION,
       task: "text-to-image",
-      catalog: { id: "prompter.core", version: "0.9.0" },
+      catalog: { id: "prompter.core", version: "0.10.0" },
       selections: {},
     });
     expect(validateImageSpec(spec, core).ok).toBe(true);

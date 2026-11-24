@@ -9,6 +9,40 @@
 - 컴파일러(`COMPILER_VERSION`): 0.1.0 / generic-en adapter: 0.1.0
 - 로컬 저장 envelope(`STORAGE_FORMAT_VERSION`): 1
 
+## [0.10.0] — 2026-11-25 — Sprint 2-C.1: UI, UX & accessibility + 로드맵 갱신 (승인됨)
+
+버전 변화: core 카탈로그 0.9.0 → **0.10.0**(ID·선택지·출력 변경 없음, 마이그레이션 `changes: []`). ImageSpec 0.3.0, 카탈로그 형식 0.4.0, 컴파일러 0.4.0, 안전 정책 0.2.0은 그대로.
+
+### Added
+- 카메라 하위 분류 5개(프레이밍 및 시점, 렌즈 및 원근감, 초점 및 피사계 심도, 구도 및 배치, 카메라 효과)
+- 조명 하위 분류 6개(조명 프리셋 및 광원, 주광, 보조광 및 환경광, 색상 및 색온도, 그림자 및 대비, 조명 효과). 림 라이트 색상은 림 라이트 강도와 같은 “보조광 및 환경광”에 있습니다(최종 승인 반영) — ADR-061
+- 공통 `ModalDialog`: 초기 포커스, Tab 순환, 배경 inert, Escape, 포커스 복귀 — TD-02, ADR-060
+- 이전/다음 페이지 버튼, 검색 결과 수 안내, 모바일 미리보기 시트의 Escape 처리와 포커스 이동
+- 테스트:
+  - `component/usability`(17)
+  - `camera-lighting-catalog`에 하위 분류 4개
+  - `migration`에 0.9.0 → 0.10.0 1개
+  - E2E `usability`(데스크톱·모바일 각 4)
+- 스크린샷 `docs/screenshots/sprint-2c1/`(변경 전·후)
+- 문서:
+  - `docs/VISUAL_EDITOR_PRINCIPLES.md`(Sprint 2-D 설계 원칙, 편집 화면 UX 원칙 §7)
+  - ADR-057–061, `docs/SPRINT_2C1_REPORT.md`
+  - 카메라·조명 카탈로그 문서 1.1.0
+
+### Changed
+- 색상 선택 27개 속성: 기본 상태에서는 현재 값만 접어서 보여 주고, 팔레트는 요청할 때 펼칩니다 — TD-13, ADR-058
+  - 단일 선택은 고르면 닫힙니다.
+  - 의상 상의 페이지 높이: 데스크톱 5,405 → 3,854px, 모바일 6,449 → 4,299px
+- 카테고리 탐색을 WAI-ARIA 탐색 트리로 바꿨습니다: 키보드 ↑↓←→·Home·End·Enter, 상태는 접근 가능한 설명으로 전달 — TD-01, ADR-059
+- 필드 헤더에 프롬프트 포함·제외 스위치를 두고, 모바일 카테고리 바를 상단에 고정했습니다.
+- `PROMPTER_MASTER_PLAN.md` 0.2: Recommended·Visual·Detailed 방향, Sprint 2-C 분할(2-C.1–2-C.4), Sprint 2-D 신설
+- 로드맵·기술 부채 갱신: TD-01·TD-02·TD-13 해결, TD-03 → 2-D.1, TD-08·09·10 → 2-C.2, TD-12·14·15 → 2-C.3, TD-11 → 2-C.4, 실제 스크린 리더·다크 모드 미검증 TD-16 → 2-C.4, Sprint 2-B.6 CI 실측 3.12·3.22·3.21초 기록
+- 테스트 확장 카탈로그를 0.10.0 → 0.11.0으로 올렸습니다.
+- 기존 테스트를 새 구조에 맞췄습니다(검증 내용은 유지):
+  - 카테고리 탐색: 버튼 → treeitem
+  - 카메라·조명은 하위 분류로 이동
+  - 색상은 팔레트를 연 뒤 선택
+
 ## [0.9.0] — 2026-11-25 — Sprint 2-B.6: Appearance direction, pose, camera & lighting (승인됨 — Sprint 2-B 카탈로그 구현 완료)
 
 버전 변화: core 카탈로그 0.8.0 → **0.9.0**(ID 변경 없음). ImageSpec 0.3.0, 카탈로그 형식 0.4.0, 컴파일러 0.4.0, 안전 정책 0.2.0은 그대로.

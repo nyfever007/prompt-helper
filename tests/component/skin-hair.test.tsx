@@ -13,13 +13,15 @@ const field = (id: string) => document.querySelector<HTMLElement>(`[data-attribu
 const nav = () => screen.getByRole("navigation", { name: "카테고리" });
 const saved = (store: KeyValueStore) => JSON.parse(store.getItem(WORKSPACE_STORAGE_KEY) ?? "{}").spec?.selections ?? {};
 const chip = (id: string, label: string) => within(field(id)).getByText(label, { exact: true }).closest("label")!;
+/** Color pickers are collapsed (Sprint 2-C.1, TD-13): open the palette first. */
+const palette = (id: string) => within(field(id)!).getByRole("button", { name: /색상 선택$|색상 변경$|팔레트 닫기$/ });
 
 const open = async (store: KeyValueStore = createMemoryStore()) => {
   const user = userEvent.setup();
   render(<PrompterApp registry={core} store={store} />);
   await waitFor(() => expect(screen.getByTestId("storage-status").textContent).not.toMatch(/불러오는 중/));
   await user.click(screen.getByRole("tab", { name: /Detailed/ }));
-  const go = async (label: string) => user.click(within(nav()).getByRole("button", { name: label }));
+  const go = async (label: string) => user.click(within(nav()).getByRole("treeitem", { name: label }));
   return { user, store, go };
 };
 
@@ -36,11 +38,13 @@ describe("skin, hair and facial hair in the Detailed editor", () => {
   it("palette display groups (natural / fantasy skin tones; hair color families) — groups are never output", async () => {
     const { user, go } = await open();
     await go("피부");
+    await user.click(palette("person.skin.tone"));
     const groups = [...field("person.skin.tone").querySelectorAll(".swatch-group__title")].map((g) => g.textContent);
     expect(groups).toEqual(["자연색", "판타지"]);
     await user.click(chip("person.skin.tone", "밝은 베이지"));
     expect(prompt()).toBe("Skin tone: light beige.");
     await go("헤어");
+    await user.click(palette("person.hair.primary_color"));
     expect([...field("person.hair.primary_color").querySelectorAll(".swatch-group__title")].map((g) => g.textContent)).toEqual(["검정 계열", "갈색 계열", "금발 계열", "적색 계열", "회색 계열", "판타지 계열"]);
   });
 

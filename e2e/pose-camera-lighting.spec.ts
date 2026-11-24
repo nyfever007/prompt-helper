@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { closePreview, ensurePreviewOpen, guardNetwork } from "./helpers";
+import { pickColor, closePreview, ensurePreviewOpen, guardNetwork } from "./helpers";
 
 /**
  * Sprint 2-B.6 — appearance direction (Basic ↔ Detailed), pose, camera and lighting on the
@@ -22,7 +22,7 @@ const pickListed = async (page: Page, id: string, query: string, role: "radio" |
 const go = async (page: Page, label: string) => {
   const toggle = page.locator(".nav-toggle");
   if ((await toggle.isVisible()) && (await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
-  await nav(page).getByRole("button", { name: label, exact: true }).click();
+  await nav(page).getByRole("treeitem", { name: label, exact: true }).locator(":scope > .cat-row").click() // the row itself (an expanded item also contains its children);
 };
 const closeNav = async (page: Page) => {
   const toggle = page.locator(".nav-toggle");
@@ -62,21 +62,26 @@ test("appearance direction in Basic and Detailed, pose, camera and lighting — 
   await pickChip(page, "person.pose.gaze_direction", "카메라를 보는");
   await shot(page, "pose", project);
 
-  await go(page, "카메라");
+  // Camera and Lighting are split into meaning groups (Sprint 2-C.1).
+  await go(page, "프레이밍 및 시점");
   await pickChip(page, "composition.framing", "머리와 어깨 (바스트 샷)");
+  await go(page, "렌즈 및 원근감");
   await pickChip(page, "camera.focal_length", "85mm");
+  await go(page, "초점 및 피사계 심도");
   await pickChip(page, "camera.aperture", "f/2.8");
   await slide(page, "camera.depth_of_field", -1);
   await expect(page.getByTestId("slider-value-camera.depth_of_field")).toHaveText("얕음");
   await shot(page, "camera", project);
 
-  await go(page, "조명");
+  await go(page, "주광");
   await pickChip(page, "lighting.direction", "3/4 측광");
   await pickChip(page, "lighting.softness", "부드러운");
+  await go(page, "색상 및 색온도");
   await pickChip(page, "lighting.color_temperature", "따뜻한");
+  await go(page, "보조광 및 환경광"); // rim strength and rim color on one page
   await pickChip(page, "lighting.fill", "약간");
-  await pickChip(page, "lighting.rim_color", "시안");
-  await pickChip(page, "lighting.rim", "없음"); // rim color kept but not output
+  await pickColor(page, "lighting.rim_color", "시안");
+  await pickChip(page, "lighting.rim", "없음"); // rim color kept but not output — notice on the same page
   await expect(field(page, "lighting.rim_color")).toContainText("현재 선택에는 적용되지 않습니다");
   await shot(page, "lighting", project);
 

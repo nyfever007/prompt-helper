@@ -344,3 +344,48 @@ textarea { width: 100%; resize: vertical; min-height: 80px; }
 .swatch-groups { display: flex; flex-direction: column; gap: 8px; }
 .swatch-group { display: flex; flex-direction: column; gap: 4px; }
 .swatch-group__title { font-weight: 600; }
+
+/* ── Sprint 2-C.1: usability & accessibility ─────────────────────────── */
+/* Color picker (TD-13): collapsed current value + toggle; palette opens inline (non-modal). */
+.color-picker { display: flex; flex-direction: column; gap: 8px; }
+.color-picker__bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.color-picker__current { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; flex: 1; min-width: 0; }
+.color-value { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 999px; padding: 3px 4px 3px 10px; font-size: 0.9rem; background: var(--surface); }
+.color-value--unset, .color-value--custom { padding-right: 10px; }
+.color-value--unset { border-style: dashed; }
+.color-value[data-inactive="true"] { border-style: dashed; color: var(--warn); }
+.color-value .swatch { width: 18px; height: 18px; }
+.color-value__clear { font: inherit; line-height: 1; border: 0; background: none; color: var(--muted); cursor: pointer; border-radius: 999px; min-width: 28px; min-height: 28px; }
+.color-value__clear:hover { background: var(--surface-2); color: var(--text); }
+.swatch--empty { background: repeating-linear-gradient(45deg, var(--surface-2) 0 3px, var(--surface) 3px 6px); border-style: dashed; }
+.swatch--custom { background: conic-gradient(#e03131, #f59f00, #37b24d, #1c7ed6, #ae3ec9, #e03131); }
+.color-palette { display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: var(--surface-2); }
+.color-palette .chip { background: var(--surface); }
+.color-palette .chip[data-checked="true"] { background: var(--accent); }
+.color-palette__done { align-self: flex-end; }
+@media (max-width: 860px) {
+  .color-palette .chip { padding: 8px 12px; } /* larger touch targets */
+}
+/* Category tree (TD-01): the row is the treeitem; the toggle is a mouse-only affordance. */
+.cat-row { cursor: pointer; }
+.cat-node:focus { outline: none; }
+.cat-node:focus-visible > .cat-row { outline: 2px solid var(--accent); outline-offset: -2px; }
+.cat-row:hover:not(.is-selected) { background: var(--surface-2); }
+.cat-search-count { margin: 0 0 6px; }
+/* Pages: a focused page title (after navigating) and a focused attribute (after search) are visible. */
+#cat-panel-title:focus { outline: none; }
+#cat-panel-title:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
+.field:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cat-sequence { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-top: 4px; padding-top: 12px; border-top: 1px solid var(--border); }
+/* Mobile: the category bar stays reachable while scrolling a long page. */
+@media (max-width: 1100px) {
+  .detailed__navbar { position: sticky; top: 0; z-index: 20; background: var(--bg); padding: 6px 0; }
+  /* Anything scrolled into view (search result, focus, keyboard) lands below the sticky bar. */
+  html:has(.detailed) { scroll-padding-top: 64px; }
+}
+/* Field header: state, include/exclude switch and clear together. */
+.field__header .output-toggle { margin: 0 0 0 auto; font-size: 0.8rem; }
+.field__header .field__clear { margin-left: auto; }
+.field__header .output-toggle + .field__clear { margin-left: 8px; }
+.field__excluded { margin: 4px 0 0; }
+#preview-title:focus { outline: none; }

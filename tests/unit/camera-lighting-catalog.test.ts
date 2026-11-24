@@ -13,6 +13,8 @@ import {
   setPromptExclusion,
   type SelectionValue,
 } from "@/domain";
+import { CAMERA_SECTIONS } from "@/domain/catalog/catalogs/shared/camera";
+import { LIGHTING_SECTIONS } from "@/domain/catalog/catalogs/shared/lighting";
 import { buildSpec, multi, single } from "../fixtures/specs";
 
 /** Sprint 2-B.6 (3)(4) — Shared › Camera and Lighting, plus the §7 integrated example. */
@@ -50,8 +52,9 @@ const CAMERA_NEW = [
 ];
 
 describe("camera (directive §4)", () => {
-  it("reuses the Basic framing / viewing direction / camera angle unchanged; 15 new Detailed attributes in the same Camera page", () => {
-    const cam = core.attributes().filter((a) => a.categoryId === "shared_camera").map((a) => a.id);
+  it("reuses the Basic framing / viewing direction / camera angle unchanged; 15 new Detailed attributes under Camera", () => {
+    // Sprint 2-C.1: the Camera page is split into subcategories; the set and catalog order are unchanged.
+    const cam = core.attributes().filter((a) => core.categoryPath(a.categoryId ?? "").includes("shared_camera")).map((a) => a.id);
     expect(cam).toEqual(["composition.framing", "composition.view_direction", "camera.angle", ...CAMERA_NEW]);
     for (const id of ["composition.framing", "composition.view_direction", "camera.angle"]) {
       const a = core.getAttribute(id)!;
@@ -229,5 +232,67 @@ describe("common features (directive §6)", () => {
     ["그림자", "attribute", "lighting.shadow_strength"], ["전구색", "option", "lighting.key_color"], ["소프트박스", "option", "lighting.source"],
   ])("search “%s” finds %s %s", (q, kind, attributeId) => {
     expect(searchCatalog(core, q).some((h) => h.kind === kind && h.attributeId === attributeId)).toBe(true);
+  });
+});
+
+describe("Sprint 2-C.1 — camera and lighting subcategories (navigation only)", () => {
+  const under = (parent: string) => core.attributes().filter((a) => core.categoryPath(a.categoryId ?? "").includes(parent));
+  const subcats = (parent: string) => core.categories.filter((c) => c.parentId === parent).sort((a, b) => a.order - b.order);
+
+  it("Camera: 5 meaning groups holding all 18 attributes; nothing stays on the parent page", () => {
+    expect(subcats("shared_camera").map((c) => c.label.ko)).toEqual(["프레이밍 및 시점", "렌즈 및 원근감", "초점 및 피사계 심도", "구도 및 배치", "카메라 효과"]);
+    expect(subcats("shared_camera").every((c) => c.status === "approved")).toBe(true);
+    const byCat = Object.fromEntries(subcats("shared_camera").map((c) => [c.id, core.attributes().filter((a) => a.categoryId === c.id).map((a) => a.id)]));
+    expect(byCat).toEqual({
+      shared_camera_framing: ["composition.framing", "composition.view_direction", "camera.angle", "camera.distance", "camera.roll"],
+      shared_camera_lens: ["camera.lens_type", "camera.focal_length", "camera.projection", "camera.perspective"],
+      shared_camera_focus: ["camera.aperture", "camera.depth_of_field", "camera.focus_target", "camera.focus_sharpness"],
+      shared_camera_composition: ["composition.layout", "composition.negative_space", "composition.subject_position"],
+      shared_camera_effects: ["camera.bokeh", "camera.motion_blur"],
+    });
+    expect(under("shared_camera")).toHaveLength(18);
+    expect(core.attributes().filter((a) => a.categoryId === "shared_camera")).toEqual([]);
+    expect(CAMERA_SECTIONS.flatMap(([, , , ids]) => ids)).toHaveLength(18);
+  });
+
+  it("Lighting: 6 meaning groups holding all 18 attributes; the Basic preset keeps its 12 options and output", () => {
+    expect(subcats("shared_lighting").map((c) => c.label.ko)).toEqual(["조명 프리셋 및 광원", "주광", "보조광 및 환경광", "색상 및 색온도", "그림자 및 대비", "조명 효과"]);
+    const byCat = Object.fromEntries(subcats("shared_lighting").map((c) => [c.id, core.attributes().filter((a) => a.categoryId === c.id).map((a) => a.id)]));
+    expect(byCat).toEqual({
+      shared_lighting_source: ["lighting.preset", "lighting.source"],
+      shared_lighting_key: ["lighting.direction", "lighting.key_height", "lighting.softness", "lighting.intensity"],
+      shared_lighting_fill: ["lighting.fill", "lighting.rim", "lighting.rim_color", "lighting.ambient", "lighting.reflected"], // rim color next to rim strength
+      shared_lighting_color: ["lighting.color_temperature", "lighting.key_color"],
+      shared_lighting_shadow: ["lighting.contrast", "lighting.shadow_strength", "lighting.shadow_edge"],
+      shared_lighting_effects: ["lighting.volumetric", "lighting.source_visibility"],
+    });
+    expect(under("shared_lighting")).toHaveLength(18);
+    expect(LIGHTING_SECTIONS.flatMap(([, , , ids]) => ids)).toHaveLength(18);
+    expect(opts("lighting.preset")).toHaveLength(12);
+    expect(core.getAttribute("lighting.preset")!.tier).toBe("basic");
+  });
+
+  it("the attribute set, catalog order and Basic tier are unchanged (348 attributes; output order follows `order`, not the category)", () => {
+    expect(core.attributes()).toHaveLength(348);
+    expect(core.attributesForTier("basic").map((a) => a.id)).toContain("composition.framing");
+    // A value from every camera/lighting group compiles in catalog order, independent of the navigation group.
+    expect(
+      prompt([
+        ["camera.motion_blur", single("subtle")], ["composition.layout", multi("rule_of_thirds")], ["camera.aperture", single("f_2_8")], ["camera.lens_type", single("standard")], ["composition.framing", single("upper_body")],
+        ["lighting.volumetric", single("subtle")], ["lighting.contrast", single("high")], ["lighting.key_color", single("amber")], ["lighting.fill", single("subtle")], ["lighting.direction", single("side")], ["lighting.preset", single("golden_hour")],
+      ]),
+    ).toBe(
+      "Framing: upper-body shot. Composition: rule of thirds. Lens: standard lens. Aperture: f/2.8. Motion blur: subtle. Lighting: warm golden-hour sunlight. " +
+        "Light direction: side lighting. Key light color: amber. Lighting contrast: high contrast. Fill light: subtle. Volumetric lighting: subtle.",
+    );
+  });
+
+  it("resetting a subcategory clears only that group; resetting Camera or Lighting still clears every subcategory", () => {
+    const spec = buildSpec(core, [["camera.focal_length", single("mm_85")], ["camera.aperture", single("f_2_8")], ["camera.bokeh", single("oval")], ["lighting.rim_color", single("cyan")], ["lighting.rim", single("subtle")], ["lighting.key_color", single("amber")]]);
+    expect(Object.keys(resetCategory(spec, core, "shared_camera_lens").removed)).toEqual(["camera.focal_length"]);
+    expect(Object.keys(resetCategory(spec, core, "shared_camera").removed).sort()).toEqual(["camera.aperture", "camera.bokeh", "camera.focal_length"]);
+    expect(Object.keys(resetCategory(spec, core, "shared_lighting_color").removed)).toEqual(["lighting.key_color"]);
+    expect(Object.keys(resetCategory(spec, core, "shared_lighting_fill").removed).sort()).toEqual(["lighting.rim", "lighting.rim_color"]); // rim strength + its color together
+    expect(Object.keys(resetCategory(spec, core, "shared_lighting").removed).sort()).toEqual(["lighting.key_color", "lighting.rim", "lighting.rim_color"]);
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   normalizeSearch,
   resolveText,
@@ -11,6 +11,7 @@ import {
   type SelectionValue,
 } from "@/domain";
 import { fmt, type Messages } from "@/i18n/messages";
+import { ModalDialog } from "../ModalDialog";
 
 export interface OptionControlProps {
   attribute: OptionAttributeDefinition;
@@ -119,19 +120,19 @@ export function CardsControl(p: OptionControlProps) {
         })}
       </div>
       {zoom && (
-        <div className="zoom" role="dialog" aria-modal="true" aria-label={resolveText(zoom.label, p.locale)} onClick={() => setZoom(null)}>
-          <figure onClick={(e) => e.stopPropagation()}>
+        <ModalDialog className="zoom" label={resolveText(zoom.label, p.locale)} onClose={() => setZoom(null)} onBackdropClick={() => setZoom(null)}>
+          <figure>
             {/* eslint-disable-next-line @next/next/no-img-element -- local catalog asset */}
             <img src={zoom.examples?.find((e) => e.src)?.src} alt={resolveText(zoom.examples?.find((e) => e.src)?.alt, p.locale)} />
             <figcaption>
               {resolveText(zoom.label, p.locale)}
               {zoom.examples?.[0]?.provenance && <span className="muted small"> · {zoom.examples[0].provenance.source}</span>}
             </figcaption>
-            <button type="button" className="button" onClick={() => setZoom(null)} autoFocus>
+            <button type="button" className="button" onClick={() => setZoom(null)} data-autofocus>
               {p.t.controls.closeZoom}
             </button>
           </figure>
-        </div>
+        </ModalDialog>
       )}
     </>
   );
@@ -308,48 +309,153 @@ export function SearchableListControl(p: OptionControlProps) {
   );
 }
 
+const NAV_KEYS = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End"]);
+
 /**
- * Palette swatches (visual references, not exact output colors). Display-only
- * option groups (e.g. natural / fantasy) become labelled rows; groups are never output.
+ * Color picker (Sprint 2-C.1, TD-13). Collapsed by default: only the current color (swatch +
+ * name, a custom value, or “not set”), a button that opens the palette and a per-color clear.
+ * The full palette (display-only groups, e.g. natural / fantasy; never output) opens inline as a
+ * NON-MODAL panel: Escape or the toggle closes it and returns focus to the toggle, a click outside
+ * closes it, and choosing a color in a single-select palette closes it (arrow-key browsing does
+ * not). Values, IDs, output and storage are unchanged — the palette is only not rendered while closed.
  */
 export function ColorControl(p: OptionControlProps) {
   const isMulti = p.attribute.type === "multi";
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const browsing = useRef(false);
+  const paletteId = useId();
   const offered = offeredOptions(p);
+  const selected = p.attribute.options.filter((o) => p.selectedIds.includes(o.id));
+  const custom = p.customLabels ?? [];
+  const hasValue = selected.length > 0 || custom.length > 0;
+
+  const close = (returnFocus: boolean) => {
+    setOpen(false);
+    if (returnFocus) toggleRef.current?.focus();
+  };
+
+  // Light dismiss: a pointer press outside closes the panel without moving focus.
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, [open]);
+
+  // Opening moves focus to the current color (or the first one) so the palette is usable from the keyboard.
+  useEffect(() => {
+    if (!open) return;
+    const panel = rootRef.current?.querySelector<HTMLElement>(".color-palette");
+    (panel?.querySelector<HTMLInputElement>("input:checked:not(:disabled)") ?? panel?.querySelector<HTMLInputElement>("input:not(:disabled)"))?.focus();
+  }, [open]);
+
   const swatch = (o: OptionDefinition) => (
-    <label key={o.id} className="chip chip--swatch" data-checked={p.selectedIds.includes(o.id)} data-option-id={o.id} data-restricted={p.isRestricted(o) || undefined}>
+    <label key={o.id} className="chip chip--swatch" data-checked={p.selectedIds.includes(o.id)} data-option-id={o.id} data-restricted={p.isRestricted(o) || undefined} data-inactive={!p.isActive(o) || undefined}>
       <input
         type={isMulti ? "checkbox" : "radio"}
         name={isMulti ? undefined : p.attribute.id}
         checked={p.selectedIds.includes(o.id)}
         disabled={p.isRestricted(o) && !p.selectedIds.includes(o.id)}
         onChange={() => (isMulti ? p.onToggle(o.id) : p.onSelect(o.id))}
+        // Single select: a click (or Space) chooses and closes; arrow keys only browse.
+        onClick={() => !isMulti && !browsing.current && close(true)}
       />
       <span className="swatch" style={{ background: o.swatch }} aria-hidden="true" />
       <span>{resolveText(o.label, p.locale)}</span>
     </label>
   );
   const groups = p.attribute.optionGroups ? [...p.attribute.optionGroups].sort((a, b) => a.order - b.order) : null;
-  if (!groups) {
-    return (
-      <div className="chips" role={isMulti ? "group" : "radiogroup"} aria-label={p.label}>
-        {offered.map(swatch)}
-      </div>
-    );
-  }
-  const ungrouped = offered.filter((o) => !o.group || !groups.some((g) => g.id === o.group));
+  const ungrouped = groups ? offered.filter((o) => !o.group || !groups.some((g) => g.id === o.group)) : offered;
+
   return (
-    <div className="swatch-groups" role={isMulti ? "group" : "radiogroup"} aria-label={p.label}>
-      {groups.map((g) => {
-        const members = offered.filter((o) => o.group === g.id);
-        if (members.length === 0) return null;
-        return (
-          <div key={g.id} className="swatch-group" data-group-id={g.id}>
-            <span className="swatch-group__title small muted">{resolveText(g.label, p.locale)}</span>
-            <div className="chips">{members.map(swatch)}</div>
+    <div
+      className="color-picker"
+      ref={rootRef}
+      data-open={open}
+      onKeyDown={(e) => {
+        if (e.key === "Escape" && open) {
+          e.stopPropagation();
+          close(true);
+        }
+      }}
+    >
+      <div className="color-picker__bar">
+        <div className="color-picker__current" data-testid={`color-current-${p.attribute.id}`}>
+          {selected.map((o) => (
+            <span key={o.id} className="color-value" data-option-id={o.id} data-inactive={!p.isActive(o) || undefined}>
+              <span className="swatch" style={{ background: o.swatch }} aria-hidden="true" />
+              <span>{resolveText(o.label, p.locale)}</span>
+              {!p.isActive(o) && <span className="muted small"> ({p.t.controls.colorInactive})</span>}
+              <button
+                type="button"
+                className="color-value__clear"
+                aria-label={fmt(p.t.field.deselect, { name: resolveText(o.label, p.locale) })}
+                onClick={() => (isMulti ? p.onToggle(o.id) : p.onClear())}
+              >
+                <span aria-hidden="true">×</span>
+              </button>
+            </span>
+          ))}
+          {custom.map((name) => (
+            <span key={`custom-${name}`} className="color-value color-value--custom">
+              <span className="swatch swatch--custom" aria-hidden="true" />
+              <span>{fmt(p.t.controls.colorCustom, { name })}</span>
+            </span>
+          ))}
+          {!hasValue && (
+            <span className="color-value color-value--unset">
+              <span className="swatch swatch--empty" aria-hidden="true" />
+              <span className="muted">{p.t.controls.colorUnset}</span>
+            </span>
+          )}
+        </div>
+        <button
+          ref={toggleRef}
+          type="button"
+          className="button button--small color-picker__toggle"
+          aria-expanded={open}
+          aria-controls={open ? paletteId : undefined}
+          aria-label={`${p.label}: ${open ? p.t.controls.colorClose : hasValue ? p.t.controls.colorChange : p.t.controls.colorOpen}`}
+          onClick={() => (open ? close(false) : setOpen(true))}
+        >
+          {open ? p.t.controls.colorClose : hasValue ? p.t.controls.colorChange : p.t.controls.colorOpen}
+        </button>
+      </div>
+      {open && (
+        <div
+          id={paletteId}
+          className="color-palette"
+          role="group"
+          aria-label={fmt(p.t.controls.colorPalette, { label: p.label })}
+          onKeyDown={(e) => {
+            if (NAV_KEYS.has(e.key)) browsing.current = true;
+          }}
+          onKeyUp={(e) => {
+            if (NAV_KEYS.has(e.key)) browsing.current = false;
+          }}
+        >
+          <div className="swatch-groups" role={isMulti ? "group" : "radiogroup"} aria-label={p.label}>
+            {groups?.map((g) => {
+              const members = offered.filter((o) => o.group === g.id);
+              if (members.length === 0) return null;
+              return (
+                <div key={g.id} className="swatch-group" data-group-id={g.id}>
+                  <span className="swatch-group__title small muted">{resolveText(g.label, p.locale)}</span>
+                  <div className="chips">{members.map(swatch)}</div>
+                </div>
+              );
+            })}
+            {ungrouped.length > 0 && <div className="chips">{ungrouped.map(swatch)}</div>}
           </div>
-        );
-      })}
-      {ungrouped.length > 0 && <div className="chips">{ungrouped.map(swatch)}</div>}
+          <button type="button" className="button button--small color-palette__done" onClick={() => close(true)}>
+            {p.t.controls.colorDone}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -53,7 +53,7 @@ export function PromptPreview({
   return (
     <section className="preview" id="preview-panel" aria-labelledby="preview-title" data-blocked={compilation.blocked}>
       <header className="preview__header">
-        <h2 id="preview-title">{t.preview.title}</h2>
+        <h2 id="preview-title" tabIndex={-1}>{t.preview.title}</h2>
         {onClose && (
           <button type="button" className="link-button preview__close" onClick={onClose}>
             {t.mobile.hidePreview}

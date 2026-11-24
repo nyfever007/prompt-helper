@@ -14,13 +14,15 @@ const field = (id: string) => document.querySelector<HTMLElement>(`[data-attribu
 const nav = () => screen.getByRole("navigation", { name: "카테고리" });
 const saved = (store: KeyValueStore) => JSON.parse(store.getItem(WORKSPACE_STORAGE_KEY) ?? "{}").spec?.selections ?? {};
 const chip = (id: string, label: string) => within(field(id)).getByText(label, { exact: true }).closest("label")!;
+/** Color pickers are collapsed (Sprint 2-C.1, TD-13): open the palette first. */
+const palette = (id: string) => within(field(id)!).getByRole("button", { name: /색상 선택$|색상 변경$|팔레트 닫기$/ });
 
 const open = async (store: KeyValueStore = createMemoryStore()) => {
   const user = userEvent.setup();
   render(<PrompterApp registry={core} store={store} />);
   await waitFor(() => expect(screen.getByTestId("storage-status").textContent).not.toMatch(/불러오는 중/));
   await user.click(screen.getByRole("tab", { name: /Detailed/ }));
-  const go = async (label: string) => user.click(within(nav()).getByRole("button", { name: label }));
+  const go = async (label: string) => user.click(within(nav()).getByRole("treeitem", { name: label }));
   return { user, store, go };
 };
 
@@ -58,10 +60,11 @@ describe("Sprint 2-B.5 areas in the Detailed editor", () => {
   it("“no makeup” keeps makeup values but stops outputting them (with a notice); “makeup applied” restores them", async () => {
     const { user, go, store } = await open();
     await go("메이크업");
+    await user.click(palette("person.makeup.lip_color"));
+    expect([...field("person.makeup.lip_color").querySelectorAll(".swatch-group__title")].map((g) => g.textContent)).toEqual(["뉴트럴", "핑크", "레드", "오렌지", "퍼플", "다크", "메탈릭", "크리에이티브"]);
     await user.click(chip("person.makeup.lip_color", "더스티 로즈"));
     await user.click(chip("person.makeup.base_finish", "듀이"));
     expect(prompt()).toBe("Foundation finish: dewy. Lip makeup color: dusty rose.");
-    expect([...field("person.makeup.lip_color").querySelectorAll(".swatch-group__title")].map((g) => g.textContent)).toEqual(["뉴트럴", "핑크", "레드", "오렌지", "퍼플", "다크", "메탈릭", "크리에이티브"]);
     await user.click(chip("person.makeup.presence", "메이크업 없음"));
     expect(prompt()).toBe("Makeup: no makeup.");
     expect(within(field("person.makeup.lip_color")).getByText(/현재 선택에는 적용되지 않습니다/)).toBeInTheDocument();
@@ -75,9 +78,11 @@ describe("Sprint 2-B.5 areas in the Detailed editor", () => {
     await go("상의");
     await user.type(within(field("person.clothing.tops.type")).getByRole("searchbox"), "블라우스");
     await user.click(within(field("person.clothing.tops.type")).getByRole("radio", { name: /^블라우스/ }));
-    await user.click(chip("person.clothing.tops.primary_color", "아이보리"));
+    await user.click(palette("person.clothing.tops.primary_color"));
     expect([...field("person.clothing.tops.primary_color").querySelectorAll(".swatch-group__title")]).toHaveLength(10);
+    await user.click(chip("person.clothing.tops.primary_color", "아이보리"));
     await go("하의");
+    await user.click(palette("person.clothing.bottoms.primary_color"));
     await user.click(chip("person.clothing.bottoms.primary_color", "네이비"));
     expect(prompt()).toBe("Top: blouse. Top primary color: ivory. Bottom primary color: navy.");
     await go("상의");

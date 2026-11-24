@@ -13,13 +13,15 @@ const field = (id: string) => document.querySelector<HTMLElement>(`[data-attribu
 const nav = () => screen.getByRole("navigation", { name: "카테고리" });
 const saved = (store: KeyValueStore) => JSON.parse(store.getItem(WORKSPACE_STORAGE_KEY) ?? "{}").spec?.selections ?? {};
 const chip = (id: string, label: string) => within(field(id)).getByText(label, { exact: true }).closest("label")!;
+/** Color pickers are collapsed (Sprint 2-C.1, TD-13): open the palette first. */
+const palette = (id: string) => within(field(id)!).getByRole("button", { name: /색상 선택$|색상 변경$|팔레트 닫기$/ });
 
 const open = async (store: KeyValueStore = createMemoryStore()) => {
   const user = userEvent.setup();
   render(<PrompterApp registry={core} store={store} />);
   await waitFor(() => expect(screen.getByTestId("storage-status").textContent).not.toMatch(/불러오는 중/));
   await user.click(screen.getByRole("tab", { name: /Detailed/ }));
-  const go = async (label: string) => user.click(within(nav()).getByRole("button", { name: label }));
+  const go = async (label: string) => user.click(within(nav()).getByRole("treeitem", { name: label }));
   return { user, store, go };
 };
 
@@ -51,7 +53,11 @@ describe("facial areas in the Detailed editor (real core catalog)", () => {
   it("palette color + custom color with a separate expression", async () => {
     const { user, go, store } = await open();
     await go("눈");
+    expect(within(field("person.eyes.iris_color")).queryByRole("radio")).toBeNull(); // collapsed: only the current value
+    await user.click(palette("person.eyes.iris_color"));
     await user.click(chip("person.eyes.iris_color", "짙은 갈색"));
+    expect(within(field("person.eyes.iris_color")).queryByRole("radio")).toBeNull(); // closes after a choice
+    expect(screen.getByTestId("color-current-person.eyes.iris_color")).toHaveTextContent("짙은 갈색");
     expect(prompt()).toBe("Iris color: dark brown.");
     await user.click(within(field("person.eyes.iris_color")).getByRole("button", { name: /사용자 정의 값 추가/ }));
     const form = within(field("person.eyes.iris_color")).getByRole("form");
@@ -79,6 +85,7 @@ describe("facial areas in the Detailed editor (real core catalog)", () => {
   it("output toggle on a facial attribute; category reset clears only that area and can be undone", async () => {
     const { user, go, store } = await open();
     await go("입술");
+    await user.click(palette("person.lips.natural_color"));
     await user.click(chip("person.lips.natural_color", "장밋빛"));
     await user.click(within(field("person.lips.natural_color")).getByRole("switch", { name: /프롬프트에 포함/ }));
     expect(prompt()).not.toContain("rose");

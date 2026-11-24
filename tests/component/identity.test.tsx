@@ -19,7 +19,7 @@ const open = async (store: KeyValueStore = createMemoryStore()) => {
   render(<PrompterApp registry={core} store={store} />);
   await waitFor(() => expect(screen.getByTestId("storage-status").textContent).not.toMatch(/불러오는 중/));
   await user.click(screen.getByRole("tab", { name: /Detailed/ }));
-  const go = async (label: string) => user.click(within(nav()).getByRole("button", { name: label }));
+  const go = async (label: string) => user.click(within(nav()).getByRole("treeitem", { name: label }));
   return { user, store, go };
 };
 
@@ -28,7 +28,7 @@ describe("Identity navigation and editing (real core catalog)", () => {
     const { go } = await open();
     await go("인물 기본 정보");
     expect(screen.queryByTestId("draft-placeholder")).toBeNull();
-    for (const sub of ["존재", "연령", "성별", "배경", "사회", "기타"]) expect(within(nav()).getByRole("button", { name: sub })).toBeInTheDocument();
+    for (const sub of ["존재", "연령", "성별", "배경", "사회", "기타"]) expect(within(nav()).getByRole("treeitem", { name: sub })).toBeInTheDocument();
     await go("자세 및 행동"); // approved in 2-B.6 (the draft placeholder is still covered on the fixture catalog: component/detailed)
     expect(screen.queryByTestId("draft-placeholder")).toBeNull();
   });
@@ -187,7 +187,7 @@ describe("category reset (N5)", () => {
   it("resets ALL stored identity values even while a list is filtered, lists states, and can be undone", async () => {
     const { user, go, store } = await open();
     await go("공통");
-    await go("조명");
+    await go("조명 프리셋 및 광원");
     await user.click(screen.getByRole("radio", { name: "골든아워" }));
     await go("사회");
     await user.click(within(field("occupation")).getByRole("checkbox", { name: /^요리사/ }));

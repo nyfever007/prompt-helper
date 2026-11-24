@@ -15,12 +15,14 @@ const field = (id: string) => document.querySelector<HTMLElement>(`[data-attribu
 const nav = () => screen.getByRole("navigation", { name: "카테고리" });
 const saved = (store: KeyValueStore) => JSON.parse(store.getItem(WORKSPACE_STORAGE_KEY) ?? "{}").spec?.selections ?? {};
 const chip = (id: string, label: string) => within(field(id)!).getByText(label, { exact: true }).closest("label")!;
+/** Color pickers are collapsed (Sprint 2-C.1, TD-13): open the palette first. */
+const palette = (id: string) => within(field(id)!).getByRole("button", { name: /색상 선택$|색상 변경$|팔레트 닫기$/ });
 
 const open = async (store: KeyValueStore = createMemoryStore()) => {
   const user = userEvent.setup();
   render(<PrompterApp registry={core} store={store} />);
   await waitFor(() => expect(screen.getByTestId("storage-status").textContent).not.toMatch(/불러오는 중/));
-  const go = async (label: string) => user.click(within(nav()).getByRole("button", { name: label }));
+  const go = async (label: string) => user.click(within(nav()).getByRole("treeitem", { name: label }));
   return { user, store, go };
 };
 
@@ -62,7 +64,12 @@ describe("pose, camera and lighting in the Detailed editor", () => {
   it("pose has 5 subcategories with 22 attributes; camera and lighting pages hold reused + new attributes", async () => {
     const { user, go } = await open();
     await user.click(screen.getByRole("tab", { name: /Detailed/ }));
-    for (const [label, n] of [["기본 자세", 7], ["머리·시선", 4], ["팔·손 자세", 4], ["다리·발 자세", 3], ["동작", 4], ["카메라", 18], ["조명", 18]] as const) {
+    // Sprint 2-C.1: Camera (5) and Lighting (6) are split into meaning groups — 18 + 18 attributes as before.
+    for (const [label, n] of [
+      ["기본 자세", 7], ["머리·시선", 4], ["팔·손 자세", 4], ["다리·발 자세", 3], ["동작", 4],
+      ["프레이밍 및 시점", 5], ["렌즈 및 원근감", 4], ["초점 및 피사계 심도", 4], ["구도 및 배치", 3], ["카메라 효과", 2],
+      ["조명 프리셋 및 광원", 2], ["주광", 4], ["보조광 및 환경광", 5], ["색상 및 색온도", 2], ["그림자 및 대비", 3], ["조명 효과", 2],
+    ] as const) {
       await go(label);
       expect(screen.queryByTestId("draft-placeholder"), label).toBeNull();
       expect(document.querySelectorAll(".cat-panel .attribute-list > [data-attribute-id]"), label).toHaveLength(n);
@@ -72,13 +79,17 @@ describe("pose, camera and lighting in the Detailed editor", () => {
   it("focal length and aperture show their real values; no rim light hides the rim color with a notice", async () => {
     const { user, go, store } = await open();
     await user.click(screen.getByRole("tab", { name: /Detailed/ }));
-    await go("카메라");
+    await go("렌즈 및 원근감");
     await user.click(chip("camera.focal_length", "85mm"));
+    await go("초점 및 피사계 심도");
     await user.click(chip("camera.aperture", "f/2.8"));
     expect(prompt()).toBe("Focal length: 85 mm. Aperture: f/2.8.");
-    await go("조명");
-    await user.click(chip("lighting.rim_color", "시안"));
+    // Rim strength and rim color are on the same page (Sprint 2-C.1 final approval).
+    await go("보조광 및 환경광");
     await user.click(chip("lighting.rim", "없음"));
+    await user.click(palette("lighting.rim_color"));
+    await user.click(chip("lighting.rim_color", "시안"));
+    expect(screen.getByTestId("color-current-lighting.rim_color")).toHaveTextContent(/^시안/); // shown collapsed after the choice
     expect(prompt()).toBe("Focal length: 85 mm. Aperture: f/2.8. Rim light: none.");
     expect(within(field("lighting.rim_color")!).getByText(/현재 선택에는 적용되지 않습니다/)).toBeInTheDocument();
     expect(saved(store)["lighting.rim_color"].value).toEqual({ kind: "single", optionId: "cyan" });

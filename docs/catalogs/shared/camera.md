@@ -1,8 +1,8 @@
 # 카메라 (Camera) — 카탈로그 설계
 
-- 버전: 1.0.0
+- 버전: 1.1.0
 - 설계 상태: **APPROVED** — Sprint 2-B.6 개발 승인서의 초기 제품 카탈로그
-- 구현: core 카탈로그 0.9.0 — 기존 Basic 속성 3개(`core.ts`, Sprint 1) + 새 Detailed 속성 15개(`src/domain/catalog/catalogs/shared/camera.ts`), 카테고리 `shared_camera`(18개, 한 화면)
+- 구현: core 카탈로그 0.10.0 — 기존 Basic 속성 3개(`core.ts`, Sprint 1) + 새 Detailed 속성 15개(`src/domain/catalog/catalogs/shared/camera.ts`), 카테고리 `shared_camera` 아래 하위 분류 5개(Sprint 2-C.1, §2-1)
 - 공통 규격: [../CATALOG_DESIGN_STANDARD.md](../CATALOG_DESIGN_STANDARD.md)
 
 ## 1. 설계 목적과 원칙
@@ -39,6 +39,20 @@
 | 1670 | `camera.bokeh` | 보케 형태 / Bokeh shape | Detailed | 단일 · 칩 + 사용자 정의 | `Bokeh: {value}.` | 원형(Circular) → circular bokeh; 타원형(Oval) → oval bokeh; 회오리(Swirling) → swirling bokeh; 다각형(Polygonal) → polygonal bokeh | 모든 피사체 | bokeh, 보케, 빛망울 |
 | 1675 | `camera.motion_blur` | 모션 블러 / Motion blur | Detailed | 단일 · 칩 | `Motion blur: {value}.` | 없음(None) → none; 약간(Subtle) → subtle; 보통(Moderate) → moderate; 강함(Strong) → strong | 모든 피사체 | motion blur, 모션 블러, 흔들림, 잔상 |
 
+## 2-1. 하위 분류 (Sprint 2-C.1)
+
+Detailed 탐색에서 18개 속성을 의미 그룹 5개로 나눕니다. 탐색 구조만 바뀌며 속성 ID·선택지·저장값·`order`(출력 순서)·프롬프트 출력은 그대로입니다. Basic의 구도·보는 방향·카메라 각도는 같은 값을 계속 공유합니다. 분류의 원본은 `CAMERA_SECTIONS`(`camera.ts`)이며, 분류되지 않은 카메라 속성은 카탈로그 생성 시 오류입니다.
+
+| 하위 분류 | ID | 속성 |
+|---|---|---|
+| 프레이밍 및 시점 | `shared_camera_framing` | 구도(화면에 담는 범위)·보는 방향·카메라 각도(이상 Basic 공유)·카메라 거리·카메라 롤 |
+| 렌즈 및 원근감 | `shared_camera_lens` | 렌즈 종류·초점 거리·투영 방식·원근감 |
+| 초점 및 피사계 심도 | `shared_camera_focus` | 조리개·피사계 심도·초점 대상·초점 선명도 |
+| 구도 및 배치 | `shared_camera_composition` | 구도 배치·여백·피사체 위치 |
+| 카메라 효과 | `shared_camera_effects` | 보케 형태·모션 블러 |
+
+판단: 조리개는 피사계 심도와 함께 찾는 경우가 많아 “초점 및 피사계 심도”에 두었습니다. 보케 형태는 초점 밖 표현이지만 독립적인 효과라 모션 블러와 함께 “카메라 효과”에 두었습니다. “카메라” 페이지를 초기화하면 하위 분류 5개의 값이 모두 지워집니다(기존 동작).
+
 ## 3. 충돌 안내 (비차단, 값 자동 변경 없음)
 
 `overhead-vs-direction`, `silhouette-hides-face`는 Sprint 1부터 있던 규칙입니다.
@@ -59,5 +73,6 @@
 
 | 날짜 | 버전 | 변경 | 승인 |
 |---|---|---|---|
+| 2026-11-25 | 1.1.0 | 하위 분류 5개(탐색 전용, ID·출력 변경 없음), core 카탈로그 0.10.0 | Sprint 2-C.1 개발 승인서 |
 | 2026-11-25 | 1.0.0 | 승인된 초기 카탈로그 구현 (Sprint 2-B.6) | Sprint 2-B.6 개발 승인서 (Sprint 1 승인 속성 3개 재사용) |
 | 2026-11-24 | draft-0 | 문서 구조 생성 (Sprint 2-A) | — |

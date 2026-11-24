@@ -17,7 +17,7 @@ const pickChip = (page: Page, id: string, label: string) =>
 const go = async (page: Page, label: string) => {
   const toggle = page.locator(".nav-toggle");
   if ((await toggle.isVisible()) && (await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
-  await nav(page).getByRole("button", { name: label, exact: true }).click();
+  await nav(page).getByRole("treeitem", { name: label, exact: true }).locator(":scope > .cat-row").click() // the row itself (an expanded item also contains its children);
 };
 const closeNav = async (page: Page) => {
   const toggle = page.locator(".nav-toggle");

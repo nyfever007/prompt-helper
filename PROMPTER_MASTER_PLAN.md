@@ -1,6 +1,6 @@
 # Prompter — Product & Engineering Master Plan
 
-- Version: 0.1 (initial working specification)
+- Version: 0.2 (0.1 initial working specification; 0.2 — 2026-11-25, Roadmap Update & Sprint 2-C.1 directive: visual image-design direction, Sprint 2-C split, new Sprint 2-D)
 - Status: Proposed architecture; product direction agreed, technical choices pending validation
 - Project: **Prompter** (independent of WHY; do not modify WHY)
 - Purpose: Help creators translate a precisely imagined image into an explicit, reusable, testable image specification and model-adapted prompt.
@@ -42,6 +42,14 @@ Do not require all fields. Avoid auto-inserting attractive/sexy anatomy, reveali
 
 ### Detailed mode
 Domain-aware sections. A person has face, skin, body, hair, expression, clothes, pose, etc.; a landscape has terrain, vegetation, geography, weather; architecture has structure, materials, elevation/projection. Shared sections include style, camera, lighting, palette, output and constraints.
+
+### Recommended, Visual and Detailed editing (direction added in 0.2)
+Prompter grows from a text-based prompt designer into a **visual image design tool**: a user should be able to design the image they want without knowing professional appearance, camera or lighting terms. Three editing directions are added; all of them edit the **same ImageSpec** (principle 3):
+- **Recommended Mode** — concept-based recommended settings (hand-designed recommendation presets first, no AI).
+- **Visual Mode** — choosing by sketches and visual examples (line art, SVG, silhouettes, diagrams).
+- **Detailed Mode** — the existing detailed attribute editing.
+
+The existing Basic Editor and Detailed Editor stay. The final screen structure of Visual and Recommended modes is decided in Sprint 2-D. Design principles: [docs/VISUAL_EDITOR_PRINCIPLES.md](docs/VISUAL_EDITOR_PRINCIPLES.md) (summary in §8).
 
 ### Precision mode
 Sub-part attributes, exact positions and counts (e.g. one beauty mark under the left eye), emphasis/priority, negative constraints, per-region specifications, reference-image roles, technical camera cues, repeatability/seed when supported, model-specific limitations, and overrides.
@@ -141,6 +149,14 @@ Reference roles: identity, face, outfit, pose, composition, color palette, style
 
 Visual option examples should use controlled comparisons: same subject, framing and lighting, changing only the intended attribute when practical. Track catalog provenance, rights, and version.
 
+### Visual selection and recommendation principles (Sprint 2-D, added in 0.2)
+Full text: [docs/VISUAL_EDITOR_PRINCIPLES.md](docs/VISUAL_EDITOR_PRINCIPLES.md). In short:
+- Visual examples explain the difference between options; photorealistic images are not a requirement — simple line art, SVG, silhouettes and diagrams come first.
+- Within one attribute, the reference figure/object, viewpoint, size, scale, composition, background, line weight and style are kept identical; only the attribute being explained changes. Examples never rank beauty or worth. Placeholder images that do not match the catalog meaning are never shipped as finished examples.
+- Relative sliders (eye size, eye spacing, brow thickness, nose length, lip thickness, face width, body proportions …) may get dynamic SVG previews instead of many images.
+- A combined face sketch (face shape, eyes, brows, nose, lips) explains the user's settings; it never claims to predict or reproduce a model's output. Preview-only renderings of unset attributes are never stored in the ImageSpec or added to the prompt. Attributes that cannot be drawn stay editable as text.
+- Recommendations start as hand-designed presets (no AI) on the existing preset system with provenance and undo. Choosing a recommendation never overwrites existing settings by itself: the values to apply and the changes are shown first; explicit user choices are never removed or changed silently; recommendations do not infer age, gender, nationality, skin color, body features or sexual expression.
+
 ## 9. API integration and testing
 
 Integrate image-generation APIs **after** the prompt engine works locally; use an adapter boundary from day one.
@@ -181,6 +197,22 @@ Create a fixed evaluation set including portraits, full-body figures, skin marks
 - Face, skin, body, hair, expression, wardrobe, pose, camera, lighting; independent body shape / clothing coverage / appeal.
 - Versioned option registry, search, grouped visual examples (initially placeholders with metadata), conflict warnings.
 - **Exit:** independent settings persist; coverage, anatomy and mood do not cross-modify each other; automated tests prove it.
+
+### Sprint 2-C — Integration & Usability (added in 0.2)
+- 2-C.1 UI, UX, accessibility: collapsed color palettes (TD-13), camera and lighting subcategories, common editing screen, category keyboard navigation (TD-01), modal and popover focus (TD-02).
+- 2-C.2 Architecture, state management & diagnostics.
+- 2-C.3 Safety consistency (TD-12, TD-14, TD-15 — policy changes need separate approval).
+- 2-C.4 Performance & integration validation (TD-11; real screen reader — VoiceOver, NVDA — and dark-mode verification, TD-16).
+- **Exit:** the 348-attribute Detailed editor is navigable and editable by mouse, keyboard and on mobile without hiding features; IDs, stored values and prompt output are unchanged.
+
+### Sprint 2-D — Visual Editor & Recommendation (added in 0.2)
+- 2-D.1 Shared visual-choice components and asset standard (connects TD-03).
+- 2-D.2 Face and facial-feature visual choices; combined face preview.
+- 2-D.3 Hair, body and clothing visual choices.
+- 2-D.4 Pose, camera and lighting visual choices.
+- 2-D.5 Recommended mode and recommendation presets.
+- 2-D.6 Visual editing integration and usability validation.
+- **Exit:** a user without professional terms can set face, hair, body, clothing, pose, camera and lighting by visual choice or recommendation, editing the same ImageSpec as Basic/Detailed; recommendations apply only after confirmation and can be undone; text editing remains available for everything.
 
 ### Sprint 3 — Precision editor
 - Localized skin marks (count, side, size), region-specific attributes, priorities, preserve/exclude constraints, reference roles (metadata first), advanced camera cues.
@@ -238,11 +270,13 @@ Keep domain logic free of UI/framework dependencies; do not build provider-speci
 - Image API integration and empirical result tests are part of the roadmap.
 - Adult body proportions, garment coverage and visual appeal must be independently controllable.
 - Broad style taxonomy with orthogonal dimensions; not a tiny exclusive style list.
+- (0.2) Visual image-design direction: Recommended, Visual and Detailed editing share one ImageSpec; Basic and Detailed editors stay; Sprint 2-C (integration & usability) and Sprint 2-D (visual editor & recommendation) precede Sprint 3, whose plan is unchanged.
 
 ### Proposed / pending validation
 - Next.js / TypeScript / Zod.
 - Local-first persistence for early sprints.
 - Exact Basic mode fields and catalog taxonomy.
+- Final screen structure of Visual and Recommended modes (decided in Sprint 2-D).
 - OpenAI as first image provider, subject to current API validation.
 - Subscription tiers, pricing and business model.
 

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { ensurePreviewOpen, guardNetwork } from "./helpers";
+import { pickColor, ensurePreviewOpen, guardNetwork } from "./helpers";
 
 /**
  * Sprint 2-B.3 — Person › Skin, Hair, Facial hair on the PRODUCT catalog (/), desktop and mobile.
@@ -17,7 +17,7 @@ const pickChip = (page: Page, id: string, label: string) =>
 const go = async (page: Page, label: string) => {
   const toggle = page.locator(".nav-toggle");
   if ((await toggle.isVisible()) && (await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
-  await nav(page).getByRole("button", { name: label, exact: true }).click();
+  await nav(page).getByRole("treeitem", { name: label, exact: true }).locator(":scope > .cat-row").click() // the row itself (an expanded item also contains its children);
 };
 const closeNav = async (page: Page) => {
   const toggle = page.locator(".nav-toggle");
@@ -34,7 +34,7 @@ test("skin, hair and facial hair: palettes, groups, none vs unset, applicability
 
   // Skin: grouped palette, explicit-none-aware freckles
   await go(page, "피부");
-  await pickChip(page, "person.skin.tone", "밝은 베이지");
+  await pickColor(page, "person.skin.tone", "밝은 베이지");
   await pickChip(page, "person.skin.undertone", "웜");
   await pickChip(page, "person.skin.freckle_density", "적음");
   await pickChip(page, "person.skin.freckle_placement", "코");
@@ -44,8 +44,8 @@ test("skin, hair and facial hair: palettes, groups, none vs unset, applicability
   // Hair: bald hides (but keeps) the hairstyle; back to “hair present” restores it
   await go(page, "헤어");
   await pickChip(page, "person.hair.length", "허리 길이");
-  await pickChip(page, "person.hair.primary_color", "짙은 갈색");
-  await pickChip(page, "person.hair.secondary_color", "허니 블론드");
+  await pickColor(page, "person.hair.primary_color", "짙은 갈색");
+  await pickColor(page, "person.hair.secondary_color", "허니 블론드");
   await field(page, "person.hair.style").getByRole("searchbox").fill("반묶음 번");
   await field(page, "person.hair.style").getByRole("radio", { name: /^반묶음 번/ }).check();
   await field(page, "person.hair.style").getByRole("searchbox").fill("");
@@ -59,7 +59,7 @@ test("skin, hair and facial hair: palettes, groups, none vs unset, applicability
   await go(page, "수염");
   await field(page, "person.facial_hair.style").getByRole("checkbox", { name: /^콧수염/ }).check();
   await field(page, "person.facial_hair.style").getByRole("checkbox", { name: /^염소수염/ }).check();
-  await pickChip(page, "person.facial_hair.color", "희끗희끗한");
+  await pickColor(page, "person.facial_hair.color", "희끗희끗한");
   await shot(page, "facial-hair", project);
 
   const expected =

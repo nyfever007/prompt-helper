@@ -1,4 +1,4 @@
-import type { Condition } from "../../schema";
+import type { CategoryDefinition, Condition } from "../../schema";
 import { SLIDER, degree, fd, shape, type Attr, type O, type Rule, type ShapeOptions } from "../person/builders";
 
 /**
@@ -14,11 +14,40 @@ import { SLIDER, degree, fd, shape, type Attr, type O, type Rule, type ShapeOpti
  */
 
 const CAT = "shared_lighting";
+
+/**
+ * Sprint 2-C.1 — Lighting subcategories (meaning groups for the Detailed navigation only).
+ * IDs, options, stored values, `order`, output and the 12 Basic presets are unchanged.
+ * The rim light color sits next to the rim light strength it depends on (edited together; when the rim
+ * light is “none”, the kept color and its notice are on the same page — Sprint 2-C.1 final approval).
+ */
+export const LIGHTING_SECTIONS: ReadonlyArray<readonly [id: string, en: string, ko: string, attributeIds: readonly string[]]> = [
+  ["source", "Presets & light source", "조명 프리셋 및 광원", ["lighting.preset", "lighting.source"]],
+  ["key", "Key light", "주광", ["lighting.direction", "lighting.key_height", "lighting.softness", "lighting.intensity"]],
+  ["fill", "Fill, rim & ambient light", "보조광 및 환경광", ["lighting.fill", "lighting.rim", "lighting.rim_color", "lighting.ambient", "lighting.reflected"]],
+  ["color", "Color & color temperature", "색상 및 색온도", ["lighting.color_temperature", "lighting.key_color"]],
+  ["shadow", "Shadows & contrast", "그림자 및 대비", ["lighting.contrast", "lighting.shadow_strength", "lighting.shadow_edge"]],
+  ["effects", "Lighting effects", "조명 효과", ["lighting.volumetric", "lighting.source_visibility"]],
+];
+export const lightingCategories: CategoryDefinition[] = LIGHTING_SECTIONS.map(([id, en, ko], i) => ({
+  id: `${CAT}_${id}`,
+  parentId: CAT,
+  order: 1 + i,
+  status: "approved" as const,
+  label: { en, ko },
+  docPath: "docs/catalogs/shared/lighting.md",
+}));
+/** Category of a lighting attribute (throws for an unmapped ID). */
+export const lightingCategoryOf = (attributeId: string): string => {
+  const s = LIGHTING_SECTIONS.find(([, , , ids]) => ids.includes(attributeId));
+  if (!s) throw new Error(`lighting attribute ${attributeId} has no subcategory`);
+  return `${CAT}_${s[0]}`;
+};
 const ANY: Condition[] = [];
 const lit = (id: string, order: number, label: [string, string], aliases: string[], description: ReturnType<typeof fd>, template: string, options: O[], o: ShapeOptions = {}): Attr =>
-  ({ ...shape(id, order, CAT, fd(label[0], label[1]), aliases, description, template, options, { custom: false, ...o, scope: ANY }), groupId: "lighting_axes" }) as Attr;
+  ({ ...shape(id, order, lightingCategoryOf(id), fd(label[0], label[1]), aliases, description, template, options, { custom: false, ...o, scope: ANY }), groupId: "lighting_axes" }) as Attr;
 const litDegree = (id: string, order: number, label: [string, string], aliases: string[], description: ReturnType<typeof fd>, template: string, bands: Parameters<typeof degree>[7], when: Condition[] = []): Attr =>
-  ({ ...degree(id, order, CAT, fd(label[0], label[1]), aliases, description, template, bands, when, ANY), groupId: "lighting_axes" }) as Attr;
+  ({ ...degree(id, order, lightingCategoryOf(id), fd(label[0], label[1]), aliases, description, template, bands, when, ANY), groupId: "lighting_axes" }) as Attr;
 
 export const LIGHT_COLOR_GROUPS: Array<[string, string, string]> = [["whites", "Whites", "화이트"], ["warm", "Warm", "따뜻한 색"], ["cool", "Cool", "차가운 색"], ["vivid", "Vivid", "비비드"]];
 export const LIGHT_COLORS: O[] = [

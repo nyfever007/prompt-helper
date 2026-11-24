@@ -19,7 +19,7 @@ const open = async (store: KeyValueStore = createMemoryStore()) => {
   render(<PrompterApp registry={core} store={store} />);
   await waitFor(() => expect(screen.getByTestId("storage-status").textContent).not.toMatch(/불러오는 중/));
   await user.click(screen.getByRole("tab", { name: /Detailed/ }));
-  const go = async (label: string) => user.click(within(nav()).getByRole("button", { name: label }));
+  const go = async (label: string) => user.click(within(nav()).getByRole("treeitem", { name: label }));
   return { user, store, go };
 };
 

@@ -1,4 +1,4 @@
-import type { Condition } from "../../schema";
+import type { CategoryDefinition, Condition } from "../../schema";
 import { SLIDER, degree, fd, opposite as oppositeIn, shape, type Attr, type O, type Rule, type ShapeOptions } from "../person/builders";
 
 /**
@@ -14,12 +14,39 @@ import { SLIDER, degree, fd, opposite as oppositeIn, shape, type Attr, type O, t
  */
 
 const CAT = "shared_camera";
+
+/**
+ * Sprint 2-C.1 — Camera subcategories (meaning groups for the Detailed navigation only).
+ * Attribute IDs, options, stored values, `order` and output are unchanged; Basic still shows
+ * framing, view direction and angle (same values). Single source for every camera attribute's category.
+ */
+export const CAMERA_SECTIONS: ReadonlyArray<readonly [id: string, en: string, ko: string, attributeIds: readonly string[]]> = [
+  ["framing", "Framing & viewpoint", "프레이밍 및 시점", ["composition.framing", "composition.view_direction", "camera.angle", "camera.distance", "camera.roll"]],
+  ["lens", "Lens & perspective", "렌즈 및 원근감", ["camera.lens_type", "camera.focal_length", "camera.projection", "camera.perspective"]],
+  ["focus", "Focus & depth of field", "초점 및 피사계 심도", ["camera.aperture", "camera.depth_of_field", "camera.focus_target", "camera.focus_sharpness"]],
+  ["composition", "Composition & placement", "구도 및 배치", ["composition.layout", "composition.negative_space", "composition.subject_position"]],
+  ["effects", "Camera effects", "카메라 효과", ["camera.bokeh", "camera.motion_blur"]],
+];
+export const cameraCategories: CategoryDefinition[] = CAMERA_SECTIONS.map(([id, en, ko], i) => ({
+  id: `${CAT}_${id}`,
+  parentId: CAT,
+  order: 1 + i,
+  status: "approved" as const,
+  label: { en, ko },
+  docPath: "docs/catalogs/shared/camera.md",
+}));
+/** Category of a camera attribute (throws for an unmapped ID, so a new attribute must be placed explicitly). */
+export const cameraCategoryOf = (attributeId: string): string => {
+  const s = CAMERA_SECTIONS.find(([, , , ids]) => ids.includes(attributeId));
+  if (!s) throw new Error(`camera attribute ${attributeId} has no subcategory`);
+  return `${CAT}_${s[0]}`;
+};
 const ANY: Condition[] = [];
 const OPTICS = (en: string, ko: string) => fd(`${en} Image models do not reproduce exact optics.`, `${ko} 이미지 모델이 정확한 광학 결과를 재현하지는 않습니다.`);
 const cam = (id: string, order: number, label: [string, string], aliases: string[], description: ReturnType<typeof fd>, template: string, options: O[], o: ShapeOptions = {}): Attr =>
-  ({ ...shape(id, order, CAT, fd(label[0], label[1]), aliases, description, template, options, { ...o, scope: ANY }), groupId: "composition" }) as Attr;
+  ({ ...shape(id, order, cameraCategoryOf(id), fd(label[0], label[1]), aliases, description, template, options, { ...o, scope: ANY }), groupId: "composition" }) as Attr;
 const camDegree = (id: string, order: number, label: [string, string], aliases: string[], description: ReturnType<typeof fd>, template: string, bands: Parameters<typeof degree>[7], when: Condition[] = []): Attr =>
-  ({ ...degree(id, order, CAT, fd(label[0], label[1]), aliases, description, template, bands, when, ANY), groupId: "composition" }) as Attr;
+  ({ ...degree(id, order, cameraCategoryOf(id), fd(label[0], label[1]), aliases, description, template, bands, when, ANY), groupId: "composition" }) as Attr;
 
 const FOCAL_LENGTHS = [14, 20, 24, 28, 35, 50, 70, 85, 105, 135, 200];
 const APERTURES = ["1.4", "1.8", "2", "2.8", "4", "5.6", "8", "11", "16", "22"];

@@ -344,3 +344,27 @@ testing/fixtureCatalog.ts     ── person_pose를 테스트 카탈로그에서
 | 외모 방향은 Basic·Detailed가 같은 값, 미설정이면 기존 출력 동일, 인물이 아니면 미적용(값 보존), 성별 무관, 연령 판단 불변, “섹시한”만 기존 미성년자 보호 규칙 | `appearance-pose-catalog`, `component/pose-camera-lighting`, `catalog`, E2E |
 | 자세 22개·카메라 15개·조명 11개 등록·문장·적용 조건·충돌, 신체 방향 ↔ 관찰 방향, 머리 ↔ 시선 방향 ↔ 시선 상태 독립 | `appearance-pose-catalog`, `camera-lighting-catalog` |
 | Basic 카메라 3개·조명 프리셋 12개·조명 속성 6개의 ID·문구·출력·의미 단위 대체 불변 | `camera-lighting-catalog`, 기존 회귀 테스트 |
+
+## 16. Sprint 2-C.1: UI·UX·접근성
+
+core 카탈로그 0.10.0(하위 분류만 추가). 스키마·컴파일러·안전 정책 변경 없음.
+
+```text
+catalogs/shared/camera.ts   ── CAMERA_SECTIONS (5) → cameraCategories, cameraCategoryOf(id)
+catalogs/shared/lighting.ts ── LIGHTING_SECTIONS (6) → lightingCategories, lightingCategoryOf(id)
+  → core.ts가 Basic 카메라 3개·조명 프리셋·조명 속성 6개의 categoryId도 같은 표에서 가져옴 (원본 하나)
+
+components/controls/Controls.tsx ── ColorControl: 접힌 현재 값 + 비모달 팔레트 (닫혀 있으면 렌더하지 않음)
+components/detailed/CategoryNav.tsx ── 탐색 트리 (li[treeitem] + ul[group], roving tabindex, aria-labelledby/-describedby)
+components/ModalDialog.tsx ── 모든 모달: 초기 포커스·Tab 순환·inert·Escape·포커스 복귀
+components/detailed/DetailedEditor.tsx ── 이전/다음 페이지, 모바일 서랍 선택 후 제목 포커스
+components/PrompterApp.tsx ── 모바일 미리보기 시트(비모달): 열면 제목 포커스, Escape로 닫고 버튼으로 복귀
+```
+
+| 보장 | 근거 테스트 |
+|---|---|
+| 카메라 18·조명 18 속성이 하위 분류에 빠짐없이 한 번씩, 부모 페이지에는 없음, 출력 순서·값 불변 | `camera-lighting-catalog` (Sprint 2-C.1 블록) |
+| 0.9.0 명세가 기록 없이 그대로 열림 | `migration` |
+| 색상: 기본 접힘, 선택 후 닫힘·포커스 복귀, Escape·바깥 클릭, 다중 선택, 사용자 정의 표시, 새로고침 복원, 프리셋 적용 후 표시 | `component/usability`, E2E `usability` |
+| 트리 키보드(한 Tab 정지점, 화살표·Home·End·Enter), 이름/설명 분리 | `component/usability`, E2E `usability` |
+| 모달 초기 포커스·Tab 순환·inert·Escape·복귀(비활성화된 여는 버튼 → 되돌리기 버튼) | `component/usability`, E2E `usability` |

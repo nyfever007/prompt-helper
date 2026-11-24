@@ -1,8 +1,8 @@
 # 조명 (Lighting) — 카탈로그 설계
 
-- 버전: 1.0.0
+- 버전: 1.1.0
 - 설계 상태: **APPROVED** — Sprint 2-B.6 개발 승인서의 초기 제품 카탈로그 (Sprint 2-A 조명 구조 유지)
-- 구현: core 카탈로그 0.9.0 — 기존 Basic 프리셋 1개 + Sprint 2-A 조명 속성 6개(`core.ts`, 선택지 추가) + 새 Detailed 속성 11개(`src/domain/catalog/catalogs/shared/lighting.ts`), 카테고리 `shared_lighting`(18개, 한 화면)
+- 구현: core 카탈로그 0.10.0 — 기존 Basic 프리셋 1개 + Sprint 2-A 조명 속성 6개(`core.ts`, 선택지 추가) + 새 Detailed 속성 11개(`src/domain/catalog/catalogs/shared/lighting.ts`), 카테고리 `shared_lighting` 아래 하위 분류 6개(Sprint 2-C.1, §2-1)
 - 공통 규격: [../CATALOG_DESIGN_STANDARD.md](../CATALOG_DESIGN_STANDARD.md)
 
 ## 1. 설계 목적과 원칙
@@ -38,6 +38,27 @@
 | 2090 | `lighting.volumetric` | 볼류메트릭 조명 / Volumetric light | Detailed | 단일 · 칩 | `Volumetric lighting: {value}.` | 없음(None) → none; 약간(Subtle) → subtle; 보통(Moderate) → moderate; 강함(Strong) → strong | 모든 피사체 | volumetric, god rays, 빛내림, 빛줄기 |
 | 2095 | `lighting.source_visibility` | 광원 가시성 / Light source visibility | Detailed | 단일 · 칩 | `Light source visibility: {value}.` | 화면 안(Visible) → visible in the frame; 화면 밖(Off-screen) → off-screen | 모든 피사체 | light source visible, 광원 노출, 화면 밖 조명 |
 
+## 2-1. 하위 분류 (Sprint 2-C.1)
+
+Detailed 탐색에서 18개 속성을 의미 그룹 6개로 나눕니다. 탐색 구조만 바뀌며 속성 ID·선택지·저장값·`order`·프롬프트 출력과 Basic 조명 프리셋 12개의 동작·출력은 그대로입니다. 분류의 원본은 `LIGHTING_SECTIONS`(`lighting.ts`)입니다.
+
+| 하위 분류 | ID | 속성 |
+|---|---|---|
+| 조명 프리셋 및 광원 | `shared_lighting_source` | 조명(빠른 프리셋, Basic 공유)·광원 |
+| 주광 | `shared_lighting_key` | 빛의 방향·주광 높이·빛의 질감·밝기 |
+| 보조광 및 환경광 | `shared_lighting_fill` | 보조광·림 라이트·림 라이트 색상·환경광·반사광 |
+| 색상 및 색온도 | `shared_lighting_color` | 색온도·주광 색상 |
+| 그림자 및 대비 | `shared_lighting_shadow` | 명암 대비·그림자 강도·그림자 경계 |
+| 조명 효과 | `shared_lighting_effects` | 볼류메트릭 조명·광원 가시성 |
+
+판단:
+- 림 라이트 색상은 의존하는 림 라이트 강도 바로 옆(“보조광 및 환경광”)에 둡니다.
+  - 함께 편집하는 속성이고, 림 라이트가 “없음”일 때 색상이 보존되지만 출력되지 않는다는 안내를 같은 페이지에서 확인할 수 있습니다.
+  - Sprint 2-C.1 최종 승인에서 “색상 및 색온도”에서 옮겼습니다.
+- 주광 색상은 주광 강도와 독립적인 속성이라 “색상 및 색온도”에 그대로 둡니다.
+- 반사광은 보조적인 빛이라 “보조광 및 환경광”에 둡니다.
+- 림 라이트 “없음” → 색상 미출력(값 보존, 안내) 규칙은 그대로입니다.
+
 ## 3. 조명 색상 팔레트 (14색 · 4그룹) — 주광·림 라이트 색상이 공유, 사용자 정의 색 이름 가능
 
 | 그룹 | 색상(프롬프트 표현) |
@@ -62,5 +83,6 @@
 
 | 날짜 | 버전 | 변경 | 승인 |
 |---|---|---|---|
+| 2026-11-25 | 1.1.0 | 하위 분류 6개(탐색 전용, ID·출력·Basic 프리셋 변경 없음), core 카탈로그 0.10.0 | Sprint 2-C.1 개발 승인서 |
 | 2026-11-25 | 1.0.0 | 승인된 초기 카탈로그 구현 (Sprint 2-B.6) | Sprint 2-B.6 개발 승인서 |
 | 2026-11-24 | draft-0 | 문서 구조 생성 (Sprint 2-A) | — |
