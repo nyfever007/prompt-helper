@@ -295,3 +295,31 @@ catalogs/person/body.ts ── 45개 속성 (order 309–353), 하위 분류 7�
 | 45개 속성(누적 153)·7개 하위 분류·구간·선택지가 승인 목록과 같고 모든 값이 해당 문장만 출력 | `body-catalog` |
 | 신체 속성은 정체성·다른 속성을 참조하지 않고, 전체 체형이 다른 값을 설정하지 않음 | `body-catalog`, `component/body` |
 | 신체 선택만으로는 차단되지 않음(미성년 포함), 성적 표현과 결합된 미성년 묘사는 계속 차단 | `body-catalog` |
+
+## 14. Sprint 2-B.5: 표정·인상·메이크업·의상·액세서리
+
+카탈로그 데이터 추가(core 카탈로그 0.8.0) + 결과가 같은 컴파일 반복 계산 제거(ADR-054). 스키마·컴파일러 버전·안전 정책 변경 없음.
+
+```text
+catalogs/person/expression-makeup.ts ── 표정 10 + 인상 8 (person_expression_face/_impression) + 메이크업 16 (order 354–387)
+catalogs/person/clothing.ts          ── 전체 설정 8 + 의복 7개 × 세부 (person_wardrobe_*, order 388–459)
+  person.clothing.<의복>.{type, primary_color, …}  ← 공통 어휘(팔레트·소재·패턴 …)는 데이터 상수로 공유, 값은 속성마다 독립
+  type “none” → noneOf 조건으로 해당 의복 세부만 비활성(값 보존); 종류별 의미 없는 세부도 noneOf/anyOf
+catalogs/person/accessories.ts       ── 18개 (order 460–477), 안경테·모자 색상은 의상 팔레트 공유
+
+compilePrompt
+  ├─ findInactiveSelections / findRestrictedSelections  (1회)
+  ├─ validateSpecAgainstCatalog(spec, registry, { inactive, restricted })   ← 같은 결과 재사용
+  ├─ pass 1 활성 선택지 → pass 2 renderValue 재사용
+  └─ evaluateSafety → scanText(text, policy)  (짧은 텍스트 결과 메모이즈, 전체 프롬프트는 매번 검사)
+CatalogRegistry: optionsById 색인, lineage 메모이즈(deep-frozen 카탈로그)
+```
+
+| 추가 불변 조건 | 테스트 |
+|---|---|
+| 124개 속성(누적 277)·카테고리·순서·선택지·어휘가 승인 목록과 같고 모든 값이 해당 문장만 출력 | `expression-makeup-catalog`, `clothing-catalog`, `accessories-catalog` |
+| 메이크업 없음·아이라인 없음·의복 없음·종류별 세부·플랫 굽·안경/모자 없음은 값을 보존한 채 출력만 멈추고 다시 적용되면 복원 | 위 3개, `component/wardrobe`, E2E `wardrobe` |
+| 의복별 색상·소재·핏은 서로 독립, 전체 설정은 개별 의복을 설정하지 않음, 원피스는 상의·하의를 지우지 않음 | `clothing-catalog`, E2E `wardrobe` |
+| 성숙한 인상은 연령 판단을 바꾸지 않음, 매력·귀여움은 미성년과 함께여도 차단되지 않음, 성적 표현 + 앳된 인상은 차단 | `expression-makeup-catalog` |
+| 의복 “없음”·커버리지·핏은 노출 표현을 만들지 않음, 내의 어휘는 기존 미성년자 보호 규칙만 따름(성인 미차단) | `clothing-catalog`, `catalog` |
+| 컴파일 최적화 전후 결과 동일 | 기존 골든·회귀·독립성 테스트, `safety` 동일성 테스트 |

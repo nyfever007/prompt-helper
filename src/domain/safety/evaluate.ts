@@ -71,6 +71,33 @@ export const matchEntry = (entry: LexiconEntry, normalized: string): string[] =>
 };
 
 /**
+ * Matched terms of every signal (policy order) in one text: entries in lexicon
+ * order, matches in text order — exactly the per-entry scan. Pure in (policy, text),
+ * so results for short texts (prompt fragments, which repeat across compiles) are
+ * memoized per policy object; long texts (the whole prompt) are always scanned.
+ */
+type TextScan = ReadonlyArray<readonly string[]>;
+const SCAN_CACHE_MAX_ENTRIES = 4096;
+const SCAN_CACHE_MAX_TEXT = 512;
+const scanCache = new WeakMap<SafetyPolicy, Map<string, TextScan>>();
+const scanText = (text: string, policy: SafetyPolicy): TextScan => {
+  const cacheable = text.length <= SCAN_CACHE_MAX_TEXT;
+  let cache = scanCache.get(policy);
+  const hit = cacheable ? cache?.get(text) : undefined;
+  if (hit) return hit;
+  const normalized = normalizeForSafety(text);
+  const scan: TextScan = policy.signals.map((signal) =>
+    !normalized || !unionFor(signal).test(normalized) ? [] : signal.lexicon.flatMap((entry) => matchEntry(entry, normalized)),
+  );
+  if (cacheable) {
+    if (!cache) scanCache.set(policy, (cache = new Map()));
+    if (cache.size >= SCAN_CACHE_MAX_ENTRIES) cache.clear();
+    cache.set(text, scan);
+  }
+  return scan;
+};
+
+/**
  * Evaluate the policy over structured tags and texts. Deterministic: signals,
  * sources and findings are produced in policy/input order.
  */
@@ -87,18 +114,14 @@ export const evaluateSafety = (input: SafetyInput, policy: SafetyPolicy = baseli
     sourcesBySignal.set(signalId, list);
   };
 
-  // Normalize each text once (not once per signal).
-  const normalizedTexts = input.texts.map(({ attributeId, text }) => ({ attributeId, normalized: normalizeForSafety(text) }));
-  for (const signal of policy.signals) {
+  // Each text is scanned once for all signals (memoized per policy; see `scanText`).
+  const scans = input.texts.map(({ text }) => scanText(text, policy));
+  policy.signals.forEach((signal, i) => {
     for (const t of input.tags) if (signal.tags.includes(t.tag)) add(signal.id, { kind: "tag", ...t });
-    const union = unionFor(signal);
-    for (const { attributeId, normalized } of normalizedTexts) {
-      if (!normalized || !union.test(normalized)) continue;
-      for (const entry of signal.lexicon) {
-        for (const term of matchEntry(entry, normalized)) add(signal.id, { kind: "text", attributeId, term });
-      }
-    }
-  }
+    input.texts.forEach(({ attributeId }, j) => {
+      for (const term of scans[j]![i]!) add(signal.id, { kind: "text", attributeId, term });
+    });
+  });
 
   const findings: SafetyFinding[] = [];
   for (const rule of policy.rules) {

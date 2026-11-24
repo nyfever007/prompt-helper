@@ -26,6 +26,26 @@ const BODY_IDS = [
   "arm_length", "upper_arm_thickness", "forearm_thickness", "arm_muscles", "hand_size", "finger_length", "finger_thickness",
   "leg_length", "thigh_thickness", "calf_thickness", "leg_muscles", "ankle_thickness", "foot_size", "leg_alignment",
 ].map((x) => `person.body.${x}`);
+/** Sprint 2-B.5 (order 354–477), listed explicitly so registration and order are checked. */
+const EXPRESSION_MAKEUP_IDS = [
+  ...["emotion", "emotion_intensity", "smile", "mouth_openness", "teeth", "eye_openness", "brow_movement", "gaze_state", "tears", "facial_tension"].map((x) => `person.expression.${x}`),
+  ...["overall", "vibe", "attractiveness", "cuteness", "elegance", "charisma", "androgyny", "maturity"].map((x) => `person.impression.${x}`),
+  ...["presence", "style", "intensity", "base_coverage", "base_finish", "eyeshadow_color", "eyeshadow_style", "eyeliner_style", "eyeliner_color", "mascara", "false_lashes", "blush_color", "blush_placement", "lip_color", "lip_finish", "contour"].map((x) => `person.makeup.${x}`),
+];
+const CLOTHING_IDS = [
+  ...["fashion_style", "formality", "fit", "season", "era", "condition", "layering", "coverage"].map((x) => `person.clothing.${x}`),
+  ...["type", "primary_color", "secondary_color", "material", "pattern", "fit", "neckline", "collar", "sleeve_length", "sleeve_style", "length", "details"].map((x) => `person.clothing.tops.${x}`),
+  ...["type", "primary_color", "secondary_color", "material", "pattern", "fit", "waist_rise", "leg_cut", "hem_length", "details"].map((x) => `person.clothing.bottoms.${x}`),
+  ...["type", "primary_color", "secondary_color", "material", "pattern", "fit", "neckline", "sleeve_length", "sleeve_style", "waist_design", "hem_length", "skirt_silhouette", "details"].map((x) => `person.clothing.one_piece.${x}`),
+  ...["type", "primary_color", "secondary_color", "material", "pattern", "fit", "length", "closure_state", "closure_type", "hood", "details"].map((x) => `person.clothing.outerwear.${x}`),
+  ...["type", "primary_color", "material", "pattern"].map((x) => `person.clothing.innerwear.${x}`),
+  ...["type", "primary_color", "secondary_color", "material", "heel_height", "heel_type", "toe_shape", "closure"].map((x) => `person.clothing.footwear.${x}`),
+  ...["type", "primary_color", "pattern", "length", "opacity", "thickness"].map((x) => `person.clothing.hosiery.${x}`),
+];
+const ACCESSORY_IDS = [
+  "eyewear", "frame_shape", "frame_color", "hat", "hat_color", "hair_accessories", "earrings", "necklace", "bracelets",
+  "rings", "watch", "belt", "bag", "scarf", "gloves", "necktie", "piercings", "decorative",
+].map((x) => `person.accessories.${x}`);
 const SKIN_HAIR_IDS = [
   ...["tone", "undertone", "texture", "sheen", "hydration", "pores", "translucency", "evenness", "freckle_density", "freckle_placement", "moles", "mole_placement", "wrinkles", "wrinkle_placement", "scars", "features"].map((x) => `person.skin.${x}`),
   ...["presence", "length", "primary_color", "secondary_color", "color_pattern", "texture", "thickness", "density", "volume", "shine", "condition", "curl_size", "curl_tightness", "part", "hairline", "bangs_style", "bangs_length", "bangs_density", "style", "tie_position", "layering", "flyaways", "movement"].map((x) => `person.hair.${x}`),
@@ -39,10 +59,10 @@ const FACIAL_IDS = [
   ...["shape", "mouth_width", "upper_thickness", "lower_thickness", "ratio", "cupids_bow", "corners", "natural_color"].map((x) => `person.lips.${x}`),
 ];
 
-describe("8. core catalog 0.7.0", () => {
+describe("8. core catalog 0.8.0", () => {
   it("is valid, versioned and declares its format", () => {
     expect(core.id).toBe("prompter.core");
-    expect(core.version).toBe("0.7.0");
+    expect(core.version).toBe("0.8.0");
     expect(coreCatalog.formatVersion).toBe("0.4.0");
   });
 
@@ -87,6 +107,10 @@ describe("8. core catalog 0.7.0", () => {
       ...SKIN_HAIR_IDS,
       // Person › Body (Sprint 2-B.4, order 309–353)
       ...BODY_IDS,
+      // Person › Expression & impression, Makeup (2-B.5A, 354–387), Wardrobe (2-B.5B, 388–459), Accessories (2-B.5C, 460–477)
+      ...EXPRESSION_MAKEUP_IDS,
+      ...CLOTHING_IDS,
+      ...ACCESSORY_IDS,
       "style.medium",
       "style.realism",
       "style.technique",
@@ -124,15 +148,27 @@ describe("8. core catalog 0.7.0", () => {
     for (const o of preset.options) for (const axis of Object.keys(o.classification ?? {})) expect(axis.startsWith("lighting.")).toBe(true);
   });
 
-  it("every option phrase in the catalog alone triggers no safety signal", () => {
+  // Innerwear (Sprint 2-B.5) is neutral garment wording, but the EXISTING lexicon treats
+  // “underwear” / “bra” as appeal wording. The policy is not relaxed and the phrases are not
+  // reworded around it: combined with minor/ambiguous-age wording they must keep blocking.
+  const MINOR_PROTECTED = new Set(["thermal", "sports_bra", "everyday_bra", "full_coverage"].map((o) => `person.clothing.innerwear.type/${o}`));
+  it("every option phrase in the catalog alone triggers no safety signal (innerwear: exactly the existing minor-protection block)", () => {
+    const flagged: string[] = [];
     for (const a of core.attributes()) {
       if (!isOptionAttribute(a)) continue;
       for (const o of a.options) {
         const r = evaluateSafety({ tags: [], texts: [{ attributeId: a.id, text: `${a.prompt.template.replace("{value}", o.prompt.text)} girl child` }] });
         // "girl child" adds age signals; any finding would mean the phrase itself carries a sexual/nudity signal
-        expect(r.findings, `${a.id}/${o.id}`).toEqual([]);
+        const key = `${a.id}/${o.id}`;
+        if (MINOR_PROTECTED.has(key)) {
+          flagged.push(key);
+          expect(r.findings.map((f) => f.ruleId), key).toEqual(["minor-sexualization"]);
+        } else expect(r.findings, key).toEqual([]);
+        // On its own (no age wording) no option phrase raises any finding
+        expect(evaluateSafety({ tags: [], texts: [{ attributeId: a.id, text: a.prompt.template.replace("{value}", o.prompt.text) }] }).findings, key).toEqual([]);
       }
     }
+    expect(flagged.sort()).toEqual([...MINOR_PROTECTED].sort());
   });
 
   it("compiling every single core option never blocks and never mixes languages", () => {

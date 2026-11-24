@@ -1,5 +1,8 @@
 import type { CatalogInput, Condition } from "../schema";
+import { ACCESSORIES_CATEGORY_DESCRIPTION, accessoriesAttributes, accessoriesRules } from "./person/accessories";
 import { BODY_CATEGORY_DESCRIPTION, bodyAttributes, bodyCategories } from "./person/body";
+import { WARDROBE_CATEGORY_DESCRIPTION, clothingAttributes, clothingRules, wardrobeCategories } from "./person/clothing";
+import { EXPRESSION_MAKEUP_DESCRIPTIONS, expressionCategories, expressionMakeupAttributes, expressionMakeupRules } from "./person/expression-makeup";
 import { FACIAL_CATEGORY_DESCRIPTIONS, facialAttributes, facialRules } from "./person/facial";
 import { identityAgeModel, identityAttributes, identityCategories, identityRules } from "./person/identity";
 import { SKIN_HAIR_CATEGORY_DESCRIPTIONS, skinHairAttributes, skinHairRules } from "./person/skin-hair";
@@ -9,6 +12,9 @@ const APPROVED_PERSON_AREAS: Record<string, { en: string; ko: string }> = {
   ...FACIAL_CATEGORY_DESCRIPTIONS,
   ...SKIN_HAIR_CATEGORY_DESCRIPTIONS,
   person_body: BODY_CATEGORY_DESCRIPTION,
+  ...EXPRESSION_MAKEUP_DESCRIPTIONS,
+  person_wardrobe: WARDROBE_CATEGORY_DESCRIPTION,
+  person_accessories: ACCESSORIES_CATEGORY_DESCRIPTION,
 };
 
 /**
@@ -21,6 +27,7 @@ const APPROVED_PERSON_AREAS: Record<string, { en: string; ko: string }> = {
  * attributes from order 300 up shifted by +1000 so person attributes fit at 201–308 —
  * relative order unchanged, prompts byte-identical).
  * 0.7.0 Sprint 2-B.4 (Person › Body — 45 attributes in 7 subcategories, approved; order 309–353).
+ * 0.8.0 Sprint 2-B.5 (Person › Expression & impression, Makeup, Wardrobe, Accessories — approved; order 354–477).
  *
  * Every list here is an extensible STARTING POINT, not a final scope. No option
  * count limits are implied; add entries as data and bump `version`.
@@ -45,7 +52,7 @@ const NON_ABSTRACT = [...ORIENTED_SUBJECTS, "landscape"];
 export const coreCatalog = {
   formatVersion: "0.4.0",
   id: "prompter.core",
-  version: "0.7.0",
+  version: "0.8.0",
   title: { en: "Prompter core catalog", ko: "Prompter 기본 카탈로그" },
   groups: [
     { id: "what", order: 0, label: { en: "What to depict", ko: "무엇을 그릴까요" } },
@@ -122,6 +129,8 @@ export const coreCatalog = {
     })),
     ...identityCategories,
     ...bodyCategories,
+    ...expressionCategories,
+    ...wardrobeCategories,
     { id: "shared", order: 40, status: "approved", label: { en: "Shared", ko: "공통" } },
     { id: "shared_camera", parentId: "shared", order: 41, status: "approved", label: { en: "Camera", ko: "카메라" }, docPath: "docs/catalogs/shared/camera.md" },
     { id: "shared_lighting", parentId: "shared", order: 42, status: "approved", label: { en: "Lighting", ko: "조명" }, docPath: "docs/catalogs/shared/lighting.md" },
@@ -727,6 +736,12 @@ export const coreCatalog = {
     ...skinHairAttributes,
     // ── Person › Body (Sprint 2-B.4, order 309–353) ──
     ...bodyAttributes,
+    // ── Person › Expression & impression, Makeup (Sprint 2-B.5A, order 354–387) ──
+    ...expressionMakeupAttributes,
+    // ── Person › Wardrobe (Sprint 2-B.5B, order 388–459) ──
+    ...clothingAttributes,
+    // ── Person › Accessories (Sprint 2-B.5C, order 460–477) ──
+    ...accessoriesAttributes,
 
     // ── Output ──────────────────────────────────────────────────────────────
     {
@@ -876,6 +891,9 @@ export const coreCatalog = {
     ...identityRules,
     ...facialRules,
     ...skinHairRules,
+    ...expressionMakeupRules,
+    ...clothingRules,
+    ...accessoriesRules,
   ],
   migrations: [
     {
@@ -921,6 +939,12 @@ export const coreCatalog = {
       fromVersion: "0.6.0",
       toVersion: "0.7.0",
       // No ID changes: 0.7.0 adds Person › Body.
+      changes: [],
+    },
+    {
+      fromVersion: "0.7.0",
+      toVersion: "0.8.0",
+      // No ID changes: 0.8.0 adds Person › Expression & impression, Makeup, Wardrobe and Accessories.
       changes: [],
     },
   ],

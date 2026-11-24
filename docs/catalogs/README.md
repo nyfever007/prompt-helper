@@ -22,10 +22,10 @@ Prompter의 속성 카탈로그는 **데이터**(`src/domain/catalog/catalogs/co
 | 인물 › 헤어 (Hair) | [person/hair.md](person/hair.md) | **APPROVED** (Sprint 2-B.3, 23개 속성) |
 | 인물 › 수염 (Facial hair) | [person/facial-hair.md](person/facial-hair.md) | **APPROVED** (Sprint 2-B.3, 6개 속성, 새 영역) |
 | 인물 › 신체 (Body) | [person/body.md](person/body.md) | **APPROVED** (Sprint 2-B.4, 45개 속성, 하위 분류 7개) |
-| 인물 › 표정 및 시각적 인상 (Expression & Appeal) | [person/expression.md](person/expression.md) | DRAFT |
-| 인물 › 메이크업 (Makeup) | [person/makeup.md](person/makeup.md) | DRAFT |
-| 인물 › 의상 (Wardrobe) | [person/wardrobe.md](person/wardrobe.md) | DRAFT |
-| 인물 › 액세서리 (Accessories) | [person/accessories.md](person/accessories.md) | DRAFT |
+| 인물 › 표정 및 시각적 인상 (Expression & Appeal) | [person/expression.md](person/expression.md) | **APPROVED** (Sprint 2-B.5, 18개 속성, 하위 분류 2개) |
+| 인물 › 메이크업 (Makeup) | [person/makeup.md](person/makeup.md) | **APPROVED** (Sprint 2-B.5, 16개 속성) |
+| 인물 › 의상 (Wardrobe) | [person/wardrobe.md](person/wardrobe.md) | **APPROVED** (Sprint 2-B.5, 72개 속성, 하위 분류 8개) |
+| 인물 › 액세서리 (Accessories) | [person/accessories.md](person/accessories.md) | **APPROVED** (Sprint 2-B.5, 18개 속성) |
 | 인물 › 자세 및 행동 (Pose & Action) | [person/pose.md](person/pose.md) | DRAFT |
 | 공통 › 카메라 (Camera) | [shared/camera.md](shared/camera.md) | DRAFT (Sprint 1 승인 속성 존재) |
 | 공통 › 조명 (Lighting) | [shared/lighting.md](shared/lighting.md) | DRAFT (Sprint 1·2-A 승인 속성 존재) |

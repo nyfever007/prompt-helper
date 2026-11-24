@@ -1,5 +1,5 @@
 import { assessAge, type AgeAssessment } from "../catalog/age";
-import { findRestrictedSelections, isAttributeActive, isOptionActive } from "../catalog/applicability";
+import { findInactiveSelections, findRestrictedSelections, isOptionActive } from "../catalog/applicability";
 import { evaluateAll } from "../catalog/conditions";
 import { phraseUnits, renderPhraseParts } from "../catalog/phrase";
 import type { CatalogRegistry } from "../catalog/registry";
@@ -52,13 +52,16 @@ interface Rendered {
   parameter?: PromptParameterValue;
 }
 
-/** Applicable selected registered options of an option attribute (catalog order). */
-const activeOptions = (registry: CatalogRegistry, spec: ImageSpec, attribute: AttributeDefinition, value: SelectionValue): OptionDefinition[] => {
+/** Selected registered options of an option attribute, in catalog order (not click order: the same set always yields the same text). */
+const selectedOptionsInOrder = (attribute: AttributeDefinition, value: SelectionValue): OptionDefinition[] => {
   if (attribute.type !== "single" && attribute.type !== "multi") return [];
   const ids = selectedOptionIds(value);
-  // Catalog order, not click order: the same set always yields the same text.
-  return attribute.options.filter((o) => ids.includes(o.id) && isOptionActive(registry, o, spec));
+  return attribute.options.filter((o) => ids.includes(o.id));
 };
+
+/** Applicable selected registered options of an option attribute (catalog order). */
+const activeOptions = (registry: CatalogRegistry, spec: ImageSpec, attribute: AttributeDefinition, value: SelectionValue): OptionDefinition[] =>
+  selectedOptionsInOrder(attribute, value).filter((o) => isOptionActive(registry, o, spec));
 
 const quantityText = (attribute: AttributeDefinition, value: SelectionValue): string | null => {
   if (attribute.type !== "quantity" || (value.kind !== "number" && value.kind !== "range")) return null;
@@ -74,11 +77,13 @@ const renderValue = (
   value: SelectionValue,
   adapterId: string,
   takenOver: ReadonlySet<string>,
+  /** Applicable options already computed for this spec (pass 1); recomputed when absent. */
+  active?: OptionDefinition[],
 ): Rendered | null => {
   switch (value.kind) {
     case "single":
     case "multi": {
-      const options = activeOptions(registry, spec, attribute, value);
+      const options = active ?? activeOptions(registry, spec, attribute, value);
       const custom = selectedCustomEntries(value);
       if (options.length === 0 && custom.length === 0) return null; // inactive option: kept, not compiled
       const params = options.map((o) => o.parameterValue).filter((p) => p !== undefined);
@@ -150,11 +155,17 @@ export const compilePrompt = (
   const adapter = options.adapter ?? genericEnglishAdapter;
   const policy = options.safetyPolicy ?? baselinePolicy;
 
-  const diagnostics: Diagnostic[] = [...validateSpecAgainstCatalog(spec, registry)];
+  // Applicability and policy restrictions are analyzed ONCE per compile and shared with
+  // the validator (same spec, same registry → identical results, no repeated work).
+  const catalogUsable = spec.catalog.id === registry.id; // otherwise the validator reports spec.catalog_mismatch
+  const inactive = catalogUsable ? findInactiveSelections(spec, registry) : [];
+  const restricted = catalogUsable ? findRestrictedSelections(spec, registry) : [];
+  const diagnostics: Diagnostic[] = [...validateSpecAgainstCatalog(spec, registry, catalogUsable ? { inactive, restricted } : undefined)];
+  const inactiveAttributes = new Set(inactive.filter((i) => i.scope === "attribute").map((i) => i.attributeId));
+  const inactiveOptions = new Map(inactive.filter((i) => i.scope === "option").map((i) => [i.attributeId, i.optionIds] as const));
   const fragments: PromptFragment[] = [];
   const parameters: Record<string, PromptParameterValue> = {};
   const parameterSources: Record<string, string> = {};
-  const catalogUsable = !diagnostics.some((d) => d.code === "spec.catalog_mismatch");
   /** Set + valid selections that do not produce a fragment, and why. */
   const hidden = new Map<string, HiddenReason>();
   const covered: NonNullable<PromptCompilation["covered"]> = [];
@@ -176,11 +187,12 @@ export const compilePrompt = (
         hidden.set(attribute.id, "excluded"); // kept + safety-checked, not output
         continue;
       }
-      if (!isAttributeActive(registry, attribute, spec)) {
+      if (inactiveAttributes.has(attribute.id)) {
         hidden.set(attribute.id, "inactive"); // kept in spec, not compiled
         continue;
       }
-      const active = activeOptions(registry, spec, attribute, selection.value);
+      const off = inactiveOptions.get(attribute.id);
+      const active = selectedOptionsInOrder(attribute, selection.value).filter((o) => !off?.includes(o.id));
       if ((attribute.type === "single" || attribute.type === "multi") && active.length === 0 && selectedCustomEntries(selection.value).length === 0) {
         hidden.set(attribute.id, "inactive");
         continue;
@@ -236,7 +248,7 @@ export const compilePrompt = (
       }
     }
 
-    const rendered = renderValue(registry, spec, attribute, selection.value, adapter.id, takenOver);
+    const rendered = renderValue(registry, spec, attribute, selection.value, adapter.id, takenOver, producing.get(attribute.id));
     if (!rendered || !rendered.text) continue;
 
     const channel = attribute.prompt.channel ?? "text";
@@ -309,7 +321,6 @@ export const compilePrompt = (
 
   // Policy restrictions (catalog `restriction`): if a restricted option is present
   // (e.g. via import) the whole output is withheld; the spec itself is preserved.
-  const restricted = catalogUsable ? findRestrictedSelections(spec, registry) : [];
   for (const r of restricted) {
     const attribute = registry.getAttribute(r.attributeId)!;
     const option = attribute.type === "single" || attribute.type === "multi" ? attribute.options.find((o) => o.id === r.optionIds[0]) : undefined;

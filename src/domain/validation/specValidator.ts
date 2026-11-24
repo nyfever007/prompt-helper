@@ -1,4 +1,4 @@
-import { findInactiveSelections, findRestrictedSelections } from "../catalog/applicability";
+import { findInactiveSelections, findRestrictedSelections, type InactiveSelection, type RestrictedSelection } from "../catalog/applicability";
 import { conditionAttributeIds, evaluateAll } from "../catalog/conditions";
 import type { CatalogRegistry } from "../catalog/registry";
 import { checkValueForAttribute } from "../catalog/valueCheck";
@@ -43,10 +43,19 @@ export const parseImageSpec = (input: unknown): Result<ImageSpec> => {
 };
 
 /**
+ * Applicability already computed for this exact (spec, registry) — the compiler
+ * passes it so the same analysis is not repeated. Results are identical.
+ */
+export interface PrecomputedApplicability {
+  inactive: readonly InactiveSelection[];
+  restricted: readonly RestrictedSelection[];
+}
+
+/**
  * Stage 2 — semantic validation against a catalog. Reports only; never
  * rewrites the spec.
  */
-export const validateSpecAgainstCatalog = (spec: ImageSpec, registry: CatalogRegistry): Diagnostic[] => {
+export const validateSpecAgainstCatalog = (spec: ImageSpec, registry: CatalogRegistry, precomputed?: PrecomputedApplicability): Diagnostic[] => {
   const out: Diagnostic[] = [];
 
   if (spec.catalog.id !== registry.id) {
@@ -84,7 +93,7 @@ export const validateSpecAgainstCatalog = (spec: ImageSpec, registry: CatalogReg
 
   // Applicability is only meaningful for values that exist in the catalog.
   if (valuesOk) {
-    for (const inactive of findInactiveSelections(spec, registry)) {
+    for (const inactive of precomputed?.inactive ?? findInactiveSelections(spec, registry)) {
       const path = `selections.${inactive.attributeId}`;
       out.push(
         inactive.scope === "attribute"
@@ -102,7 +111,7 @@ export const validateSpecAgainstCatalog = (spec: ImageSpec, registry: CatalogReg
   }
 
   if (valuesOk) {
-    for (const r of findRestrictedSelections(spec, registry)) {
+    for (const r of precomputed?.restricted ?? findRestrictedSelections(spec, registry)) {
       const attribute = registry.getAttribute(r.attributeId)!;
       const option = attribute.type === "single" || attribute.type === "multi" ? attribute.options.find((o) => o.id === r.optionIds[0]) : undefined;
       out.push(
