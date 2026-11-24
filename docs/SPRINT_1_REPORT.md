@@ -159,7 +159,7 @@
 | 실행 | 커밋 | 결과 |
 |---|---|---|
 | 1차 | `c4dce16` | ❌ E2E 2건 실패 (테스트 타이밍 경쟁) — 위 표 참고 |
-| 2차 | E2E 수정 커밋 | 확인 후 기재 |
+| 2차 | `5d7f767` | ✅ 전체 통과 (typecheck·lint·test·build·E2E 26/26), GitHub Actions run 45316476851 |
 
 ## 6. 실제 브라우저 검증 결과
 
@@ -208,7 +208,7 @@ Playwright로 프로덕션 빌드(`next build` + `next start`)를 대상으로 �
 | 마이그레이션 로그와 백업 키가 1개씩이고 덮어써짐 | 두 번째 손상 시 이전 백업이 교체됨 | 타임스탬프 키 또는 이력 |
 | 매 입력마다 동기 저장 (debounce 없음) | 지금은 문제 없음 | 명세가 커지면 debounce |
 | ESLint 9 지원 종료 경고 | 보안 패치 없음 | eslint-config-next의 ESLint 10 지원 후 업그레이드 |
-| 원격 CI 첫 실행 결과 미확인 | 로컬 외 환경 검증 대기 | push 후 결과 확인 |
+| GitHub Actions 경고: 사용 중인 action(v4)이 지원 종료된 Node 20 기반 | 지금은 Node 24로 강제 실행되어 동작함 | action 메이저 버전 업그레이드 |
 | `execCommand` 복사 대체 경로 | deprecated API | 지원 브라우저 결정 후 제거 |
 | 검색 순위가 단순함(초성 검색 없음) | 한국어 초성 입력 불가 | 카탈로그가 커지면 개선 |
 
