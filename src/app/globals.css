@@ -341,3 +341,6 @@ textarea { width: 100%; resize: vertical; min-height: 80px; }
 .selected-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 6px; }
 .selected-chip { border: 1px solid var(--accent); background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: 2px 10px; font-size: 0.8rem; }
 .selected-chip:hover { filter: brightness(0.97); }
+.swatch-groups { display: flex; flex-direction: column; gap: 8px; }
+.swatch-group { display: flex; flex-direction: column; gap: 4px; }
+.swatch-group__title { font-weight: 600; }

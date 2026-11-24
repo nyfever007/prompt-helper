@@ -29,7 +29,7 @@ describe("Identity navigation and editing (real core catalog)", () => {
     await go("인물 기본 정보");
     expect(screen.queryByTestId("draft-placeholder")).toBeNull();
     for (const sub of ["존재", "연령", "성별", "배경", "사회", "기타"]) expect(within(nav()).getByRole("button", { name: sub })).toBeInTheDocument();
-    await go("피부"); // still DRAFT (face/eyes/eyebrows/nose/lips approved in 2-B.2)
+    await go("자세 및 행동"); // still DRAFT (face … lips approved in 2-B.2; skin, hair, facial hair in 2-B.3)
     expect(screen.getByTestId("draft-placeholder")).toBeInTheDocument();
   });
 

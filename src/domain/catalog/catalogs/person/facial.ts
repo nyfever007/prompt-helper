@@ -1,4 +1,4 @@
-import type { CatalogInput, Condition } from "../../schema";
+import { DOWN_UP_TURNED, LENGTH, LOW_HIGH, NARROW_BROAD, NARROW_WIDE, SIZE, SLIDER, SPARSE_DENSE, THIN_FULL, THIN_THICK, degree, fd, opposite as oppositeIn, pairsOf, shape, type Attr, type L, type Rule } from "./builders";
 
 /**
  * Person › Face, Eyes, Eyebrows, Nose, Lips (Sprint 2-B.2) — APPROVED initial product vocabulary.
@@ -15,83 +15,6 @@ import type { CatalogInput, Condition } from "../../schema";
  *   only genuinely opposite pairs get a non-blocking conflict notice.
  * - Natural lip color is not makeup; iris/eyebrow/lip colors use the palette control.
  */
-
-const forPerson: Condition[] = [{ op: "anyOf", attributeId: "subject.kind", optionIds: ["person"], whenUnset: "pass" }];
-
-type Attr = CatalogInput["attributes"][number];
-type Rule = NonNullable<CatalogInput["rules"]>[number];
-type L = { en: string; ko: string };
-
-const base = (id: string, order: number, categoryId: string, label: L, aliases: string[], description: L, kind: "categorical" | "relative") => ({
-  id,
-  domain: id.split(".").slice(0, 2).join("."),
-  status: "approved" as const,
-  categoryId,
-  tier: "detailed" as const,
-  order,
-  label,
-  aliases,
-  description,
-  appliesWhen: forPerson,
-  expression: { role: "direct" as const, kind },
-  outputToggle: true,
-});
-
-/** Option: [id, ko, en label, prompt text, aliases?, swatch?] */
-type O = [string, string, string, string, string[]?, string?];
-const opts = (list: O[]) =>
-  list.map(([id, ko, en, text, aliases, swatch]) => ({ id, label: { en, ko }, prompt: { text }, ...(aliases?.length ? { aliases } : {}), ...(swatch ? { swatch } : {}) }));
-
-const shape = (id: string, order: number, cat: string, label: L, aliases: string[], description: L, template: string, options: O[], o: { multi?: boolean; custom?: boolean; control?: "searchable" | "color" | "dropdown" } = {}): Attr =>
-  ({
-    ...base(id, order, cat, label, aliases, description, "categorical"),
-    type: o.multi ? "multi" : "single",
-    ...(o.control ? { control: o.control } : {}),
-    ...(o.custom === false ? {} : { custom: { nameOnlyNotice: true } }),
-    prompt: { template },
-    options: opts(options),
-  }) as Attr;
-
-/** Band: [ko label, en label, prompt text] — 5 ordered qualitative bands on a 1–5 relative slider. */
-type B = [string, string, string];
-const degree = (id: string, order: number, cat: string, label: L, aliases: string[], description: L, template: string, bands: [B, B, B, B, B]): Attr =>
-  ({
-    ...base(id, order, cat, label, aliases, description, "relative"),
-    type: "number",
-    control: "slider",
-    semantics: "degree",
-    min: 1,
-    max: 5,
-    step: 1,
-    prompt: { template },
-    bands: bands.map(([ko, en, text], i) => ({ upTo: i + 1, label: { en, ko }, text })),
-  }) as Attr;
-
-// Reusable band sets (ko, en, text). Texts are relative descriptions, not measurements.
-const SIZE = (noun = ""): [B, B, B, B, B] => [
-  ["아주 작음", "Very small", `very small${noun}`],
-  ["작음", "Small", `small${noun}`],
-  ["보통", "Medium", `medium-sized${noun}`],
-  ["큼", "Large", `large${noun}`],
-  ["아주 큼", "Very large", `very large${noun}`],
-];
-const LENGTH: [B, B, B, B, B] = [["아주 짧음", "Very short", "very short"], ["짧음", "Short", "short"], ["보통", "Medium", "medium length"], ["긺", "Long", "long"], ["아주 긺", "Very long", "very long"]];
-const NARROW_BROAD: [B, B, B, B, B] = [["아주 좁음", "Very narrow", "very narrow"], ["좁음", "Narrow", "narrow"], ["보통", "Medium", "medium width"], ["넓음", "Broad", "broad"], ["아주 넓음", "Very broad", "very broad"]];
-const NARROW_WIDE: [B, B, B, B, B] = [["아주 좁음", "Very narrow", "very narrow"], ["좁음", "Narrow", "narrow"], ["보통", "Medium", "medium width"], ["넓음", "Wide", "wide"], ["아주 넓음", "Very wide", "very wide"]];
-const LOW_HIGH: [B, B, B, B, B] = [["아주 낮음", "Very low", "very low"], ["낮음", "Low", "low"], ["보통", "Medium", "medium height"], ["높음", "High", "high"], ["아주 높음", "Very high", "very high"]];
-const SPARSE_DENSE: [B, B, B, B, B] = [["아주 성김", "Very sparse", "very sparse"], ["성김", "Sparse", "sparse"], ["보통", "Medium", "medium density"], ["촘촘함", "Dense", "dense"], ["아주 촘촘함", "Very dense", "very dense"]];
-const THIN_THICK: [B, B, B, B, B] = [["아주 얇음", "Very thin", "very thin"], ["얇음", "Thin", "thin"], ["보통", "Medium", "medium thickness"], ["두꺼움", "Thick", "thick"], ["아주 두꺼움", "Very thick", "very thick"]];
-const THIN_FULL: [B, B, B, B, B] = [["아주 얇음", "Very thin", "very thin"], ["얇음", "Thin", "thin"], ["보통", "Medium", "medium fullness"], ["도톰함", "Full", "full"], ["아주 도톰함", "Very full", "very full"]];
-const DOWN_UP_TURNED: [B, B, B, B, B] = [
-  ["많이 처짐", "Strongly downturned", "strongly downturned"],
-  ["약간 처짐", "Slightly downturned", "slightly downturned"],
-  ["수평", "Level", "level"],
-  ["약간 올라감", "Slightly upturned", "slightly upturned"],
-  ["많이 올라감", "Strongly upturned", "strongly upturned"],
-];
-
-const fd = (en: string, ko: string): L => ({ en, ko });
-const SLIDER = (en: string, ko: string) => fd(`${en} Relative impression only — not a measurement.`, `${ko} 상대적인 정도이며 실제 측정값이 아닙니다.`);
 
 export const FACIAL_CATEGORY_DESCRIPTIONS: Record<string, L> = {
   person_face: fd("Facial outline and structure. Nothing here changes expression, impression or attractiveness.", "얼굴 윤곽과 구조입니다. 표정·인상·매력도를 바꾸지 않습니다."),
@@ -165,7 +88,7 @@ const eyes: Attr[] = [
     ["oval", "타원형", "Oval", "oval"],
     ["elongated", "가로로 긴", "Elongated", "elongated", ["long eyes", "긴 눈"]],
   ]),
-  degree("person.eyes.size", 228, E, fd("Eye size", "눈 크기"), ["eye size", "큰 눈", "작은 눈"], SLIDER("Overall size of the eyes.", "눈의 전체 크기입니다."), "Eye size: {value}.", SIZE()),
+  degree("person.eyes.size", 228, E, fd("Eye size", "눈 크기"), ["eye size", "큰 눈", "작은 눈"], SLIDER("Overall size of the eyes.", "눈의 전체 크기입니다."), "Eye size: {value}.", SIZE),
   degree("person.eyes.width", 229, E, fd("Eye width", "눈 너비"), ["eye width", "눈 가로"], SLIDER("Horizontal length of the eye opening.", "눈의 가로 길이입니다."), "Eye width: {value}.", NARROW_WIDE),
   degree("person.eyes.height", 230, E, fd("Eye height", "눈 높이"), ["eye opening height", "눈 세로"], SLIDER("Vertical height of the eye opening.", "눈을 뜬 세로 높이입니다."), "Eye opening height: {value}.", [
     ["아주 낮음", "Very low", "very low"],
@@ -208,7 +131,7 @@ const eyes: Attr[] = [
     ["gold", "금색", "Gold", "gold", [], "#d4a72c"],
     ["silver", "은색", "Silver", "silver", [], "#c3c7cc"],
   ], { control: "color" }),
-  degree("person.eyes.iris_size", 236, E, fd("Iris size", "홍채 크기"), ["iris size", "눈동자 크기"], SLIDER("Size of the iris relative to the eye.", "눈에 대한 홍채의 상대적 크기입니다."), "Iris size: {value}.", SIZE()),
+  degree("person.eyes.iris_size", 236, E, fd("Iris size", "홍채 크기"), ["iris size", "눈동자 크기"], SLIDER("Size of the iris relative to the eye.", "눈에 대한 홍채의 상대적 크기입니다."), "Iris size: {value}.", SIZE),
   shape("person.eyes.pupil_shape", 237, E, fd("Pupil shape", "동공 모양"), ["pupil", "동공", "slit pupils"], fd("Includes fantasy shapes; no species is implied.", "판타지 형태를 포함하며 종족을 뜻하지 않습니다."), "Pupils: {value}.", [
     ["round", "둥근", "Round", "round"],
     ["vertical_slit", "세로 틈", "Vertical slit", "vertical slit", ["cat pupils", "고양이 눈"]],
@@ -351,32 +274,7 @@ for (const [id, bridge] of [["straight", ["straight"]], ["roman", ["convex"]], [
 export const facialAttributes: Attr[] = [...face, ...eyes, ...eyebrows, ...nose, ...lips];
 
 // ── Rules: genuinely opposite traits inside multi-select attributes, and nose shape vs bridge.
-const labelOf = (attributeId: string, optionId: string): L => {
-  const a = facialAttributes.find((x) => x.id === attributeId) as Extract<Attr, { type: "single" | "multi" }>;
-  const o = a.options.find((x) => x.id === optionId)!;
-  return { en: o.label.en, ko: o.label.ko! };
-};
-const opposite = (attributeId: string, pairs: Array<[string, string]>): Rule[] =>
-  pairs.map(([a, b]) => {
-    const la = labelOf(attributeId, a);
-    const lb = labelOf(attributeId, b);
-    return {
-      id: `${attributeId.replace(/^person\./, "").replace(/[._]/g, "-")}-${a.replace(/_/g, "-")}-vs-${b.replace(/_/g, "-")}`,
-      kind: "conflict" as const,
-      severity: "warning" as const,
-      when: [
-        { op: "anyOf" as const, attributeId, optionIds: [a] },
-        { op: "anyOf" as const, attributeId, optionIds: [b] },
-      ],
-      involves: [attributeId],
-      message: { en: `“${la.en}” and “${lb.en}” describe opposite traits.`, ko: `‘${la.ko}’과(와) ‘${lb.ko}’은(는) 서로 반대되는 특징입니다.` },
-      guidance: {
-        en: "Keep both only if this is intended (e.g. a stylized design); otherwise deselect one. Nothing is changed automatically.",
-        ko: "의도한 표현(예: 스타일화된 디자인)이라면 그대로 두고, 아니라면 하나를 해제하세요. 자동으로 바꾸지 않습니다.",
-      },
-    };
-  });
-const pairsOf = (group: string[]): Array<[string, string]> => group.flatMap((a, i) => group.slice(i + 1).map((b) => [a, b] as [string, string]));
+const opposite = (attributeId: string, pairs: Array<[string, string]>): Rule[] => oppositeIn(facialAttributes, attributeId, pairs);
 
 export const facialRules: Rule[] = [
   ...opposite("person.face.cheekbones", [...pairsOf(["flat", "softly_contoured", "prominent"]), ["high", "low"]]),

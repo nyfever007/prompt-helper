@@ -49,8 +49,8 @@ test.describe("product catalog (/)", () => {
     await expect(field(page, "style.preset")).toBeVisible();
     await expect(field(page, "style.medium")).toHaveCount(0); // deferred until Sprint 4
 
-    await go(page, "피부"); // face was approved in Sprint 2-B.2; skin stays DRAFT
-    await expect(page.getByTestId("draft-placeholder")).toContainText("docs/catalogs/person/skin.md");
+    await go(page, "자세 및 행동"); // face (2-B.2) and skin (2-B.3) were approved; pose stays DRAFT
+    await expect(page.getByTestId("draft-placeholder")).toContainText("docs/catalogs/person/pose.md");
     await shot(page, "detailed-draft", info.project.name);
 
     // back to Basic: same values, lighting properties stay (not editable in Basic, but in the prompt)

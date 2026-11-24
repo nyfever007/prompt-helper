@@ -17,6 +17,11 @@ import { buildExtendedCatalog, cloneCore, coreAttr, extendedRegistry } from "../
 import { buildSpec, multi, single } from "../fixtures/specs";
 
 const core = getCoreRegistry();
+const SKIN_HAIR_IDS = [
+  ...["tone", "undertone", "texture", "sheen", "hydration", "pores", "translucency", "evenness", "freckle_density", "freckle_placement", "moles", "mole_placement", "wrinkles", "wrinkle_placement", "scars", "features"].map((x) => `person.skin.${x}`),
+  ...["presence", "length", "primary_color", "secondary_color", "color_pattern", "texture", "thickness", "density", "volume", "shine", "condition", "curl_size", "curl_tightness", "part", "hairline", "bangs_style", "bangs_length", "bangs_density", "style", "tie_position", "layering", "flyaways", "movement"].map((x) => `person.hair.${x}`),
+  ...["style", "length", "density", "color", "grooming", "texture"].map((x) => `person.facial_hair.${x}`),
+];
 const FACIAL_IDS = [
   ...["shape", "length", "width", "forehead_height", "forehead_width", "cheekbones", "jawline", "chin", "cheeks", "symmetry"].map((x) => `person.face.${x}`),
   ...["shape", "size", "width", "height", "spacing", "outer_corner_angle", "depth", "eyelids", "iris_color", "iris_size", "pupil_shape", "lash_length", "lash_density"].map((x) => `person.eyes.${x}`),
@@ -25,10 +30,10 @@ const FACIAL_IDS = [
   ...["shape", "mouth_width", "upper_thickness", "lower_thickness", "ratio", "cupids_bow", "corners", "natural_color"].map((x) => `person.lips.${x}`),
 ];
 
-describe("8. core catalog 0.5.0", () => {
+describe("8. core catalog 0.6.0", () => {
   it("is valid, versioned and declares its format", () => {
     expect(core.id).toBe("prompter.core");
-    expect(core.version).toBe("0.5.0");
+    expect(core.version).toBe("0.6.0");
     expect(coreCatalog.formatVersion).toBe("0.4.0");
   });
 
@@ -69,6 +74,8 @@ describe("8. core catalog 0.5.0", () => {
       "person.identity.description",
       // Person › Face, Eyes, Eyebrows, Nose, Lips (Sprint 2-B.2, order 217–263)
       ...FACIAL_IDS,
+      // Person › Skin, Hair, Facial hair (Sprint 2-B.3, order 264–308)
+      ...SKIN_HAIR_IDS,
       "style.medium",
       "style.realism",
       "style.technique",

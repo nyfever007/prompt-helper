@@ -73,8 +73,8 @@ describe("Detailed navigation (data-driven)", () => {
 
   it("draft areas are honest placeholders with their design document", async () => {
     const { user } = await open();
-    await go(user, "피부"); // eyebrows were approved in Sprint 2-B.2; skin stays DRAFT
-    expect(screen.getByTestId("draft-placeholder")).toHaveTextContent("docs/catalogs/person/skin.md");
+    await go(user, "자세 및 행동"); // eyebrows (2-B.2) and skin (2-B.3) were approved; pose stays DRAFT
+    expect(screen.getByTestId("draft-placeholder")).toHaveTextContent("docs/catalogs/person/pose.md");
     expect(document.querySelectorAll(".cat-panel [data-attribute-id]")).toHaveLength(0);
   });
 
