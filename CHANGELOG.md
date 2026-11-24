@@ -9,7 +9,17 @@
 - 컴파일러(`COMPILER_VERSION`): 0.1.0 / generic-en adapter: 0.1.0
 - 로컬 저장 envelope(`STORAGE_FORMAT_VERSION`): 1
 
-## [Unreleased] — Sprint 2-B.3: Skin, hair & facial hair (구현 완료, 검토 대기)
+## [Unreleased] — Sprint 2-B.4: Body (구현 완료, 검토 대기)
+
+버전 변화: core 카탈로그 0.6.0 → **0.7.0**(속성 추가만, ID 변경 없음). ImageSpec 0.3.0, 카탈로그 형식 0.4.0, 컴파일러 0.4.0, 안전 정책 0.2.0은 그대로.
+
+### Added
+- 인물 › 신체 45개 속성, 하위 분류 7개(전체 신체 8·신체 비율 5·목·어깨 5·몸통 9·엉덩이·골반 4·팔·손 7·다리·발 7) — 누적 인물 상세 속성 153개
+- 5단계 상대 슬라이더 36개, 형태 칩 8개(선택지 34개, 사용자 정의 4개 속성), 등신 비율 숫자 속성(2–10, 0.5 단위, “N heads tall”)
+- 테스트: `body-catalog`(25), `component/body`(3), E2E `body`(데스크톱·모바일), 다중 텍스트 안전 검사 동일성 테스트, 스크린샷 `docs/screenshots/sprint-2b4/`
+- 문서: `docs/catalogs/person/body.md` 1.0.0 APPROVED, ADR-052, TD-11, `docs/SPRINT_2B4_REPORT.md`
+
+## [0.6.0] — 2026-11-24 — Sprint 2-B.3: Skin, hair & facial hair (승인됨, PR #5 병합 `7b9b9f2`)
 
 버전 변화: core 카탈로그 0.5.0 → **0.6.0**(속성 추가만, ID 변경 없음). ImageSpec 0.3.0, 카탈로그 형식 0.4.0, 컴파일러 0.4.0, 안전 정책 0.2.0은 그대로.
 

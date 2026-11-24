@@ -3,7 +3,7 @@
 사용자가 상상한 이미지를 구조화된 명세(**ImageSpec**)로 정밀하게 정의하고, 이를 이미지 생성 모델용 프롬프트로 변환하는 **Visual Prompt Design Tool**입니다.
 
 - 제품 마스터 계획: [PROMPTER_MASTER_PLAN.md](PROMPTER_MASTER_PLAN.md) (원본 보존, 수정 금지)
-- 현재 단계: **Sprint 2-B.3 — Skin, hair & facial hair (구현 완료, 검토 대기)**. 결과는 [docs/SPRINT_2B3_REPORT.md](docs/SPRINT_2B3_REPORT.md), 카탈로그 설계는 [docs/catalogs/person/](docs/catalogs/person/)를 참고하세요. 이전 단계: [Sprint 2-B.2](docs/SPRINT_2B2_REPORT.md)·[2-B.1](docs/SPRINT_2B1_REPORT.md)·[2-A](docs/SPRINT_2A_REPORT.md) 보고서(승인·병합), 기술 부채: [docs/TECH_DEBT.md](docs/TECH_DEBT.md). Sprint 2-B.4는 별도 승인 후 시작합니다.
+- 현재 단계: **Sprint 2-B.4 — Body (구현 완료, 검토 대기)**. 결과는 [docs/SPRINT_2B4_REPORT.md](docs/SPRINT_2B4_REPORT.md), 카탈로그 설계는 [docs/catalogs/person/](docs/catalogs/person/)를 참고하세요. 이전 단계: [Sprint 2-B.3](docs/SPRINT_2B3_REPORT.md)·[2-B.2](docs/SPRINT_2B2_REPORT.md)·[2-B.1](docs/SPRINT_2B1_REPORT.md)·[2-A](docs/SPRINT_2A_REPORT.md) 보고서(승인·병합), 기술 부채: [docs/TECH_DEBT.md](docs/TECH_DEBT.md). Sprint 2-B.5는 별도 승인 후 시작합니다.
 - 이 빌드는 이미지 생성 API나 유료 LLM API를 **호출하지 않습니다**. API 키도 필요 없습니다.
 
 ## 요구 사항
@@ -91,6 +91,7 @@ scripts/         빌드 검증 스크립트 (테스트 카탈로그 격리)
 - [docs/SPRINT_2B1_REPORT.md](docs/SPRINT_2B1_REPORT.md): Sprint 2-B.1 (Person › Identity) 구현 및 검증 결과
 - [docs/SPRINT_2B2_REPORT.md](docs/SPRINT_2B2_REPORT.md): Sprint 2-B.2 (Face & facial features) 구현 및 검증 결과
 - [docs/SPRINT_2B3_REPORT.md](docs/SPRINT_2B3_REPORT.md): Sprint 2-B.3 (Skin, hair & facial hair) 구현 및 검증 결과
+- [docs/SPRINT_2B4_REPORT.md](docs/SPRINT_2B4_REPORT.md): Sprint 2-B.4 (Body) 구현 및 검증 결과
 - [docs/SPRINT_2B1_SPEC_REVIEW.md](docs/SPRINT_2B1_SPEC_REVIEW.md): Sprint 2-B.1 사양 결정 기록(D0–D14, N1–N5, Q1–Q3, 국가·지역 목록, 전체 컴파일 문장)
 - [docs/catalogs/CATALOG_DESIGN_STANDARD.md](docs/catalogs/CATALOG_DESIGN_STANDARD.md): 모든 카탈로그 공통 설계 규격
 - [docs/catalogs/](docs/catalogs/README.md): 카탈로그 설계 문서

@@ -1,10 +1,15 @@
 import type { CatalogInput, Condition } from "../schema";
+import { BODY_CATEGORY_DESCRIPTION, bodyAttributes, bodyCategories } from "./person/body";
 import { FACIAL_CATEGORY_DESCRIPTIONS, facialAttributes, facialRules } from "./person/facial";
 import { identityAgeModel, identityAttributes, identityCategories, identityRules } from "./person/identity";
 import { SKIN_HAIR_CATEGORY_DESCRIPTIONS, skinHairAttributes, skinHairRules } from "./person/skin-hair";
 
 /** Approved person areas beyond Identity (descriptions shown in the Detailed editor). */
-const APPROVED_PERSON_AREAS: Record<string, { en: string; ko: string }> = { ...FACIAL_CATEGORY_DESCRIPTIONS, ...SKIN_HAIR_CATEGORY_DESCRIPTIONS };
+const APPROVED_PERSON_AREAS: Record<string, { en: string; ko: string }> = {
+  ...FACIAL_CATEGORY_DESCRIPTIONS,
+  ...SKIN_HAIR_CATEGORY_DESCRIPTIONS,
+  person_body: BODY_CATEGORY_DESCRIPTION,
+};
 
 /**
  * prompter.core — catalog content v0.4.0.
@@ -15,6 +20,7 @@ const APPROVED_PERSON_AREAS: Record<string, { en: string; ko: string }> = { ...F
  * 0.6.0 Sprint 2-B.3 (Person › Skin, Hair, Facial hair — 45 attributes, approved; non-person
  * attributes from order 300 up shifted by +1000 so person attributes fit at 201–308 —
  * relative order unchanged, prompts byte-identical).
+ * 0.7.0 Sprint 2-B.4 (Person › Body — 45 attributes in 7 subcategories, approved; order 309–353).
  *
  * Every list here is an extensible STARTING POINT, not a final scope. No option
  * count limits are implied; add entries as data and bump `version`.
@@ -39,7 +45,7 @@ const NON_ABSTRACT = [...ORIENTED_SUBJECTS, "landscape"];
 export const coreCatalog = {
   formatVersion: "0.4.0",
   id: "prompter.core",
-  version: "0.6.0",
+  version: "0.7.0",
   title: { en: "Prompter core catalog", ko: "Prompter 기본 카탈로그" },
   groups: [
     { id: "what", order: 0, label: { en: "What to depict", ko: "무엇을 그릴까요" } },
@@ -66,7 +72,8 @@ export const coreCatalog = {
   categories: [
     // Detailed navigation (expert taxonomy). Person areas are approved one by one after
     // their catalog design is approved (docs/catalogs/). Identity: approved (Sprint 2-B.1);
-    // face, eyes, eyebrows, nose, lips: approved (Sprint 2-B.2); skin, hair, facial hair: approved (Sprint 2-B.3).
+    // face, eyes, eyebrows, nose, lips: approved (Sprint 2-B.2); skin, hair, facial hair: approved (Sprint 2-B.3);
+    // body: approved (Sprint 2-B.4).
     { id: "essentials", order: 0, status: "approved", label: { en: "Essentials", ko: "기본" }, description: { en: "What the image is about.", ko: "이미지의 기본 내용입니다." } },
     {
       id: "person",
@@ -114,6 +121,7 @@ export const coreCatalog = {
           : {}),
     })),
     ...identityCategories,
+    ...bodyCategories,
     { id: "shared", order: 40, status: "approved", label: { en: "Shared", ko: "공통" } },
     { id: "shared_camera", parentId: "shared", order: 41, status: "approved", label: { en: "Camera", ko: "카메라" }, docPath: "docs/catalogs/shared/camera.md" },
     { id: "shared_lighting", parentId: "shared", order: 42, status: "approved", label: { en: "Lighting", ko: "조명" }, docPath: "docs/catalogs/shared/lighting.md" },
@@ -717,6 +725,8 @@ export const coreCatalog = {
     ...facialAttributes,
     // ── Person › Skin, Hair, Facial hair (Sprint 2-B.3, order 264–308) ──
     ...skinHairAttributes,
+    // ── Person › Body (Sprint 2-B.4, order 309–353) ──
+    ...bodyAttributes,
 
     // ── Output ──────────────────────────────────────────────────────────────
     {
@@ -905,6 +915,12 @@ export const coreCatalog = {
       fromVersion: "0.5.0",
       toVersion: "0.6.0",
       // No ID changes: 0.6.0 adds Person › Skin, Hair, Facial hair (+ non-person order offset).
+      changes: [],
+    },
+    {
+      fromVersion: "0.6.0",
+      toVersion: "0.7.0",
+      // No ID changes: 0.7.0 adds Person › Body.
       changes: [],
     },
   ],

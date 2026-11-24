@@ -120,14 +120,15 @@ describe("identity catalog: approved structure (D2, D12, N2)", () => {
     expect(core.lineage(P + "species", "catfolk")).toEqual(["catfolk", "beastfolk"]);
   });
 
-  it("Identity has its 6 subcategories; approved person areas are exactly Identity (2-B.1), the 5 facial areas (2-B.2) and skin, hair, facial hair (2-B.3)", () => {
+  it("Identity has its 6 subcategories; approved person areas are exactly Identity (2-B.1), the 5 facial areas (2-B.2) skin, hair, facial hair (2-B.3) and body + its 7 subcategories (2-B.4)", () => {
     expect(core.categories.filter((c) => c.parentId === "person_identity").map((c) => c.id)).toEqual([
       "person_identity_being", "person_identity_age", "person_identity_gender", "person_identity_background", "person_identity_social", "person_identity_other",
     ]);
     const approvedPerson = core.categories.filter((c) => core.categoryPath(c.id)[0] === "person" && core.isCategoryApproved(c.id)).map((c) => c.id);
     expect(approvedPerson.sort()).toEqual(
       ["person", "person_identity", "person_identity_being", "person_identity_age", "person_identity_gender", "person_identity_background", "person_identity_social", "person_identity_other",
-        "person_face", "person_eyes", "person_eyebrows", "person_nose", "person_lips", "person_skin", "person_hair", "person_facial_hair"].sort(),
+        "person_face", "person_eyes", "person_eyebrows", "person_nose", "person_lips", "person_skin", "person_hair", "person_facial_hair",
+        "person_body", "person_body_general", "person_body_proportions", "person_body_neck_shoulders", "person_body_torso", "person_body_hips", "person_body_arms_hands", "person_body_legs_feet"].sort(),
     );
   });
 });

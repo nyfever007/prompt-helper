@@ -21,7 +21,7 @@ Prompter의 속성 카탈로그는 **데이터**(`src/domain/catalog/catalogs/co
 | 인물 › 피부 (Skin) | [person/skin.md](person/skin.md) | **APPROVED** (Sprint 2-B.3, 16개 속성) |
 | 인물 › 헤어 (Hair) | [person/hair.md](person/hair.md) | **APPROVED** (Sprint 2-B.3, 23개 속성) |
 | 인물 › 수염 (Facial hair) | [person/facial-hair.md](person/facial-hair.md) | **APPROVED** (Sprint 2-B.3, 6개 속성, 새 영역) |
-| 인물 › 신체 (Body) | [person/body.md](person/body.md) | DRAFT |
+| 인물 › 신체 (Body) | [person/body.md](person/body.md) | **APPROVED** (Sprint 2-B.4, 45개 속성, 하위 분류 7개) |
 | 인물 › 표정 및 시각적 인상 (Expression & Appeal) | [person/expression.md](person/expression.md) | DRAFT |
 | 인물 › 메이크업 (Makeup) | [person/makeup.md](person/makeup.md) | DRAFT |
 | 인물 › 의상 (Wardrobe) | [person/wardrobe.md](person/wardrobe.md) | DRAFT |

@@ -17,6 +17,15 @@ import { buildExtendedCatalog, cloneCore, coreAttr, extendedRegistry } from "../
 import { buildSpec, multi, single } from "../fixtures/specs";
 
 const core = getCoreRegistry();
+const BODY_IDS = [
+  "height", "build", "frame", "muscle_mass", "muscle_definition", "body_fat", "silhouette", "proportions",
+  "head_size", "heads_tall", "upper_body_length", "lower_body_length", "upper_lower_ratio",
+  "neck_length", "neck_thickness", "shoulder_width", "shoulder_slope", "collarbones",
+  "rib_cage_width", "chest_volume", "pectorals", "waist_width", "waist_curvature", "abdomen", "abs_definition", "back_width", "back_muscles",
+  "pelvis_width", "gluteal_volume", "gluteal_shape", "waist_hip_contrast",
+  "arm_length", "upper_arm_thickness", "forearm_thickness", "arm_muscles", "hand_size", "finger_length", "finger_thickness",
+  "leg_length", "thigh_thickness", "calf_thickness", "leg_muscles", "ankle_thickness", "foot_size", "leg_alignment",
+].map((x) => `person.body.${x}`);
 const SKIN_HAIR_IDS = [
   ...["tone", "undertone", "texture", "sheen", "hydration", "pores", "translucency", "evenness", "freckle_density", "freckle_placement", "moles", "mole_placement", "wrinkles", "wrinkle_placement", "scars", "features"].map((x) => `person.skin.${x}`),
   ...["presence", "length", "primary_color", "secondary_color", "color_pattern", "texture", "thickness", "density", "volume", "shine", "condition", "curl_size", "curl_tightness", "part", "hairline", "bangs_style", "bangs_length", "bangs_density", "style", "tie_position", "layering", "flyaways", "movement"].map((x) => `person.hair.${x}`),
@@ -30,10 +39,10 @@ const FACIAL_IDS = [
   ...["shape", "mouth_width", "upper_thickness", "lower_thickness", "ratio", "cupids_bow", "corners", "natural_color"].map((x) => `person.lips.${x}`),
 ];
 
-describe("8. core catalog 0.6.0", () => {
+describe("8. core catalog 0.7.0", () => {
   it("is valid, versioned and declares its format", () => {
     expect(core.id).toBe("prompter.core");
-    expect(core.version).toBe("0.6.0");
+    expect(core.version).toBe("0.7.0");
     expect(coreCatalog.formatVersion).toBe("0.4.0");
   });
 
@@ -76,6 +85,8 @@ describe("8. core catalog 0.6.0", () => {
       ...FACIAL_IDS,
       // Person › Skin, Hair, Facial hair (Sprint 2-B.3, order 264–308)
       ...SKIN_HAIR_IDS,
+      // Person › Body (Sprint 2-B.4, order 309–353)
+      ...BODY_IDS,
       "style.medium",
       "style.realism",
       "style.technique",
