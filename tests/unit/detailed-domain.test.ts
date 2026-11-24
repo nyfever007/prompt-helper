@@ -36,7 +36,7 @@ const num = (value: number): SelectionValue => ({ kind: "number", value });
 const fixture = (dir: string, name: string) => readFileSync(join(__dirname, "../fixtures", dir, name), "utf8");
 
 describe("product exposure is separate from catalog expressiveness (D1)", () => {
-  it("core: Detailed edits every approved Basic attribute + the 6 lighting properties + the 16 identity attributes, nothing else", () => {
+  it("core: Detailed edits every approved Basic attribute + the 6 lighting properties + the 16 identity + 47 facial attributes, nothing else", () => {
     const ids = core.exposedAttributes("detailed").map((a) => a.id);
     expect(ids).toEqual([
       "intent.description",
@@ -57,6 +57,7 @@ describe("product exposure is separate from catalog expressiveness (D1)", () => 
       "person.identity.narrative_role",
       "person.identity.social_status",
       "person.identity.description",
+      ...core.attributes().filter((a) => /^person\.(face|eyes|eyebrows|nose|lips)\./.test(a.id)).map((a) => a.id),
       "style.preset",
       "composition.framing",
       "composition.view_direction",
@@ -81,19 +82,20 @@ describe("product exposure is separate from catalog expressiveness (D1)", () => 
     expect(core.exposedAttributes("basic").map((a) => a.id)).toEqual(core.attributesForTier("basic").map((a) => a.id));
   });
 
-  it("core: only Identity is approved among person areas; the other 13 stay DRAFT structure only (no attributes)", () => {
+  it("core: Identity (2-B.1) and Face, Eyes, Eyebrows, Nose, Lips (2-B.2) are approved; the other 9 person areas stay DRAFT structure only", () => {
     const person = core.categories.filter((c) => c.parentId === "person");
     expect(person.map((c) => c.id)).toEqual([
       "person_identity", "person_face", "person_eyes", "person_eyebrows", "person_nose", "person_lips", "person_skin",
       "person_hair", "person_body", "person_expression", "person_makeup", "person_wardrobe", "person_accessories", "person_pose",
     ]);
     expect(core.getCategory("person")?.status).toBe("approved");
+    const approved: Record<string, number> = { person_identity: 16, person_face: 10, person_eyes: 13, person_eyebrows: 8, person_nose: 8, person_lips: 8 };
     for (const c of person) {
       expect(c.docPath).toMatch(/^docs\/catalogs\/person\/.+\.md$/);
       const inSubtree = core.attributes().filter((a) => a.categoryId !== undefined && core.categoryPath(a.categoryId).includes(c.id));
-      if (c.id === "person_identity") {
+      if (c.id in approved) {
         expect(c.status).toBe("approved");
-        expect(inSubtree).toHaveLength(16);
+        expect(inSubtree).toHaveLength(approved[c.id]!);
         expect(inSubtree.every((a) => core.isExposed(a, "detailed"))).toBe(true);
       } else {
         expect(c.status).toBe("draft");
@@ -113,7 +115,7 @@ describe("product exposure is separate from catalog expressiveness (D1)", () => 
 
   it("an approved attribute inside a draft category is not exposed", () => {
     const c = cloneCore();
-    c.attributes.push({ id: "x.face.test", domain: "person", status: "approved", categoryId: "person_face", type: "text", tier: "detailed", order: 500, maxLength: 10, label: { en: "t" }, prompt: { template: "{value}" } });
+    c.attributes.push({ id: "x.face.test", domain: "person", status: "approved", categoryId: "person_skin", type: "text", tier: "detailed", order: 500, maxLength: 10, label: { en: "t" }, prompt: { template: "{value}" } });
     const reg = CatalogRegistry.createOrThrow(c);
     expect(reg.exposedAttributes("detailed").map((a) => a.id)).not.toContain("x.face.test");
   });
@@ -136,7 +138,7 @@ describe("data-driven categories", () => {
     expect(byId("person").applicable).toBe(false); // landscape subject
     expect(byId("person_face").applicable).toBe(false);
     expect(byId("person_face").setCount).toBe(1); // value kept even when not applicable
-    expect(byId("person_nose").approved).toBe(false);
+    expect(byId("person_skin").approved).toBe(false);
   });
 
   it("warning and block badges follow diagnostics for attributes in the subtree", () => {
@@ -168,7 +170,7 @@ describe("catalog-wide search (ko/en/aliases)", () => {
     ["골든", "option", "lighting.preset", "golden_hour"],
     ["golden", "option", "lighting.preset", "golden_hour"],
     ["색온도", "attribute", "lighting.color_temperature", undefined],
-    ["윤곽", "attribute", "x.face.shape", undefined],
+    ["윤곽", "attribute", "person.face.shape", undefined], // product attribute alias (Sprint 2-B.2) ranks before the test-only one
     ["정장", "option", "x.wardrobe.style", "business_suit"],
   ])("%s → %s %s %s", (q, kind, attributeId, optionId) => {
     const h = first(q)!;
@@ -178,7 +180,7 @@ describe("catalog-wide search (ko/en/aliases)", () => {
   });
 
   it("finds draft categories by name but never unexposed attributes", () => {
-    expect(searchCatalog(core, "눈썹")[0]).toMatchObject({ kind: "category", categoryId: "person_eyebrows" });
+    expect(searchCatalog(core, "피부")[0]).toMatchObject({ kind: "category", categoryId: "person_skin" });
     expect(searchCatalog(fx, "보류 샘플")).toEqual([]);
     expect(searchCatalog(core, "매체").filter((h) => h.attributeId === "style.medium")).toEqual([]);
   });
@@ -482,7 +484,7 @@ describe("ImageSpec 0.2.0 compatibility (D2)", () => {
     expect(r.status).toBe("valid");
     if (r.status !== "valid") return;
     expect(r.spec.schemaVersion).toBe("0.3.0"); // migrated 0.1.0 → 0.2.0 → 0.3.0 (version-only steps)
-    expect(r.spec.catalog).toEqual({ id: "prompter.core", version: "0.4.0" });
+    expect(r.spec.catalog).toEqual({ id: "prompter.core", version: "0.5.0" });
     expect(r.spec.selections).toEqual(raw.selections);
     expect(r.migrations).toEqual([]);
     expect(r.diagnostics.filter((d) => d.severity !== "info")).toEqual([]);

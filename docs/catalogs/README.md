@@ -13,11 +13,11 @@ Prompter의 속성 카탈로그는 **데이터**(`src/domain/catalog/catalogs/co
 | 영역 | 문서 | 상태 |
 |---|---|---|
 | 인물 › 인물 기본 정보 (Identity) | [person/identity.md](person/identity.md) | **APPROVED** (Sprint 2-B.1, 1.0.0 — 16개 속성 구현) |
-| 인물 › 얼굴 (Face) | [person/face.md](person/face.md) | DRAFT |
-| 인물 › 눈 (Eyes) | [person/eyes.md](person/eyes.md) | DRAFT |
-| 인물 › 눈썹 (Eyebrows) | [person/eyebrows.md](person/eyebrows.md) | DRAFT |
-| 인물 › 코 (Nose) | [person/nose.md](person/nose.md) | DRAFT |
-| 인물 › 입술 (Lips) | [person/lips.md](person/lips.md) | DRAFT |
+| 인물 › 얼굴 (Face) | [person/face.md](person/face.md) | **APPROVED** (Sprint 2-B.2, 10개 속성) |
+| 인물 › 눈 (Eyes) | [person/eyes.md](person/eyes.md) | **APPROVED** (Sprint 2-B.2, 13개 속성) |
+| 인물 › 눈썹 (Eyebrows) | [person/eyebrows.md](person/eyebrows.md) | **APPROVED** (Sprint 2-B.2, 8개 속성) |
+| 인물 › 코 (Nose) | [person/nose.md](person/nose.md) | **APPROVED** (Sprint 2-B.2, 8개 속성) |
+| 인물 › 입술 (Lips) | [person/lips.md](person/lips.md) | **APPROVED** (Sprint 2-B.2, 8개 속성) |
 | 인물 › 피부 (Skin) | [person/skin.md](person/skin.md) | DRAFT |
 | 인물 › 헤어 (Hair) | [person/hair.md](person/hair.md) | DRAFT |
 | 인물 › 신체 (Body) | [person/body.md](person/body.md) | DRAFT |

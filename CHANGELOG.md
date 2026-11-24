@@ -9,7 +9,21 @@
 - 컴파일러(`COMPILER_VERSION`): 0.1.0 / generic-en adapter: 0.1.0
 - 로컬 저장 envelope(`STORAGE_FORMAT_VERSION`): 1
 
-## [Unreleased] — Sprint 2-B.1: Person › Identity (구현 완료, 검토 대기)
+## [Unreleased] — Sprint 2-B.2: Face & facial features (구현 완료, 검토 대기)
+
+버전 변화: core 카탈로그 0.4.0 → **0.5.0**(속성 추가만, ID 변경 없음). ImageSpec 0.3.0, 카탈로그 형식 0.4.0, 컴파일러 0.4.0, 안전 정책 0.2.0은 그대로.
+
+### Added
+- 인물 › 얼굴(10)·눈(13)·눈썹(8)·코(8)·입술(8) 47개 속성 — 형태 19개(선택지 107개, 사용자 정의 15개), 상대 슬라이더 28개(의미 구간 5개씩), 다중 특징, 색상 팔레트 3개, 사용자 정의 값, 출력 토글
+- 반대 특징 경고 규칙 26개, 코 전체 모양 ↔ 콧대 모양 `covers`
+- 테스트: `facial-catalog`(34), `component/facial`(5), E2E `facial`(데스크톱·모바일), 스크린샷 `docs/screenshots/sprint-2b2/`
+- 문서: `docs/catalogs/person/{face,eyes,eyebrows,nose,lips}.md` 1.0.0 APPROVED, ADR-048·049, TD-10, `docs/SPRINT_2B2_REPORT.md`
+
+### Changed
+- 상대(degree) 슬라이더는 숫자 대신 의미 구간 이름만 표시(ADR-049)
+- 인물 영역: 인물 기본 정보 + 얼굴·눈·눈썹·코·입술 approved, 나머지 9개 영역 DRAFT
+
+## [0.4.0] — 2026-11-24 — Sprint 2-B.1: Person › Identity (승인됨, PR #3 병합 `9dc84b3`)
 
 버전 변화: ImageSpec 0.2.0 → **0.3.0**, 카탈로그 형식 0.3.0 → **0.4.0**, core 카탈로그 0.3.0 → **0.4.0**(ID 변경 없음), 컴파일러 0.3.0 → **0.4.0**, 안전 정책 prompter.baseline 0.1.0 → **0.2.0**(완화 없음).
 

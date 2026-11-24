@@ -343,7 +343,8 @@ export function SliderControl({ attribute, value, label, locale, t, onSet }: { a
   const step = attribute.step ?? 1;
   const display = unset ? Math.round((attribute.min + attribute.max) / 2 / step) * step : value;
   const band = !unset && attribute.bands ? (attribute.bands.find((b) => value <= b.upTo) ?? attribute.bands[attribute.bands.length - 1]) : undefined;
-  const valueText = unset ? t.controls.unsetValue : `${formatNumber(attribute, value)}${band ? ` · ${resolveText(band.label, locale)}` : ""}`;
+  // Relative (degree) sliders show only the qualitative band — the number is not a measurement (Sprint 2-B.2 §5).
+  const valueText = unset ? t.controls.unsetValue : band ? resolveText(band.label, locale) : formatNumber(attribute, value);
   return (
     <div className="slider" data-unset={unset}>
       <input
