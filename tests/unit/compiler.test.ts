@@ -115,7 +115,8 @@ describe("5. deterministic prompt compilation", () => {
         const spec = buildSpec(reg, entries);
         const c = compilePrompt(spec, reg);
         expect(c.prompt).toBe(c.fragments.map((f) => ensureSentence(f.text)).join(" "));
-        for (const f of c.fragments) expect(spec.selections[f.attributeId]).toBeDefined();
+        // Every fragment comes from a stored selection (one assertion listing any offenders).
+        expect(c.fragments.filter((f) => spec.selections[f.attributeId] === undefined).map((f) => f.attributeId)).toEqual([]);
         expect(compilePrompt(spec, reg)).toEqual(c);
       }
     }

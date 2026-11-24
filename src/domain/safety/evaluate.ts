@@ -57,8 +57,20 @@ const unionFor = (signal: SafetySignalDef): RegExp => {
   return re;
 };
 
+/** Normalized literal of a term entry (patterns have none). */
+const literalCache = new WeakMap<LexiconEntry, string>();
+const literalOf = (entry: LexiconEntry): string | undefined => {
+  if (entry.term === undefined || entry.pattern !== undefined) return undefined;
+  let lit = literalCache.get(entry);
+  if (lit === undefined) literalCache.set(entry, (lit = normalizeForSafety(entry.term)));
+  return lit;
+};
+
 /** All lexicon matches of an entry in normalized text, minus matches inside exception phrases. */
 export const matchEntry = (entry: LexiconEntry, normalized: string): string[] => {
+  // A term entry matches only where its literal occurs; skip the regex when it does not (same result).
+  const literal = literalOf(entry);
+  if (literal !== undefined && !normalized.includes(literal)) return [];
   const exceptions = ranges(normalized, entry.except);
   const out: string[] = [];
   for (const m of normalized.matchAll(regexFor(entry))) {

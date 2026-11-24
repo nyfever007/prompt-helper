@@ -49,6 +49,8 @@ export const parseImageSpec = (input: unknown): Result<ImageSpec> => {
 export interface PrecomputedApplicability {
   inactive: readonly InactiveSelection[];
   restricted: readonly RestrictedSelection[];
+  /** `checkValueForAttribute(attribute, value, "selections.<id>.value")` per registered selected attribute. */
+  valueProblems?: ReadonlyMap<string, readonly Diagnostic[]>;
 }
 
 /**
@@ -86,7 +88,7 @@ export const validateSpecAgainstCatalog = (spec: ImageSpec, registry: CatalogReg
       out.push(error("selection.unknown_attribute", `Unknown attribute "${attributeId}"`, { attributeId, path }));
       continue;
     }
-    const problems = checkValueForAttribute(attribute, selection.value, `${path}.value`);
+    const problems = precomputed?.valueProblems?.get(attributeId) ?? checkValueForAttribute(attribute, selection.value, `${path}.value`);
     if (problems.length > 0) valuesOk = false;
     out.push(...problems);
   }

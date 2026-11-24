@@ -4,6 +4,22 @@ import { evaluateAll } from "./conditions";
 import type { CatalogRegistry } from "./registry";
 import type { AttributeDefinition, OptionDefinition } from "./schema";
 
+/**
+ * Per-attribute facts of the (deep-frozen) catalog: whether any option has its own
+ * applicability or a policy restriction. Lets the scans below skip attributes whose
+ * options can never be inactive/restricted — the results are unchanged.
+ */
+const optionFacts = new WeakMap<AttributeDefinition, { appliesWhen: boolean; restriction: boolean }>();
+const factsOf = (attribute: AttributeDefinition) => {
+  let f = optionFacts.get(attribute);
+  if (!f) {
+    const options = attribute.type === "single" || attribute.type === "multi" ? attribute.options : [];
+    f = { appliesWhen: options.some((o) => o.appliesWhen !== undefined), restriction: options.some((o) => o.restriction !== undefined) };
+    optionFacts.set(attribute, f);
+  }
+  return f;
+};
+
 /** Is the attribute applicable to the current spec (attribute-level `appliesWhen`)? */
 export const isAttributeActive = (registry: CatalogRegistry, attribute: AttributeDefinition, spec: ImageSpec): boolean =>
   evaluateAll(attribute.appliesWhen, spec, registry);
@@ -33,10 +49,10 @@ export const findInactiveSelections = (spec: ImageSpec, registry: CatalogRegistr
       out.push({ attributeId: attribute.id, scope: "attribute", optionIds: [] });
       continue;
     }
-    if (attribute.type !== "single" && attribute.type !== "multi") continue;
+    if ((attribute.type !== "single" && attribute.type !== "multi") || !factsOf(attribute).appliesWhen) continue;
     const ids = selectedOptionIds(selection.value);
     const inactive = ids.filter((id) => {
-      const option = attribute.options.find((o) => o.id === id);
+      const option = registry.getOption(attribute.id, id);
       return option !== undefined && !isOptionActive(registry, option, spec);
     });
     if (inactive.length > 0) out.push({ attributeId: attribute.id, scope: "option", optionIds: inactive });
@@ -56,14 +72,22 @@ export interface RestrictedSelection {
 }
 
 /** Selected options that are restricted by policy in the current spec. Deterministic order. */
+/** Attributes (registry order) with at least one restricted option — usually none. */
+const restrictable = new WeakMap<CatalogRegistry, readonly AttributeDefinition[]>();
+const restrictableOf = (registry: CatalogRegistry) => {
+  let list = restrictable.get(registry);
+  if (!list) restrictable.set(registry, (list = registry.attributes().filter((a) => factsOf(a).restriction)));
+  return list;
+};
+
 export const findRestrictedSelections = (spec: ImageSpec, registry: CatalogRegistry): RestrictedSelection[] => {
   const out: RestrictedSelection[] = [];
-  for (const attribute of registry.attributes()) {
+  for (const attribute of restrictableOf(registry)) {
     const selection = spec.selections[attribute.id];
     if (!selection || (attribute.type !== "single" && attribute.type !== "multi")) continue;
     const ids = selectedOptionIds(selection.value);
     const restricted = ids.filter((id) => {
-      const o = attribute.options.find((x) => x.id === id);
+      const o = registry.getOption(attribute.id, id);
       return o !== undefined && isOptionRestricted(registry, o, spec);
     });
     if (restricted.length) out.push({ attributeId: attribute.id, optionIds: restricted });

@@ -160,7 +160,15 @@ export const compilePrompt = (
   const catalogUsable = spec.catalog.id === registry.id; // otherwise the validator reports spec.catalog_mismatch
   const inactive = catalogUsable ? findInactiveSelections(spec, registry) : [];
   const restricted = catalogUsable ? findRestrictedSelections(spec, registry) : [];
-  const diagnostics: Diagnostic[] = [...validateSpecAgainstCatalog(spec, registry, catalogUsable ? { inactive, restricted } : undefined)];
+  // Value checks, also computed once (the validator reports them; pass 1 skips invalid values).
+  const valueProblems = new Map<string, Diagnostic[]>();
+  if (catalogUsable) {
+    for (const [id, selection] of Object.entries(spec.selections)) {
+      const attribute = registry.getAttribute(id);
+      if (attribute) valueProblems.set(id, checkValueForAttribute(attribute, selection.value, `selections.${id}.value`));
+    }
+  }
+  const diagnostics: Diagnostic[] = [...validateSpecAgainstCatalog(spec, registry, catalogUsable ? { inactive, restricted, valueProblems } : undefined)];
   const inactiveAttributes = new Set(inactive.filter((i) => i.scope === "attribute").map((i) => i.attributeId));
   const inactiveOptions = new Map(inactive.filter((i) => i.scope === "option").map((i) => [i.attributeId, i.optionIds] as const));
   const fragments: PromptFragment[] = [];
@@ -177,7 +185,7 @@ export const compilePrompt = (
     for (const attribute of registry.attributes()) {
       const selection = spec.selections[attribute.id];
       if (!selection) continue; // unset → nothing
-      if (hasErrors(checkValueForAttribute(attribute, selection.value, ""))) continue; // already reported
+      if (hasErrors(valueProblems.get(attribute.id) ?? [])) continue; // already reported
       validSet.push(attribute);
       if (attribute.expression?.role === "metadata") {
         hidden.set(attribute.id, "metadata"); // management only: never output
@@ -280,7 +288,7 @@ export const compilePrompt = (
     const value = spec.selections[attribute.id]!.value;
     if (attribute.type === "single" || attribute.type === "multi") {
       for (const id of selectedOptionIds(value)) {
-        const o = attribute.options.find((x) => x.id === id);
+        const o = registry.getOption(attribute.id, id);
         for (const tag of o?.policyTags ?? []) tags.push({ attributeId: attribute.id, optionId: id, tag });
       }
     }
