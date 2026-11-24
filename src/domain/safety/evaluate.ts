@@ -1,5 +1,5 @@
 import { baselinePolicy } from "./baselinePolicy";
-import type { LexiconEntry, SafetyFinding, SafetyInput, SafetyPolicy, SafetyReport, SignalSource } from "./types";
+import type { LexiconEntry, SafetyFinding, SafetyInput, SafetyPolicy, SafetyReport, SafetySignalDef, SignalSource } from "./types";
 
 /** Normalize text for matching only (the stored spec is never changed). */
 export const normalizeForSafety = (text: string): string =>
@@ -14,14 +14,19 @@ export const normalizeForSafety = (text: string): string =>
 
 const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+/** Regex source of one lexicon entry (same matching rules as `regexFor`). */
+const sourceFor = (entry: LexiconEntry): string =>
+  entry.pattern ??
+  (entry.lang === "en"
+    ? `(?<![\\p{L}\\p{N}])${escapeRegex(normalizeForSafety(entry.term!))}(?![\\p{L}\\p{N}])`
+    : escapeRegex(normalizeForSafety(entry.term!)));
+
 const regexCache = new Map<string, RegExp>();
 const regexFor = (entry: LexiconEntry): RegExp => {
   const key = `${entry.lang}|${entry.term ?? ""}|${entry.pattern ?? ""}`;
   let re = regexCache.get(key);
   if (!re) {
-    if (entry.pattern) re = new RegExp(entry.pattern, "gu");
-    else if (entry.lang === "en") re = new RegExp(`(?<![\\p{L}\\p{N}])${escapeRegex(normalizeForSafety(entry.term!))}(?![\\p{L}\\p{N}])`, "gu");
-    else re = new RegExp(escapeRegex(normalizeForSafety(entry.term!)), "gu");
+    re = new RegExp(sourceFor(entry), "gu");
     regexCache.set(key, re);
   }
   re.lastIndex = 0;
@@ -35,6 +40,21 @@ const ranges = (text: string, phrases: readonly string[] | undefined): Array<[nu
     for (let i = text.indexOf(needle); i !== -1; i = text.indexOf(needle, i + 1)) out.push([i, i + needle.length]);
   }
   return out;
+};
+
+/**
+ * Pre-filter: one union regex per signal. If it does not match, no entry of the
+ * signal can match (exception phrases only REMOVE matches), so the per-entry
+ * scan is skipped. Results are identical; only clean texts get faster.
+ */
+const unionCache = new WeakMap<SafetySignalDef, RegExp>();
+const unionFor = (signal: SafetySignalDef): RegExp => {
+  let re = unionCache.get(signal);
+  if (!re) {
+    re = new RegExp(signal.lexicon.map((e) => `(?:${sourceFor(e)})`).join("|"), "u");
+    unionCache.set(signal, re);
+  }
+  return re;
 };
 
 /** All lexicon matches of an entry in normalized text, minus matches inside exception phrases. */
@@ -67,11 +87,13 @@ export const evaluateSafety = (input: SafetyInput, policy: SafetyPolicy = baseli
     sourcesBySignal.set(signalId, list);
   };
 
+  // Normalize each text once (not once per signal).
+  const normalizedTexts = input.texts.map(({ attributeId, text }) => ({ attributeId, normalized: normalizeForSafety(text) }));
   for (const signal of policy.signals) {
     for (const t of input.tags) if (signal.tags.includes(t.tag)) add(signal.id, { kind: "tag", ...t });
-    for (const { attributeId, text } of input.texts) {
-      const normalized = normalizeForSafety(text);
-      if (!normalized) continue;
+    const union = unionFor(signal);
+    for (const { attributeId, normalized } of normalizedTexts) {
+      if (!normalized || !union.test(normalized)) continue;
       for (const entry of signal.lexicon) {
         for (const term of matchEntry(entry, normalized)) add(signal.id, { kind: "text", attributeId, term });
       }

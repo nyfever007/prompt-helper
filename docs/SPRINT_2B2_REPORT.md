@@ -2,7 +2,8 @@
 
 - 상태: **구현 완료, 검토 대기** — 커밋·push 하지 않음
 - 브랜치: `feature/sprint-2b2-facial-features` (기준 main `9dc84b3`)
-- 로컬 전체 검증: `pnpm verify` **종료 코드 0** — 단위·컴포넌트 513개 통과, 격리 검증 통과, E2E 47 통과 / 1 skip
+- 로컬 전체 검증: `pnpm verify` **종료 코드 0** — 단위·컴포넌트 514개 통과, 격리 검증 통과, E2E 47 통과 / 1 skip
+- CI 대응: 첫 CI에서 500개 무작위 명세 속성 테스트가 5초 제한을 넘었습니다(속성 증가로 안전 검사 비용 증가, CI 6.5초 / 로컬 2.7초). 제한 시간을 늘리지 않고 안전 검사에 신호별 합집합 정규식 사전 필터를 넣어 결과는 같고 속도는 약 6배 빨라졌습니다(로컬 2.7초 → 0.44초). 동일성은 900개 이상 문구로 기존 방식과 비교하는 테스트로 검증합니다(`safety` › “pre-filter … gives identical results”).
 
 ## 1. 구현된 속성과 선택지
 
@@ -70,7 +71,7 @@ Upper lip: medium fullness. Lower lip: full. Natural lip color: rose.
 ```text
 pnpm verify → exit 0
  Test Files  24 passed (24)
-      Tests  513 passed (513)
+      Tests  514 passed (514)
 ✓ 149 production output files contain no fixture marker
 ✓ production build isolates the test catalog
   1 skipped
