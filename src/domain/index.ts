@@ -3,6 +3,7 @@ export * from "./shared/diagnostics";
 export * from "./shared/localized";
 export * from "./catalog";
 export * from "./catalog/applicability";
+export * from "./catalog/age";
 export * from "./catalog/migrate";
 export { normalizeSearch, searchOptions, type OptionSearchHit } from "./catalog/search";
 export * from "./catalog/categories";

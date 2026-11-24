@@ -6,7 +6,11 @@ import {
   findInactiveSelections,
   inactiveKey,
   markUserEdited,
+  resetCategory,
+  restoreCategoryReset,
+  setPromptExclusion,
   undoPresetTransaction,
+  type AttributeSelection,
   type CatalogRegistry,
   type ImageSpec,
   type InactiveSelection,
@@ -22,7 +26,28 @@ export type WorkspaceAction =
   | { type: "restoreResetSnapshot" }
   | { type: "replace"; spec: ImageSpec }
   | { type: "applyPreset"; plan: PresetPlan; mode: "all" | "onlyEmpty" }
-  | { type: "undoPreset" };
+  | { type: "undoPreset" }
+  | { type: "setExcluded"; attributeId: string; excluded: boolean }
+  | { type: "resetCategory"; categoryId: string }
+  | { type: "undoCategoryReset" };
+
+/**
+ * Session-only record of the LAST category reset: exactly the selection objects
+ * it removed. Undo restores each only if that attribute is still unset.
+ */
+export interface CategoryResetRecord {
+  id: number;
+  categoryId: string;
+  removed: Record<string, AttributeSelection>;
+}
+
+/** Result of the last category-reset undo (for the notice). */
+export interface CategoryRestoreResult {
+  id: number;
+  categoryId: string;
+  restored: string[];
+  skipped: string[];
+}
 
 /** Result of the last preset undo (for the notice). */
 export interface PresetUndoResult {
@@ -51,6 +76,8 @@ export interface WorkspaceState {
   /** Session-only record of the LAST preset application (undo target). */
   presetTransaction: PresetTransaction | null;
   lastPresetUndo: PresetUndoResult | null;
+  lastCategoryReset: CategoryResetRecord | null;
+  lastCategoryRestore: CategoryRestoreResult | null;
 }
 
 export const initialWorkspaceState = (registry: CatalogRegistry): WorkspaceState => ({
@@ -59,6 +86,8 @@ export const initialWorkspaceState = (registry: CatalogRegistry): WorkspaceState
   transition: null,
   presetTransaction: null,
   lastPresetUndo: null,
+  lastCategoryReset: null,
+  lastCategoryRestore: null,
 });
 
 const diffInactive = (registry: CatalogRegistry, before: ImageSpec, after: ImageSpec, prevId: number): Transition | null => {
@@ -101,6 +130,44 @@ export const createWorkspaceReducer =
           presetTransaction: state.presetTransaction ? markUserEdited(state.presetTransaction, action.attributeId) : null,
         };
       }
+      case "setExcluded": {
+        // Output state only: value, source and provenance are untouched. Still a user edit
+        // of that attribute (protects it from preset undo).
+        const next = setPromptExclusion(state.spec, action.attributeId, action.excluded);
+        if (next === state.spec) return state;
+        return {
+          ...state,
+          spec: next,
+          presetTransaction: state.presetTransaction ? markUserEdited(state.presetTransaction, action.attributeId) : null,
+        };
+      }
+      case "resetCategory": {
+        const { spec, removed } = resetCategory(state.spec, registry, action.categoryId);
+        if (spec === state.spec) return state;
+        let tx = state.presetTransaction;
+        // Cleared preset values count as user edits: a later preset undo never re-writes them.
+        for (const id of Object.keys(removed)) tx = tx ? markUserEdited(tx, id) : tx;
+        return {
+          ...state,
+          spec,
+          transition: diffInactive(registry, state.spec, spec, prevId) ?? state.transition,
+          presetTransaction: tx,
+          lastCategoryReset: { id: (state.lastCategoryReset?.id ?? 0) + 1, categoryId: action.categoryId, removed },
+          lastCategoryRestore: null,
+        };
+      }
+      case "undoCategoryReset": {
+        const record = state.lastCategoryReset;
+        if (!record) return state;
+        const result = restoreCategoryReset(state.spec, record.removed);
+        return {
+          ...state,
+          spec: result.spec,
+          transition: diffInactive(registry, state.spec, result.spec, prevId) ?? state.transition,
+          lastCategoryReset: null,
+          lastCategoryRestore: { id: (state.lastCategoryRestore?.id ?? 0) + 1, categoryId: record.categoryId, restored: result.restored, skipped: result.skipped },
+        };
+      }
       case "applyPreset": {
         const { spec, transaction } = applyPresetPlan(state.spec, registry, action.plan, action.mode);
         if (transaction.changes.length === 0) return state;
@@ -137,12 +204,15 @@ export const createWorkspaceReducer =
           transition: null,
           presetTransaction: null,
           lastPresetUndo: null,
+          // A full reset supersedes a pending category undo (restoring the full snapshot covers it).
+          lastCategoryReset: null,
+          lastCategoryRestore: null,
         };
       }
       case "restoreResetSnapshot":
         if (!state.resetSnapshot) return state;
-        return { ...state, spec: state.resetSnapshot, resetSnapshot: null, transition: null, presetTransaction: null };
+        return { ...state, spec: state.resetSnapshot, resetSnapshot: null, transition: null, presetTransaction: null, lastCategoryReset: null };
       case "replace":
-        return { ...state, spec: action.spec, transition: null, presetTransaction: null };
+        return { ...state, spec: action.spec, transition: null, presetTransaction: null, lastCategoryReset: null };
     }
   };

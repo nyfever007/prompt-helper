@@ -1,5 +1,5 @@
 import { findInactiveSelections, findRestrictedSelections } from "../catalog/applicability";
-import { evaluateAll } from "../catalog/conditions";
+import { conditionAttributeIds, evaluateAll } from "../catalog/conditions";
 import type { CatalogRegistry } from "../catalog/registry";
 import { checkValueForAttribute } from "../catalog/valueCheck";
 import {
@@ -16,6 +16,7 @@ import {
 import { resolveText } from "../shared/localized";
 import { migrateRawSpec } from "../spec/migrations";
 import { IMAGE_SPEC_KIND, ImageSpecSchema, type ImageSpec } from "../spec/schema";
+import { selectedCustomEntries, selectedOptionIds } from "../spec/values";
 
 const isPlainObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
@@ -118,6 +119,8 @@ export const validateSpecAgainstCatalog = (spec: ImageSpec, registry: CatalogReg
     }
   }
 
+  if (valuesOk) out.push(...customAndSuggestionNotices(spec, registry));
+
   for (const rule of registry.rules) {
     if (evaluateAll(rule.when, spec, registry)) {
       out.push({
@@ -140,4 +143,49 @@ export const validateImageSpec = (input: unknown, registry: CatalogRegistry): Re
   if (!parsed.ok) return parsed;
   const diagnostics = [...parsed.diagnostics, ...validateSpecAgainstCatalog(parsed.value, registry)];
   return hasErrors(diagnostics) ? fail(diagnostics) : ok(parsed.value, diagnostics);
+};
+
+/**
+ * Non-blocking notices (never rewrite the spec):
+ * - `selection.custom_name_only`: a custom entry has a name but no prompt
+ *   expression where the catalog asks for a visual description (Direct roles).
+ * - `selection.atypical`: a selected option's typical context (`suggestedWhen`)
+ *   does not hold — an unusual but valid creative combination. Skipped when the
+ *   referenced value is custom (it cannot be judged).
+ */
+const customAndSuggestionNotices = (spec: ImageSpec, registry: CatalogRegistry): Diagnostic[] => {
+  const out: Diagnostic[] = [];
+  for (const attribute of registry.attributes()) {
+    const selection = spec.selections[attribute.id];
+    if (!selection || (attribute.type !== "single" && attribute.type !== "multi")) continue;
+    const path = `selections.${attribute.id}`;
+    if (attribute.custom?.nameOnlyNotice) {
+      const nameOnly = selectedCustomEntries(selection.value).filter((c) => c.expression === undefined);
+      if (nameOnly.length > 0) {
+        out.push(
+          info("selection.custom_name_only", `"${attribute.id}": custom value(s) ${nameOnly.map((c) => `"${c.label}"`).join(", ")} have no visual description`, {
+            attributeId: attribute.id,
+            path,
+            params: { labels: nameOnly.map((c) => c.label).join(", ") },
+          }),
+        );
+      }
+    }
+    for (const id of selectedOptionIds(selection.value)) {
+      const option = attribute.options.find((o) => o.id === id);
+      if (!option?.suggestedWhen) continue;
+      const refs = option.suggestedWhen.flatMap(conditionAttributeIds);
+      if (refs.some((ref) => selectedCustomEntries(spec.selections[ref]?.value).length > 0)) continue;
+      if (evaluateAll(option.suggestedWhen, spec, registry)) continue;
+      out.push(
+        info("selection.atypical", `"${attribute.id}/${id}" is an atypical combination with ${refs.join(", ")} (kept as chosen)`, {
+          attributeId: attribute.id,
+          involves: [attribute.id, ...refs],
+          path,
+          params: { optionId: id, with: refs.join(",") },
+        }),
+      );
+    }
+  }
+  return out;
 };

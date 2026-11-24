@@ -187,3 +187,55 @@ unset (키 없음)
 | 같은 의미는 한 번만 출력, 직접 선택 우선, 다른 축은 충돌 아님 | `detailed-domain`, `component/detailed`, E2E |
 | Sprint 0·1 실제 데이터 무손실, Sprint 1 프롬프트 동일 | `migration`, `detailed-domain`, E2E |
 | 일반 빌드에서 테스트 카탈로그 접근 불가 | `verify:isolation` |
+
+## 10. Sprint 2-B.1: Person › Identity와 공통 카탈로그 기능
+
+### 10.1 버전
+| 대상 | 이전 | 현재 | 변경 |
+|---|---|---|---|
+| ImageSpec | 0.2.0 | **0.3.0** | `excludedFromPrompt`, `CustomEntry`(single/multi), number/range `unit` — 추가만, 마이그레이션은 버전 숫자만 변경 |
+| 카탈로그 형식 | 0.3.0 | **0.4.0** | `expression`, `outputToggle`, `custom`, `quantity`, `optionGroups/group`, `covers`, `suggestedWhen`, `interval`, `prompt.variants`, 조건 `derived`·`selectedCount`·`intervalMismatch`, `ageModel` |
+| 핵심 카탈로그 | 0.3.0 | **0.4.0** | Identity 16개 속성, 속성 order ×10, ID 변경 없음 |
+| 컴파일러 | 0.3.0 | **0.4.0** | 제외·Metadata 생략, covers, 조건별 표현, 사용자 정의 값, 단위, 숨은 값 안전 검사 |
+| 안전 정책 | prompter.baseline 0.1.0 | **0.2.0** | 규칙·단어 그대로, 입력 확장(숨은 값, 사용자 정의 이름·표현, 구조화 연령 신호) |
+
+### 10.2 선택 상태와 출력
+```text
+Unset     ── 키 없음
+Selected  ── { value, source, origin? }                    → 적용 가능하면 출력
+Excluded  ── { value, source, origin?, excludedFromPrompt } → 출력 안 함, 값 유지
+표현 역할(카탈로그): direct · context · metadata(항상 출력 안 함)
+모든 저장 값(출력 여부와 무관) ──► 안전 검사 · 연령 판단 · 규칙
+```
+
+### 10.3 컴파일 파이프라인 (0.4.0)
+```text
+spec ─► 검증 ─► Pass 1: 출력 후보 (설정·유효·포함·Metadata 아님·적용 가능)
+        └─► covers: 다른 출력 선택지가 같은 의미를 담으면 생략(출처 compilation.covered)
+     ─► Pass 2: 문장 (조건별 표현 → 의미 단위 대체 → 사용자 정의 표현/이름 → 단위)
+     ─► 어댑터 ─► 안전 게이트: 출력 문장 + 숨은 값(제외·적용 불가·Metadata·covers) 문장
+                 + 사용자 정의 이름·표현 + 모든 선택지 태그 + 구조화 연령 신호
+```
+
+### 10.4 공통 연령 해석 (`domain/catalog/age.ts`)
+- `classifyBeing`: 존재 유형·종족의 등록 분류(ageModel)로 human / nonhuman / unclassified. 둘 다 미설정이면 human(기록하지 않음).
+- `assessAge`: 연령대·실제·외형 연령을 기본 단위(년)로 정규화해 minor / ambiguous / adult / unknown. 미성년 신호는 상쇄하지 않고, 실제 연령은 human일 때만 성인 근거.
+- 사용처: 안전 정책(구조화 태그), 규칙 R1(`intervalMismatch` + `derived being.class`), 조건별 표현(`derived age.class`). 레지스트리가 `ConditionContext.derivedFact`로 제공합니다.
+
+### 10.5 카탈로그 구성
+```text
+catalogs/core.ts ── 기존 속성 (order ×10) + identityCategories + identityAttributes + identityRules + ageModel
+catalogs/person/identity.ts ── 16개 속성, 6개 하위 분류, 규칙 R1·R2·R5, 연령 모델
+catalogs/person/regions.ts  ── 국가·지역 199개 정적 데이터 (출처·버전 주석)
+```
+
+### 10.6 추가 불변 조건 (테스트로 보장)
+| 불변 조건 | 테스트 |
+|---|---|
+| 승인된 16개 속성·선택지·영어 표현·문장 틀이 사양과 정확히 같음(부록 A·B) | `identity-catalog` |
+| 연령 판단 결정표 전체, 단위 정규화, 명세에 값을 자동으로 쓰지 않음 | `identity-semantics` |
+| 프롬프트에서 제외한 값·적용 불가 값·사용자 정의 이름도 안전 검사(돌연변이 테스트로 확인) | `identity-semantics`, E2E |
+| 제외 상태는 값 변경 시 유지, 해제 시 제거, JSON·저장소 왕복 | `identity-semantics`, `component/identity`, E2E |
+| 사용자 정의 값은 등록 선택지와 병합·대체되지 않음 | `identity-semantics`, `component/identity` |
+| 카테고리 초기화는 저장 값 전체(검색·제외·적용 여부 무관), 복원은 이후 편집과 다른 카테고리를 바꾸지 않음 | `category-reset`, `component/identity`, E2E |
+| Sprint 0·1·2-A 실제 데이터 무손실, 기존 프롬프트 글자 단위 동일 | `migration`, `detailed-domain`, `identity-semantics` (sprint2a fixture) |

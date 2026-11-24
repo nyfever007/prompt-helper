@@ -2,6 +2,7 @@
 
 Prompter의 속성 카탈로그는 **데이터**(`src/domain/catalog/catalogs/core.ts`)와 **설계 문서**(이 폴더)로 나뉩니다.
 
+- 공통 설계 규격: [CATALOG_DESIGN_STANDARD.md](CATALOG_DESIGN_STANDARD.md) (모든 카탈로그에 적용, 0.2.0)
 - 설계 문서는 [ATTRIBUTE_TEMPLATE.md](ATTRIBUTE_TEMPLATE.md)를 따릅니다.
 - 설계 상태가 `APPROVED`가 된 항목만 카탈로그 데이터에 `status: "approved"`로 추가하고, 제품 UI에 노출합니다.
 - 기술적으로 표현할 수 있다는 이유만으로는 노출하지 않습니다. `draft`·`deferred` 데이터는 제품 UI에서 편집할 수 없습니다.
@@ -11,7 +12,7 @@ Prompter의 속성 카탈로그는 **데이터**(`src/domain/catalog/catalogs/co
 
 | 영역 | 문서 | 상태 |
 |---|---|---|
-| 인물 › 인물 기본 정보 (Identity) | [person/identity.md](person/identity.md) | DRAFT |
+| 인물 › 인물 기본 정보 (Identity) | [person/identity.md](person/identity.md) | **APPROVED** (Sprint 2-B.1, 1.0.0 — 16개 속성 구현) |
 | 인물 › 얼굴 (Face) | [person/face.md](person/face.md) | DRAFT |
 | 인물 › 눈 (Eyes) | [person/eyes.md](person/eyes.md) | DRAFT |
 | 인물 › 눈썹 (Eyebrows) | [person/eyebrows.md](person/eyebrows.md) | DRAFT |

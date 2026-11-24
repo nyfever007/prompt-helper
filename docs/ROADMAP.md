@@ -8,7 +8,8 @@
 | **Sprint 0 — Foundation** | 독립 저장소, 버전이 붙은 ImageSpec과 카탈로그, 검증기, 결정론적 컴파일러, Basic 최소 기능, JSON 입출력, 로컬 저장, 테스트와 문서 | ✅ **승인됨 (2026-11-24)** ([보고서](SPRINT_0_REPORT.md)) |
 | **Sprint 1 — Basic composer** | 상황별 선택지, 검색 가능한 스타일 프리셋(독립 축 구조), 구도·방향·각도, 장소·배경, 분위기, 조명 프리셋(독립 속성 구조), 화면비, 출처·진단, 충돌 안내, 안전 정책 기준선, 언어 정책, ID 마이그레이션, 부분 복구, 초기화 되돌리기, CI 설정 파일 | ✅ 승인됨 ([보고서](SPRINT_1_REPORT.md)) |
 | **Sprint 2-A — Detailed Editor foundation** | 데이터 기반 탐색과 검색, 범용 컨트롤 9종, 복합 프리셋(계획·확인·되돌리기), 의미 단위 우선순위, 정책 제한, ImageSpec 0.2.0, 카탈로그 형식 0.3.0, 모바일 도구 모음, 테스트 카탈로그 격리, 설계 문서 DRAFT 16개 | ✅ **승인·병합 (2026-11-24, PR #1)** ([보고서](SPRINT_2A_REPORT.md), [기술 부채](TECH_DEBT.md)) |
-| Sprint 2-B — Detailed person catalog | 인물 영역별 실제 속성과 선택지(설계 문서 승인 후 순차 추가), 시각 예시 제작 기준(TD-03) | ⏸ 제품 설계 승인 대기 |
+| **Sprint 2-B.1 — Person › Identity** | 인물 기본 정보 16개 속성(국가·지역 199 + 무국적), 공통 설계 규격 0.2.0, ImageSpec 0.3.0, 카탈로그 형식·내용 0.4.0, 컴파일러 0.4.0, 안전 정책 0.2.0, 프롬프트 포함·제외, 사용자 정의 값, quantity·단위, 조건별 표현, covers, 표시용 묶음, 카테고리 초기화·복원, 시각 예시 기준(TD-03) | 🔍 **구현 완료 — 검토 대기** ([보고서](SPRINT_2B1_REPORT.md), [사양 결정](SPRINT_2B1_SPEC_REVIEW.md)) |
+| Sprint 2-B.2 이후 — 다른 인물 카탈로그 | 얼굴·눈·피부·헤어·신체·표정·메이크업·의상·액세서리·자세 등(영역별 설계 문서 승인 후 순차 추가) | ⏸ 승인 대기 (자동 시작하지 않음) |
 | Sprint 2-C — Detailed accessibility | 카테고리 키보드 탐색(TD-01), 프리셋 대화상자 포커스 관리(TD-02) | ⏳ 예정 |
 | Sprint 3 — Precision editor | 위치와 개수 지정, 부위별 속성, 중요도, 유지/제외 조건, 참조 이미지 역할(메타데이터) | ⏳ 예정 |
 | Sprint 4 — Style taxonomy & non-person | 직교 스타일 축, 카탈로그 확장, 풍경·건축·제품·게임 에셋 | ⏳ 예정 |
@@ -27,12 +28,13 @@
 | 구조 | 도입 | 현황 / 사용 예정 |
 |---|---|---|
 | tier 필터 (`attributesForTier`, `attributesVisibleIn`) | Sprint 0 | Sprint 1에서 스타일·조명 축 속성을 detailed tier로 정의. 편집 UI는 Sprint 2·4 |
-| `multi`, `number`, `range` 값 타입과 범용 컨트롤 | Sprint 0 | multi는 분위기에 사용 중. number/range는 fixture로 검증 |
+| `multi`, `number`, `range` 값 타입과 범용 컨트롤 | Sprint 0 | multi는 분위기·Identity에 사용 중. number/range는 fixture로 검증 |
+| `quantity`(숫자 또는 범위 + 단위), 사용자 정의 값, 출력 제외, 표현 역할, 조건별 표현, covers, 표시용 묶음 | Sprint 2-B.1 | Identity에서 사용 중. 모든 카탈로그에서 재사용 가능한 공통 기능 |
 | 적용 조건(`appliesWhen`, 속성·선택지 단위), 계층 매칭 | Sprint 0 / 1 | 구도·방향·각도에 사용 중 |
 | 규칙(충돌·의존성·가시성) + guidance/actions | Sprint 0 / 1 | core 규칙 7개 사용 중 |
 | 선택지 계층(`parentId`), 별칭, 검색 | Sprint 0 / 1 | 스타일·장소에 사용 중. 피사체 하위 분류는 Sprint 4 (fixture로 검증) |
 | 분류 정보(`classification`) | Sprint 1 | 스타일·조명 프리셋. 축 편집기는 Sprint 4 / Detailed |
-| 정책 태그(`policyTags`) | Sprint 1 | core에는 아직 없음. 인물 속성(Sprint 2)에서 사용 예정, fixture로 검증 |
+| 정책 태그(`policyTags`) | Sprint 1 | Identity 연령대(미성년 6개 구간 `age.minor`) + 구조화 연령 신호(Sprint 2-B.1) |
 | 파라미터 채널(`channel`, `parameterValue`) | Sprint 1 | 화면비. provider 연동은 Sprint 5 |
 | 시각 예시 메타데이터(`examples`) | Sprint 0 | 자리표시자만 있음. 실제 자산은 Sprint 2·4 |
 | `prompt.byAdapter` (모델별 표현) | Sprint 0 | Sprint 5 |

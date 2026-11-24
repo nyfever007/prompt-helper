@@ -24,7 +24,7 @@ export const coreAttr = (c: CatalogInput, id: string): MutableSingle => {
  */
 export const buildExtendedCatalog = (): CatalogInput => {
   const c = cloneCore();
-  c.version = "0.4.0";
+  c.version = "0.5.0";
 
   // Hierarchical subject sub-categories (Sprint 4 will expand these for real).
   coreAttr(c, "subject.kind").options.push(
@@ -46,7 +46,7 @@ export const buildExtendedCatalog = (): CatalogInput => {
       domain: "color",
       type: "multi",
       tier: "basic",
-      order: 95,
+      order: 950,
       maxSelections: 2,
       label: { en: "Palette", ko: "팔레트" },
       prompt: { template: "Palette: {value}." },
@@ -62,7 +62,7 @@ export const buildExtendedCatalog = (): CatalogInput => {
       domain: "person",
       type: "single",
       tier: "basic",
-      order: 25,
+      order: 250,
       label: { en: "Expression" },
       prompt: { template: "Facial expression: {value}." },
       appliesWhen: [{ op: "anyOf", attributeId: "subject.kind", optionIds: ["person", "group"] }],
@@ -77,7 +77,7 @@ export const buildExtendedCatalog = (): CatalogInput => {
       domain: "camera",
       type: "number",
       tier: "detailed",
-      order: 65,
+      order: 650,
       min: 8,
       max: 800,
       unit: "mm",
@@ -91,7 +91,7 @@ export const buildExtendedCatalog = (): CatalogInput => {
       domain: "scene",
       type: "range",
       tier: "precision",
-      order: 115,
+      order: 1150,
       min: 0,
       max: 50,
       semantics: "count",
@@ -118,8 +118,8 @@ export const buildExtendedCatalog = (): CatalogInput => {
   c.migrations = [
     ...(c.migrations ?? []),
     {
-      fromVersion: "0.3.0",
-      toVersion: "0.4.0",
+      fromVersion: "0.4.0",
+      toVersion: "0.5.0",
       changes: [
         { op: "renameOption", attributeId: "style.preset", from: "render_3d", to: "cgi_render", reason: { en: "Clearer id", ko: "더 명확한 ID" } },
         { op: "renameOption", attributeId: "mood.tone", from: "eerie", to: "uncanny", reason: { en: "Clearer id", ko: "더 명확한 ID" } },
@@ -161,12 +161,12 @@ export const buildPolicyCatalog = (): CatalogInput => {
     options: options.map(([oid, tags], i) => ({ id: oid, label: { en: oid }, prompt: { text: `choice ${i + 1}` }, ...(tags.length ? { policyTags: tags } : {}) })),
   });
   c.attributes.push(
-    single("x.age_group", 200, [["adult", ["age.adult"]], ["child", ["age.minor"]]]),
-    single("x.appeal", 201, [["confident", []], ["elegant", []], ["alluring", ["appeal.suggestive"]]]),
-    single("x.coverage", 202, [["full_coverage", []], ["minimal_coverage", ["coverage.minimal"]]]),
-    single("x.fit", 203, [["loose", []], ["tight_fit", ["fit.tight"]]]),
-    single("x.body", 204, [["slim", ["body.slim"]], ["curvy", ["body.curvy"]], ["athletic", ["body.athletic"]]]),
-    single("x.exposure", 205, [["clothed", []], ["unclothed_figure", ["exposure.nudity"]]]),
+    single("x.age_group", 2000, [["adult", ["age.adult"]], ["child", ["age.minor"]]]),
+    single("x.appeal", 2010, [["confident", []], ["elegant", []], ["alluring", ["appeal.suggestive"]]]),
+    single("x.coverage", 2020, [["full_coverage", []], ["minimal_coverage", ["coverage.minimal"]]]),
+    single("x.fit", 2030, [["loose", []], ["tight_fit", ["fit.tight"]]]),
+    single("x.body", 2040, [["slim", ["body.slim"]], ["curvy", ["body.curvy"]], ["athletic", ["body.athletic"]]]),
+    single("x.exposure", 2050, [["clothed", []], ["unclothed_figure", ["exposure.nudity"]]]),
   );
   return c;
 };
@@ -199,6 +199,11 @@ export const sampleValues = (a: AttributeDefinition): [SelectionValue, Selection
       return [
         { kind: "text", text: "first description" },
         { kind: "text", text: "second description" },
+      ];
+    case "quantity":
+      return [
+        { kind: "number", value: a.min, unit: a.units[0]!.id },
+        { kind: "range", min: a.min, max: a.min + 1, unit: a.units[a.units.length - 1]!.id },
       ];
   }
 };

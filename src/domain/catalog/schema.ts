@@ -16,8 +16,14 @@ import { SelectionValueSchema } from "../spec/values";
  * `restriction` (policy-based availability with reason) and phrase `parts`
  * (semantic units that direct selections can take over); number/range
  * `semantics` + `bands`; catalog `presets` (explicit partial patches).
+ * 0.4.0 (Sprint 2-B.1): attribute `expression` (role + semantic kind),
+ * `outputToggle`, `custom` (user-defined values), `quantity` type (number or
+ * range with units), option `optionGroups`/`group` (display-only), option
+ * `covers` (semantic de-duplication), `suggestedWhen` (UI suggestion only),
+ * `interval`, conditional `prompt.variants`; conditions `derived`,
+ * `selectedCount`, `intervalMismatch`; catalog `ageModel`.
  */
-export const CATALOG_FORMAT_VERSION = "0.3.0" as const;
+export const CATALOG_FORMAT_VERSION = "0.4.0" as const;
 
 /**
  * Product approval status — separate from what the catalog can technically
@@ -56,14 +62,13 @@ export const PhrasePartSchema = z.union([
 export type PhraseUnit = z.infer<typeof PhraseUnitSchema>;
 export type PhrasePart = z.infer<typeof PhrasePartSchema>;
 
-export const PromptPhraseSchema = z
-  .object({
-    text: z.string().min(1),
-    byAdapter: z.record(IdSchema, z.string().min(1)).optional(),
-    /** Optional semantic decomposition of `text`; must render exactly to `text` (checked). */
-    parts: z.array(PhrasePartSchema).min(1).optional(),
-  })
-  .strict();
+/** Facts derived from the spec by domain logic (see domain/catalog/age.ts). */
+export const DerivedFactSchema = z.enum(["age.class", "being.class"]);
+export type DerivedFact = z.infer<typeof DerivedFactSchema>;
+export const AGE_CLASSES = ["minor", "ambiguous", "adult", "unknown"] as const;
+export const BEING_CLASSES = ["human", "nonhuman", "unclassified"] as const;
+export type AgeClass = (typeof AGE_CLASSES)[number];
+export type BeingClass = (typeof BEING_CLASSES)[number];
 
 /** Visual example metadata. Assets themselves are out of scope for now. */
 export const VisualExampleSchema = z
@@ -107,8 +112,33 @@ export const ConditionSchema = z.discriminatedUnion("op", [
       whenUnset: WhenUnsetSchema,
     })
     .strict(),
+  /** A fact derived from the whole spec (e.g. `age.class` ∈ minor/ambiguous/adult/unknown). */
+  z.object({ op: z.literal("derived"), fact: DerivedFactSchema, anyOf: z.array(z.string().min(1)).min(1) }).strict(),
+  /** Number of selected entries (registered + custom) of an option attribute is at least `min`. */
+  z.object({ op: z.literal("selectedCount"), attributeId: AttributeIdSchema, min: z.number().int().positive() }).strict(),
+  /**
+   * The quantity attribute's value (normalized to its base unit) lies outside
+   * the `interval` of the option selected in `groupAttributeId`. False when
+   * either is unset, custom, or the option has no interval.
+   */
+  z.object({ op: z.literal("intervalMismatch"), attributeId: AttributeIdSchema, groupAttributeId: AttributeIdSchema }).strict(),
 ]);
 export type Condition = z.infer<typeof ConditionSchema>;
+
+export const PromptPhraseSchema = z
+  .object({
+    text: z.string().min(1),
+    byAdapter: z.record(IdSchema, z.string().min(1)).optional(),
+    /** Optional semantic decomposition of `text`; must render exactly to `text` (checked). */
+    parts: z.array(PhrasePartSchema).min(1).optional(),
+    /**
+     * Conditional wording: the first variant whose conditions all hold replaces
+     * `text` (e.g. "woman" only when the age assessment is adult). The stored
+     * selection never changes. Adapter-specific `byAdapter` still wins.
+     */
+    variants: z.array(z.object({ when: z.array(ConditionSchema).min(1), text: z.string().min(1) }).strict()).min(1).optional(),
+  })
+  .strict();
 
 export const OptionDefinitionSchema = z
   .object({
@@ -145,6 +175,19 @@ export const OptionDefinitionSchema = z
       .optional(),
     examples: z.array(VisualExampleSchema).optional(),
     deprecated: z.boolean().optional(),
+    /** Display-only group (see attribute `optionGroups`); never selectable, never compiled. */
+    group: IdSchema.optional(),
+    /**
+     * Semantic coverage: this option's phrase already states the listed values
+     * of other attributes (e.g. species `elf` covers entity type
+     * `fantasy_humanoid`). When both are output, the covered attribute's
+     * fragment is omitted with provenance. Inherited by child options.
+     */
+    covers: z.array(z.object({ attributeId: AttributeIdSchema, optionIds: z.array(IdSchema).min(1) }).strict()).min(1).optional(),
+    /** Typical context — UI ordering and a non-blocking "atypical" notice only; never deactivates the option. */
+    suggestedWhen: z.array(ConditionSchema).min(1).optional(),
+    /** Interval in the BASE unit of a quantity attribute (perBase = 1), e.g. an age group. `maxExclusive` absent = open-ended. */
+    interval: z.object({ min: z.number().finite(), maxExclusive: z.number().finite().optional() }).strict().optional(),
   })
   .strict();
 
@@ -175,6 +218,7 @@ export const ControlSchema = z.enum([
   "range",
   "text",
   "textarea",
+  "quantity",
 ]);
 export type Control = z.infer<typeof ControlSchema>;
 
@@ -193,6 +237,20 @@ const numericBase = {
   semantics: NumericSemanticsSchema.optional(),
   bands: z.array(BandSchema).min(1).optional(),
 };
+
+/** Unit of a quantity attribute. `perBase`: how many of this unit make one base unit (years: 1, months: 12, days: 365.25). */
+export const QuantityUnitSchema = z
+  .object({ id: IdSchema, label: LocalizedTextSchema, one: z.string().min(1), other: z.string().min(1), perBase: z.number().positive() })
+  .strict();
+export type QuantityUnit = z.infer<typeof QuantityUnitSchema>;
+
+/** Expression role (CATALOG_DESIGN_STANDARD §5): what an attribute contributes. `metadata` is never compiled. */
+export const ExpressionRoleSchema = z.enum(["direct", "context", "metadata"]);
+export type ExpressionRole = z.infer<typeof ExpressionRoleSchema>;
+export const SemanticKindSchema = z.enum(["categorical", "relative", "interpretive", "numeric", "freeText"]);
+
+export const OptionGroupSchema = z.object({ id: IdSchema, label: LocalizedTextSchema, order: z.number().int() }).strict();
+export type OptionGroup = z.infer<typeof OptionGroupSchema>;
 
 const attributeBase = {
   id: AttributeIdSchema,
@@ -227,21 +285,58 @@ const attributeBase = {
    */
   defaultValue: SelectionValueSchema.optional(),
   examples: z.array(VisualExampleSchema).optional(),
+  /** Expression role and semantic kind (CATALOG_DESIGN_STANDARD §2, §5). */
+  expression: z.object({ role: ExpressionRoleSchema, kind: SemanticKindSchema }).strict().optional(),
+  /** Offer the "include in prompt" toggle for this attribute (the domain supports exclusion for every attribute). */
+  outputToggle: z.boolean().optional(),
+};
+
+/** User-defined values for option attributes. Limits may only be lowered below the global caps. */
+const CustomConfigSchema = z
+  .object({
+    labelMaxLength: z.number().int().positive().max(200).optional(),
+    expressionMaxLength: z.number().int().positive().max(2000).optional(),
+    /** Notice when a custom entry has a name but no prompt expression (Direct roles). */
+    nameOnlyNotice: z.boolean().optional(),
+  })
+  .strict();
+
+const optionAttributeExtras = {
+  options: z.array(OptionDefinitionSchema).min(1),
+  custom: CustomConfigSchema.optional(),
+  optionGroups: z.array(OptionGroupSchema).min(1).optional(),
 };
 
 export const AttributeDefinitionSchema = z.discriminatedUnion("type", [
-  z.object({ ...attributeBase, type: z.literal("single"), options: z.array(OptionDefinitionSchema).min(1) }).strict(),
+  z.object({ ...attributeBase, type: z.literal("single"), ...optionAttributeExtras }).strict(),
   z
     .object({
       ...attributeBase,
       type: z.literal("multi"),
-      options: z.array(OptionDefinitionSchema).min(1),
+      ...optionAttributeExtras,
       /** Optional; omit for "no limit". */
       maxSelections: z.number().int().positive().optional(),
     })
     .strict(),
   z.object({ ...attributeBase, type: z.literal("number"), ...numericBase }).strict(),
   z.object({ ...attributeBase, type: z.literal("range"), ...numericBase }).strict(),
+  /**
+   * A measured quantity entered as a number OR a complete range, with an
+   * explicit unit chosen by the user (stored losslessly). Values are
+   * normalized to the base unit only for judgements (never for output).
+   */
+  z
+    .object({
+      ...attributeBase,
+      type: z.literal("quantity"),
+      forms: z.array(z.enum(["number", "range"])).min(1),
+      units: z.array(QuantityUnitSchema).min(1),
+      min: z.number().finite(),
+      /** Omit for no upper bound. */
+      max: z.number().finite().optional(),
+      integer: z.boolean().optional(),
+    })
+    .strict(),
   z
     .object({
       ...attributeBase,
@@ -255,6 +350,7 @@ export const AttributeDefinitionSchema = z.discriminatedUnion("type", [
 export type AttributeDefinition = z.infer<typeof AttributeDefinitionSchema>;
 export type AttributeType = AttributeDefinition["type"];
 export type OptionAttributeDefinition = Extract<AttributeDefinition, { type: "single" | "multi" }>;
+export type QuantityAttributeDefinition = Extract<AttributeDefinition, { type: "quantity" }>;
 
 export const isOptionAttribute = (a: AttributeDefinition): a is OptionAttributeDefinition =>
   a.type === "single" || a.type === "multi";
@@ -353,6 +449,26 @@ export const PresetDefinitionSchema = z
   .strict();
 export type PresetDefinition = z.infer<typeof PresetDefinitionSchema>;
 
+/**
+ * Inputs of the structured age assessment (domain/catalog/age.ts). Kinds
+ * classify registered options; anything unlisted or custom is unclassified.
+ * Species kinds are inherited by child options.
+ */
+export const AgeModelSchema = z
+  .object({
+    /** Adulthood threshold in the base unit of the age attributes. */
+    adultFrom: z.number().positive(),
+    actualAgeAttributeId: AttributeIdSchema,
+    apparentAgeAttributeId: AttributeIdSchema,
+    ageGroupAttributeId: AttributeIdSchema,
+    entityTypeAttributeId: AttributeIdSchema,
+    speciesAttributeId: AttributeIdSchema,
+    entityKinds: z.record(IdSchema, z.enum(["human", "augmented", "artificial", "nonhuman"])),
+    speciesKinds: z.record(IdSchema, z.enum(["human", "nonhuman"])),
+  })
+  .strict();
+export type AgeModel = z.infer<typeof AgeModelSchema>;
+
 export const CatalogSchema = z
   .object({
     formatVersion: z.literal(CATALOG_FORMAT_VERSION),
@@ -365,6 +481,7 @@ export const CatalogSchema = z
     rules: z.array(CatalogRuleSchema).default([]),
     migrations: z.array(CatalogMigrationSchema).default([]),
     presets: z.array(PresetDefinitionSchema).default([]),
+    ageModel: AgeModelSchema.optional(),
   })
   .strict();
 

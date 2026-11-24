@@ -1,10 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { buildCategoryTree, flattenCategoryTree, resolveText, type CatalogRegistry, type CategoryNode, type PresetPlan } from "@/domain";
+import {
+  attributesInCategory,
+  buildCategoryTree,
+  flattenCategoryTree,
+  isAttributeActive,
+  resolveText,
+  type CatalogRegistry,
+  type CategoryNode,
+  type PresetPlan,
+} from "@/domain";
 import { fmt, type Messages } from "@/i18n/messages";
 import type { Workspace } from "@/state/useWorkspace";
 import { WorkspaceField } from "../controls/WorkspaceField";
+import { attributeLabel } from "../format";
 import { CategoryNav } from "./CategoryNav";
 import { PresetDialog } from "./PresetDialog";
 
@@ -57,6 +67,10 @@ export function DetailedEditor({
 
   const tx = workspace.presetTransaction;
   const txName = tx ? resolveText(registry.getPreset(tx.presetId)?.label, locale) || tx.presetId : "";
+  const catName = (id: string) => resolveText(registry.getCategory(id)?.label, locale);
+  const lastReset = workspace.lastCategoryReset;
+  const lastRestore = workspace.lastCategoryRestore;
+  const [dismissedRestore, setDismissedRestore] = useState(0);
 
   return (
     <div className="detailed" data-nav-open={navOpen}>
@@ -76,7 +90,26 @@ export function DetailedEditor({
             </button>
           </div>
         )}
-        {node && <CategoryPanel node={node} registry={registry} workspace={workspace} locale={locale} t={t} onSelect={select} onOpenPreset={setDialogPresetId} />}
+        {lastReset && (
+          <div className="preset-bar" role="status" data-testid="category-reset-bar">
+            <span>{fmt(t.categoryReset.done, { name: catName(lastReset.categoryId), n: Object.keys(lastReset.removed).length })}</span>
+            <button type="button" className="button button--small" onClick={() => workspace.undoCategoryReset()}>
+              {t.categoryReset.undo}
+            </button>
+          </div>
+        )}
+        {!lastReset && lastRestore && lastRestore.id !== dismissedRestore && (
+          <div className="notice" role="status" data-testid="category-restore-notice">
+            <span>{fmt(t.categoryReset.restored, { name: catName(lastRestore.categoryId), n: lastRestore.restored.length })}</span>
+            {lastRestore.skipped.length > 0 && (
+              <span> {fmt(t.categoryReset.skipped, { labels: lastRestore.skipped.map((id) => attributeLabel(registry, id, locale)).join(", ") })}</span>
+            )}{" "}
+            <button type="button" className="link-button" onClick={() => setDismissedRestore(lastRestore.id)}>
+              {t.dismiss}
+            </button>
+          </div>
+        )}
+        {node && <CategoryPanel key={node.category.id} node={node} registry={registry} workspace={workspace} locale={locale} t={t} onSelect={select} onOpenPreset={setDialogPresetId} />}
       </div>
       {dialogPresetId && (
         <PresetDialog
@@ -118,12 +151,73 @@ function CategoryPanel({
   const c = node.category;
   const path = registry.categoryPath(c.id).map((id) => resolveText(registry.getCategory(id)?.label, locale));
   const presets = node.approved ? registry.presets.filter((p) => p.status === "approved" && p.categoryId === c.id) : [];
+  // Category reset targets: EVERY stored selection of the subtree (not what is shown/filtered).
+  const targets = attributesInCategory(registry, c.id).filter((id) => id in workspace.spec.selections);
+  const [confirming, setConfirming] = useState(false);
+  const stateOf = (id: string) => {
+    const a = registry.getAttribute(id)!;
+    const tags: string[] = [];
+    if (workspace.spec.selections[id]?.excludedFromPrompt) tags.push(t.categoryReset.excluded);
+    if (!isAttributeActive(registry, a, workspace.spec)) tags.push(t.categoryReset.inactive);
+    if (!registry.isExposed(a, "detailed")) tags.push(t.categoryReset.hidden);
+    return tags;
+  };
+  const showReset = (node.approved && (node.attributes.length > 0 || node.children.length > 0)) || targets.length > 0;
   return (
     <section className="cat-panel" aria-labelledby="cat-panel-title" data-category-id={c.id}>
       <p className="breadcrumb muted small">{path.join(" › ")}</p>
-      <h2 id="cat-panel-title">
-        {resolveText(c.label, locale)} {!node.approved && <span className="badge badge--planned">{t.detailed.draft}</span>}
-      </h2>
+      <div className="cat-panel__head">
+        <h2 id="cat-panel-title">
+          {resolveText(c.label, locale)} {!node.approved && <span className="badge badge--planned">{t.detailed.draft}</span>}
+          {targets.length > 0 && <span className="badge badge--set"> {fmt(t.detailed.setCount, { n: targets.length })}</span>}
+        </h2>
+        {showReset && (
+          <button
+            type="button"
+            className="button button--small"
+            disabled={targets.length === 0}
+            title={targets.length === 0 ? t.categoryReset.nothing : undefined}
+            onClick={() => setConfirming(true)}
+            data-testid="category-reset"
+          >
+            {t.categoryReset.button}
+          </button>
+        )}
+      </div>
+      {confirming && (
+        <div className="modal" role="dialog" aria-modal="true" aria-labelledby="cat-reset-title" data-testid="category-reset-dialog" onKeyDown={(e) => e.key === "Escape" && setConfirming(false)}>
+          <div className="modal__card">
+            <h3 id="cat-reset-title">{fmt(t.categoryReset.title, { name: resolveText(c.label, locale) })}</h3>
+            <p>{fmt(t.categoryReset.body, { n: targets.length })}</p>
+            <ul className="small">
+              {targets.map((id) => {
+                const tags = stateOf(id);
+                return (
+                  <li key={id} data-attribute-id={id}>
+                    {attributeLabel(registry, id, locale)}
+                    {tags.length > 0 && <span className="muted"> ({tags.join(", ")})</span>}
+                  </li>
+                );
+              })}
+            </ul>
+            <div className="toolbar">
+              <button
+                type="button"
+                className="button button--danger"
+                onClick={() => {
+                  workspace.resetCategory(c.id);
+                  setConfirming(false);
+                }}
+              >
+                {fmt(t.categoryReset.confirm, { n: targets.length })}
+              </button>
+              <button type="button" className="button" autoFocus onClick={() => setConfirming(false)}>
+                {t.categoryReset.cancel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {c.description && <p className="muted">{resolveText(c.description, locale)}</p>}
       {!node.applicable && (
         <p className="notice notice--warning" role="note">

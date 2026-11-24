@@ -80,9 +80,9 @@ export function PromptPreview({
                 <li key={i} data-code={d.code}>
                   <p>{desc.text}</p>
                   {desc.terms && (
-                    <p className="small">
+                    <p className="small" data-testid="blocked-sources">
                       <strong>{t.preview.matched}:</strong> {desc.terms}
-                      {d.involves && d.involves.length > 0 && <> — {d.involves.map((id) => attributeLabel(registry, id, locale)).join(", ")}</>}
+                      {desc.sources && <> — {desc.sources}</>}
                     </p>
                   )}
                   {desc.guidance && (
@@ -138,6 +138,11 @@ export function PromptPreview({
             {compilation.fragments.map((f) => (
               <li key={f.attributeId}>
                 <span className="muted">{attributeLabel(registry, f.attributeId, locale)}</span> → <span lang="en">{f.text}</span>
+              </li>
+            ))}
+            {(compilation.covered ?? []).map((c) => (
+              <li key={`covered-${c.attributeId}`} className="muted" data-testid={`source-covered-${c.attributeId}`}>
+                {attributeLabel(registry, c.attributeId, locale)} → {t.hiddenSource.covered} ({attributeLabel(registry, c.coveredBy, locale)})
               </li>
             ))}
           </ol>

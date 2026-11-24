@@ -14,6 +14,8 @@ export interface SpecMigration {
 export const SPEC_MIGRATIONS: readonly SpecMigration[] = [
   // 0.2.0 only ADDS the optional `origin` field; 0.1.0 data is valid as-is (lossless).
   { from: "0.1.0", to: "0.2.0", migrate: (raw) => ({ ...raw, schemaVersion: "0.2.0" }) },
+  // 0.3.0 only ADDS optional shapes (output exclusion, custom entries, units); 0.2.0 data is valid as-is (lossless).
+  { from: "0.2.0", to: "0.3.0", migrate: (raw) => ({ ...raw, schemaVersion: "0.3.0" }) },
 ];
 
 export const migrateRawSpec = (

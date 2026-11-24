@@ -1,20 +1,22 @@
-import { resolveText, type AttributeDefinition, type CatalogRegistry, type SelectionValue } from "@/domain";
+import { resolveText, selectedCustomEntries, selectedOptionIds, type AttributeDefinition, type CatalogRegistry, type SelectionValue } from "@/domain";
 
-/** Human-readable, localized summary of a selection value (UI only). */
+/** Human-readable, localized summary of a selection value (UI only). Custom entries show their name. */
 export const describeValue = (attribute: AttributeDefinition, value: SelectionValue, locale: string): string => {
   switch (value.kind) {
-    case "single": {
-      const o = attribute.type === "single" ? attribute.options.find((x) => x.id === value.optionId) : undefined;
-      return o ? resolveText(o.label, locale) : value.optionId;
-    }
+    case "single":
     case "multi": {
-      const opts = attribute.type === "multi" ? attribute.options : [];
-      return value.optionIds.map((id) => resolveText(opts.find((o) => o.id === id)?.label, locale) || id).join(", ");
+      const opts = attribute.type === "single" || attribute.type === "multi" ? attribute.options : [];
+      return [
+        ...selectedOptionIds(value).map((id) => resolveText(opts.find((o) => o.id === id)?.label, locale) || id),
+        ...selectedCustomEntries(value).map((c) => c.label),
+      ].join(", ");
     }
     case "number":
-      return String(value.value);
-    case "range":
-      return `${value.min}–${value.max}`;
+    case "range": {
+      const unit = attribute.type === "quantity" ? attribute.units.find((u) => u.id === value.unit) : undefined;
+      const n = value.kind === "number" ? String(value.value) : `${value.min}–${value.max}`;
+      return unit ? `${n} ${resolveText(unit.label, locale)}` : n;
+    }
     case "text":
       return value.text;
   }

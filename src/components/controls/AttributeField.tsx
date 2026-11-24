@@ -1,13 +1,18 @@
 "use client";
 
-import { useId, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import {
+  customKey,
   defaultControl,
   isOptionAttribute,
   resolveText,
+  selectedCustomEntries,
+  selectedOptionIds,
+  type AgeClass,
   type AttributeDefinition,
   type AttributeSelection,
   type CatalogRegistry,
+  type CustomEntry,
   type Diagnostic,
   type OptionDefinition,
   type PromptFragment,
@@ -27,7 +32,9 @@ import {
   SliderControl,
   type OptionControlProps,
 } from "./Controls";
+import { CustomEntries } from "./CustomEntries";
 import { OptionPicker } from "./OptionPicker";
+import { QuantityControl } from "./QuantityControl";
 
 export interface AttributeFieldProps {
   registry: CatalogRegistry;
@@ -37,18 +44,26 @@ export interface AttributeFieldProps {
   active: boolean;
   isOptionActive(option: OptionDefinition): boolean;
   isOptionRestricted(option: OptionDefinition): boolean;
+  /** Typical in the current context (UI ordering only). */
+  isOptionSuggested?(option: OptionDefinition): boolean;
   /** Diagnostics that concern this attribute (rules, safety, language…). */
   diagnostics: Diagnostic[];
   /** The prompt text this attribute currently contributes, if any. */
   fragment: PromptFragment | undefined;
   /** Preset phrases whose units this attribute takes over (it states that meaning instead). */
   takeovers: Array<{ presetAttributeId: string; relation: "equivalent" | "override" }>;
+  /** Another produced option already states this attribute's meaning (output once). */
+  coveredBy?: { attributeId: string; optionIds: string[] };
+  /** Structured age assessment (explains conditional wording). */
+  ageClass?: AgeClass;
   /** True when the whole prompt output is withheld by the safety policy. */
   outputBlocked: boolean;
   locale: string;
   t: Messages;
   onSet(value: SelectionValue): void;
   onClear(): void;
+  /** Include/exclude from the prompt (only offered when the catalog enables the toggle). */
+  onSetExcluded?(excluded: boolean): void;
   /** For rule actions that clear another attribute (always user-triggered). */
   onClearAttribute(attributeId: string): void;
   isAttributeSet(attributeId: string): boolean;
@@ -65,14 +80,37 @@ export function AttributeField(props: AttributeFieldProps) {
   const label = resolveText(attribute.label, locale);
   const description = resolveText(attribute.description, locale);
   const isSet = selection !== undefined;
+  const excluded = Boolean(selection?.excludedFromPrompt);
+  const [addRequest, setAddRequest] = useState<{ name: string; n: number } | null>(null);
 
-  const selectedIds =
-    selection?.value.kind === "single" ? [selection.value.optionId] : selection?.value.kind === "multi" ? selection.value.optionIds : [];
+  const selectedIds = selectedOptionIds(selection?.value);
+  const custom = selectedCustomEntries(selection?.value);
   const selectedOptions = isOptionAttribute(attribute) ? attribute.options.filter((o) => selectedIds.includes(o.id)) : [];
   const inactiveOptions = active ? selectedOptions.filter((o) => !isOptionActive(o)) : [];
   const classified = selectedOptions.filter((o) => o.classification && Object.keys(o.classification).length > 0);
   const restrictedOptions = isOptionAttribute(attribute) ? attribute.options.filter((o) => isOptionRestricted(o)) : [];
   const presetName = selection?.origin ? resolveText(registry.getPreset(selection.origin.presetId)?.label, locale) || selection.origin.presetId : null;
+  const variantOptions = selectedOptions.filter((o) => o.prompt.variants?.length);
+
+  // Option values with custom entries: every edit keeps the other part of the value.
+  const writeOptions = (ids: string[], entries: CustomEntry[]) => {
+    if (attribute.type === "single") {
+      if (entries[0]) onSet({ kind: "single", custom: entries[0] });
+      else if (ids[0]) onSet({ kind: "single", optionId: ids[0] });
+      else onClear();
+      return;
+    }
+    if (ids.length === 0 && entries.length === 0) return onClear();
+    onSet({ kind: "multi", optionIds: ids, ...(entries.length ? { custom: entries } : {}) });
+  };
+  const customOps = isOptionAttribute(attribute) && attribute.custom
+    ? {
+        add: (e: CustomEntry) => (attribute.type === "single" ? writeOptions([], [e]) : custom.some((c) => customKey(c.label) === customKey(e.label)) ? undefined : writeOptions(selectedIds, [...custom, e])),
+        update: (i: number, e: CustomEntry) => writeOptions(selectedIds, custom.map((c, j) => (j === i ? e : c))),
+        remove: (i: number) => writeOptions(selectedIds, custom.filter((_, j) => j !== i)),
+        pick: (optionId: string) => (attribute.type === "single" ? writeOptions([optionId], []) : writeOptions(selectedIds.includes(optionId) ? selectedIds : [...selectedIds, optionId], custom)),
+      }
+    : null;
 
   return (
     <section
@@ -80,7 +118,7 @@ export function AttributeField(props: AttributeFieldProps) {
       id={`attr-${attribute.id}`}
       aria-labelledby={headingId}
       data-attribute-id={attribute.id}
-      data-state={isSet ? "set" : "unset"}
+      data-state={isSet ? (excluded ? "excluded" : "set") : "unset"}
       data-active={active && inactiveOptions.length === 0 ? "true" : "false"}
       tabIndex={-1}
     >
@@ -88,7 +126,9 @@ export function AttributeField(props: AttributeFieldProps) {
         <h3 id={headingId} className="field__label">
           {label}
         </h3>
-        <span className={`badge ${isSet ? "badge--set" : "badge--unset"}`}>{isSet ? t.field.set : t.field.notSet}</span>
+        <span className={`badge ${isSet ? (excluded ? "badge--excluded" : "badge--set") : "badge--unset"}`} data-testid={`state-${attribute.id}`}>
+          {isSet ? (excluded ? t.field.excludedBadge : t.field.set) : t.field.notSet}
+        </span>
         {presetName && <span className="badge badge--preset">{fmt(t.detailed.fromPreset, { name: presetName })}</span>}
         {isSet && (
           <button type="button" className="link-button" onClick={onClear} aria-label={`${t.field.clear}: ${label}`}>
@@ -104,13 +144,42 @@ export function AttributeField(props: AttributeFieldProps) {
         </p>
       )}
 
-      <Control {...props} label={label} selectedIds={selectedIds} />
+      <Control
+        {...props}
+        label={label}
+        selectedIds={selectedIds}
+        customEntries={custom}
+        onAddCustomRequest={customOps ? (name) => setAddRequest({ name, n: (addRequest?.n ?? 0) + 1 }) : undefined}
+      />
       <RestrictedNote options={restrictedOptions} locale={locale} t={t} />
+
+      {customOps && isOptionAttribute(attribute) && (
+        <CustomEntries
+          attribute={attribute}
+          entries={custom}
+          label={label}
+          locale={locale}
+          t={t}
+          onAdd={customOps.add}
+          onUpdate={customOps.update}
+          onRemove={customOps.remove}
+          onPickRegistered={customOps.pick}
+          addRequest={addRequest}
+        />
+      )}
 
       {!isSet && attribute.defaultValue && (
         <button type="button" className="link-button" onClick={() => onSet(attribute.defaultValue!)}>
           {t.field.useDefault}: {describeValue(attribute, attribute.defaultValue, locale)}
         </button>
+      )}
+
+      {attribute.outputToggle && isSet && props.onSetExcluded && (
+        <label className="output-toggle" data-testid={`output-toggle-${attribute.id}`}>
+          <input type="checkbox" role="switch" checked={!excluded} aria-checked={!excluded} onChange={(e) => props.onSetExcluded!(!e.target.checked)} />
+          <span>{t.field.includeInPrompt}</span>
+          {excluded && <span className="muted small"> — {t.field.excludedHint}</span>}
+        </label>
       )}
 
       {classified.length > 0 && (
@@ -168,8 +237,24 @@ export function AttributeField(props: AttributeFieldProps) {
             </p>
           ) : props.outputBlocked ? (
             <p className="diag--error">{t.field.blockedProvenance}</p>
+          ) : excluded ? (
+            <p className="muted">{t.field.notInPromptExcluded}</p>
+          ) : attribute.expression?.role === "metadata" ? (
+            <p className="muted">{t.field.notInPromptMetadata}</p>
+          ) : props.coveredBy ? (
+            <p className="muted" data-testid={`covered-${attribute.id}`}>
+              {fmt(t.field.coveredBy, {
+                label: attributeLabel(registry, props.coveredBy.attributeId, locale),
+                options: props.coveredBy.optionIds.map((id) => optionLabel(registry, props.coveredBy!.attributeId, id, locale)).join(", "),
+              })}
+            </p>
           ) : (
             <p className="muted">{t.field.notInPrompt}</p>
+          )}
+          {fragment && variantOptions.length > 0 && props.ageClass && (
+            <p className="muted" data-testid={`variant-${attribute.id}`}>
+              {fmt(t.field.variantNote, { age: t.ageClass[props.ageClass] })}
+            </p>
           )}
           {fragment?.takenOverBy && fragment.takenOverBy.length > 0 && (
             <p className="muted">
@@ -190,8 +275,15 @@ export function AttributeField(props: AttributeFieldProps) {
   );
 }
 
-function Control(props: AttributeFieldProps & { label: string; selectedIds: readonly string[] }): ReactNode {
-  const { attribute, selection, isOptionActive, isOptionRestricted, locale, t, onSet, onClear, label, selectedIds } = props;
+function Control(
+  props: AttributeFieldProps & {
+    label: string;
+    selectedIds: readonly string[];
+    customEntries: readonly CustomEntry[];
+    onAddCustomRequest: ((name: string) => void) | undefined;
+  },
+): ReactNode {
+  const { attribute, selection, isOptionActive, isOptionRestricted, locale, t, onSet, onClear, label, selectedIds, customEntries } = props;
   const value = selection?.value;
   const control = defaultControl(attribute);
 
@@ -207,14 +299,24 @@ function Control(props: AttributeFieldProps & { label: string; selectedIds: read
       onSelect: (optionId) => onSet({ kind: "single", optionId }),
       onToggle: (optionId) => {
         const next = selectedIds.includes(optionId) ? selectedIds.filter((x) => x !== optionId) : [...selectedIds, optionId];
-        if (next.length === 0) onClear();
-        else onSet({ kind: "multi", optionIds: next });
+        // Custom entries are part of the same value and are kept.
+        if (next.length === 0 && customEntries.length === 0) onClear();
+        else onSet({ kind: "multi", optionIds: next, ...(customEntries.length ? { custom: [...customEntries] } : {}) });
       },
       onClear,
+      ...(props.isOptionSuggested ? { isSuggested: props.isOptionSuggested } : {}),
+      ...(props.onAddCustomRequest ? { onAddCustomRequest: props.onAddCustomRequest, customLabels: customEntries.map((c) => c.label) } : {}),
     };
     switch (control) {
-      case "dropdown":
-        return <DropdownControl {...optionProps} />;
+      case "dropdown": {
+        const selected = attribute.options.find((o) => o.id === selectedIds[0]);
+        return (
+          <>
+            <DropdownControl {...optionProps} />
+            {selected?.description && <p className="muted small">{resolveText(selected.description, locale)}</p>}
+          </>
+        );
+      }
       case "cards":
         return <CardsControl {...optionProps} />;
       case "searchable":
@@ -236,6 +338,11 @@ function Control(props: AttributeFieldProps & { label: string; selectedIds: read
           />
         );
     }
+  }
+
+  if (attribute.type === "quantity") {
+    const v = value?.kind === "number" || value?.kind === "range" ? value : undefined;
+    return <QuantityControl attribute={attribute} value={v} label={label} locale={locale} t={t} onSet={onSet} onClear={onClear} />;
   }
 
   if (attribute.type === "number") {

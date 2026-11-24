@@ -9,10 +9,28 @@
 - 컴파일러(`COMPILER_VERSION`): 0.1.0 / generic-en adapter: 0.1.0
 - 로컬 저장 envelope(`STORAGE_FORMAT_VERSION`): 1
 
-## [Unreleased]
+## [Unreleased] — Sprint 2-B.1: Person › Identity (구현 완료, 검토 대기)
+
+버전 변화: ImageSpec 0.2.0 → **0.3.0**, 카탈로그 형식 0.3.0 → **0.4.0**, core 카탈로그 0.3.0 → **0.4.0**(ID 변경 없음), 컴파일러 0.3.0 → **0.4.0**, 안전 정책 prompter.baseline 0.1.0 → **0.2.0**(완화 없음).
 
 ### Added
-- `docs/TECH_DEBT.md`: 남은 기술 부채(TD-01~07)와 권장 처리 시점 추적
+- Person › Identity 16개 속성(승인된 초기 제품 카탈로그): 존재 유형, 종족(계층), 인물의 실재 여부, 연령대, 실제 연령, 외형적 연령, 성별, 성별 표현, 국적 및 국가·지역(199 + 무국적, 다중), 민족적 배경, 문화적 배경, 시대적 배경, 직업(표시용 묶음), 서사적 역할, 사회적 지위, 인물 설명 — 선택지 337개, 하위 분류 6개
+- 공통 기능(모든 카탈로그 재사용): 프롬프트 포함·제외(`excludedFromPrompt`), 표현 역할(Direct·Context·Metadata), 사용자 정의 값(`CustomEntry`), `quantity` 타입과 단위(년·개월·일), 조건별 표현(`prompt.variants`), `covers` 의미 중복 제거, 표시용 선택지 묶음, 일반적인 조합 제안(`suggestedWhen`), 조건 `derived`·`selectedCount`·`intervalMismatch`
+- 공통 연령 해석(`assessAge`, `classifyBeing`): minor·ambiguous·adult·unknown, 인간 사이보그·안드로이드·사용자 정의 존재 구분, 단위 정규화
+- 규칙: 실제 연령–연령대 불일치(경고), 무국적 + 특정 국가·지역(경고), 혼합 종족 설명 권장(안내), 이름만 입력한 사용자 정의 값(안내), 비전형 조합(안내)
+- 카테고리 초기화와 복원(저장 값 전체 대상, 확인 창, 이후 편집 보호)
+- UI: 수량 입력(숫자/범위 + 단위), 사용자 정의 값 편집기(이름·표현 분리, 검색어에서 추가), 계층 검색 경로, 일반적인 조합 우선 정렬, 선택 요약 칩, 프롬프트 포함 토글, 제외 상태 배지, covers·조건별 표현 설명
+- 국가·지역 정적 데이터(`regions.ts`, CLDR 48 + 승인된 표시명, 출처·버전 기록)
+- Sprint 2-A 실제 데이터 fixture(`tests/fixtures/sprint2a/`)
+- 문서: `docs/catalogs/CATALOG_DESIGN_STANDARD.md`(0.2.0), `docs/catalogs/person/identity.md`(1.0.0 APPROVED), `docs/SPRINT_2B1_SPEC_REVIEW.md`, `docs/SPRINT_2B1_REPORT.md`, ADR-038~047, TD-08·09
+- 테스트: 단위·컴포넌트 474개(+130), E2E 46건(45 통과, 1 skip: 모바일 전용 테스트의 데스크톱 실행 제외)
+- `docs/TECH_DEBT.md`: 남은 기술 부채(TD-01~07)와 권장 처리 시점 추적 (Sprint 2-A 이후, PR #2)
+
+### Changed
+- 기존 속성 출력 순서 번호 ×10(상대 순서 불변 — Sprint 0·1·2-A 프롬프트 글자 단위 동일, 회귀 테스트)
+- 안전 검사 입력: 프롬프트 제외·적용 불가 값, 사용자 정의 이름·표현, 선택된 모든 선택지 태그, 구조화 연령 신호 포함. 차단 안내에 숨은 출처와 신호 이름 표시
+- 인물 카테고리: `person`, `person_identity`(+6 하위)만 approved, 나머지 13개 영역은 DRAFT 유지
+- 기존 identity 설계 초안(draft-0)을 승인된 1.0.0 문서로 교체, ATTRIBUTE_TEMPLATE·catalogs README를 공통 규격 기준으로 갱신
 
 ## [0.3.0] — 2026-11-24 — Sprint 2-A: Detailed Editor Foundation (승인됨, PR #1 병합 `4825773`)
 

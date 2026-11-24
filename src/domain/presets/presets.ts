@@ -5,7 +5,7 @@ import type { PresetDefinition } from "../catalog/schema";
 import { error, fail, ok, type Diagnostic, type Result } from "../shared/diagnostics";
 import { applySelection } from "../spec/operations";
 import type { AttributeSelection, ImageSpec, SelectionOrigin } from "../spec/schema";
-import type { SelectionValue } from "../spec/values";
+import { customKey, selectedOptionIds, type SelectionValue } from "../spec/values";
 import { validateSpecAgainstCatalog } from "../validation/specValidator";
 
 export type PresetEntryKind = "new" | "change" | "same" | "inapplicable" | "restricted";
@@ -50,7 +50,14 @@ export interface PresetTransaction {
 const sameValue = (a: SelectionValue, b: SelectionValue): boolean => {
   if (a.kind !== b.kind) return false;
   if (a.kind === "multi" && b.kind === "multi") {
-    return a.optionIds.length === b.optionIds.length && a.optionIds.every((id) => b.optionIds.includes(id));
+    const ca = (a.custom ?? []).map((c) => JSON.stringify([customKey(c.label), c.label, c.expression ?? null])).sort();
+    const cb = (b.custom ?? []).map((c) => JSON.stringify([customKey(c.label), c.label, c.expression ?? null])).sort();
+    return (
+      a.optionIds.length === b.optionIds.length &&
+      a.optionIds.every((id) => b.optionIds.includes(id)) &&
+      ca.length === cb.length &&
+      ca.every((x, i) => x === cb[i])
+    );
   }
   return JSON.stringify(a) === JSON.stringify(b);
 };
@@ -86,7 +93,7 @@ export const planPreset = (spec: ImageSpec, registry: CatalogRegistry, presetId:
   const entries = draft.map((e) => {
     const attribute = registry.getAttribute(e.attributeId)!;
     const value = e.next.value;
-    const optionIds = value.kind === "single" ? [value.optionId] : value.kind === "multi" ? value.optionIds : [];
+    const optionIds = selectedOptionIds(value);
     const optionsActive =
       attribute.type !== "single" && attribute.type !== "multi"
         ? true

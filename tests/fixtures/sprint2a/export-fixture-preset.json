@@ -1,0 +1,62 @@
+{
+  "kind": "prompter.image-spec",
+  "schemaVersion": "0.2.0",
+  "task": "text-to-image",
+  "catalog": {
+    "id": "prompter.e2e-fixture",
+    "version": "0.3.0"
+  },
+  "selections": {
+    "composition.framing": {
+      "value": {
+        "kind": "single",
+        "optionId": "head_and_shoulders"
+      },
+      "source": "preset",
+      "origin": {
+        "presetId": "p_soft_portrait",
+        "presetVersion": "1.0.0"
+      }
+    },
+    "lighting.preset": {
+      "value": {
+        "kind": "single",
+        "optionId": "studio_softbox"
+      },
+      "source": "preset",
+      "origin": {
+        "presetId": "p_soft_portrait",
+        "presetVersion": "1.0.0"
+      }
+    },
+    "scene.background": {
+      "value": {
+        "kind": "single",
+        "optionId": "blurred"
+      },
+      "source": "preset",
+      "origin": {
+        "presetId": "p_soft_portrait",
+        "presetVersion": "1.0.0"
+      }
+    },
+    "subject.kind": {
+      "value": {
+        "kind": "single",
+        "optionId": "person"
+      },
+      "source": "user"
+    },
+    "x.expression.smile": {
+      "value": {
+        "kind": "number",
+        "value": 40
+      },
+      "source": "preset",
+      "origin": {
+        "presetId": "p_soft_portrait",
+        "presetVersion": "1.0.0"
+      }
+    }
+  }
+}
