@@ -1,22 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import {
-  isAttributeActive,
-  isOptionActive,
-  resolveText,
-  type AttributeDefinition,
-  type CatalogRegistry,
-  type Diagnostic,
-  type GroupDefinition,
-} from "@/domain";
+import { isAttributeActive, resolveText, type AttributeDefinition, type CatalogRegistry, type GroupDefinition } from "@/domain";
 import type { Messages } from "@/i18n/messages";
 import type { Workspace } from "@/state/useWorkspace";
-import { AttributeField } from "../controls/AttributeField";
-
-const FIELD_HIDDEN_CODES = new Set(["selection.inactive", "selection.option_inactive", "compiler.empty"]);
-
-const concerns = (d: Diagnostic, attributeId: string) => d.attributeId === attributeId || (d.involves ?? []).includes(attributeId);
+import { WorkspaceField } from "../controls/WorkspaceField";
 
 /**
  * Basic mode: catalog groups in order; within a group, `primary` attributes up
@@ -24,7 +12,8 @@ const concerns = (d: Diagnostic, attributeId: string) => d.attributeId === attri
  * comes from the catalog — no attribute is hard-coded here.
  */
 export function BasicComposer({ registry, workspace, locale, t }: { registry: CatalogRegistry; workspace: Workspace; locale: string; t: Messages }) {
-  const basic = registry.attributesForTier("basic");
+  // Only APPROVED basic-tier attributes are editable in the product UI.
+  const basic = registry.exposedAttributes("basic");
   const roots = registry.groups.filter((g) => !g.parentId);
   const sections: Array<{ group: GroupDefinition | null; attributes: AttributeDefinition[] }> = roots
     .map((group) => ({ group, attributes: basic.filter((a) => registry.rootGroupOf(a)?.id === group.id) }))
@@ -67,25 +56,7 @@ function GroupSection({
   const expanded = userChoice ?? secondarySet > 0;
   if (shown.length === 0) return null;
 
-  const field = (a: AttributeDefinition) => (
-    <AttributeField
-      key={a.id}
-      registry={registry}
-      attribute={a}
-      selection={spec.selections[a.id]}
-      active={isAttributeActive(registry, a, spec)}
-      isOptionActive={(o) => isOptionActive(registry, o, spec)}
-      diagnostics={workspace.compilation.diagnostics.filter((d) => !FIELD_HIDDEN_CODES.has(d.code) && concerns(d, a.id))}
-      fragment={workspace.compilation.fragments.find((f) => f.attributeId === a.id)}
-      outputBlocked={workspace.compilation.blocked}
-      locale={locale}
-      t={t}
-      onSet={(value) => workspace.setValue(a.id, value)}
-      onClear={() => workspace.clear(a.id)}
-      onClearAttribute={(id) => workspace.clear(id)}
-      isAttributeSet={(id) => id in spec.selections}
-    />
-  );
+  const field = (a: AttributeDefinition) => <WorkspaceField key={a.id} attribute={a} registry={registry} workspace={workspace} locale={locale} t={t} />;
 
   const groupLabel = group ? resolveText(group.label, locale) : "";
   return (

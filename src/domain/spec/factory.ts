@@ -25,6 +25,7 @@ export const canonicalizeSpec = (spec: ImageSpec): ImageSpec => {
       value: s.value,
       source: s.source,
       ...(s.priority !== undefined ? { priority: s.priority } : {}),
+      ...(s.origin !== undefined ? { origin: { presetId: s.origin.presetId, presetVersion: s.origin.presetVersion } } : {}),
     };
   }
   return {

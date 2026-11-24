@@ -1,12 +1,17 @@
 import {
+  applyPresetPlan,
   applySelection,
   clearSelection,
   createEmptySpec,
   findInactiveSelections,
   inactiveKey,
+  markUserEdited,
+  undoPresetTransaction,
   type CatalogRegistry,
   type ImageSpec,
   type InactiveSelection,
+  type PresetPlan,
+  type PresetTransaction,
   type SelectionValue,
 } from "@/domain";
 
@@ -15,7 +20,17 @@ export type WorkspaceAction =
   | { type: "clear"; attributeId: string }
   | { type: "reset" }
   | { type: "restoreResetSnapshot" }
-  | { type: "replace"; spec: ImageSpec };
+  | { type: "replace"; spec: ImageSpec }
+  | { type: "applyPreset"; plan: PresetPlan; mode: "all" | "onlyEmpty" }
+  | { type: "undoPreset" };
+
+/** Result of the last preset undo (for the notice). */
+export interface PresetUndoResult {
+  id: number;
+  presetId: string;
+  restored: string[];
+  kept: string[];
+}
 
 /** Applicability changes caused by the latest user edit (for notices). */
 export interface Transition {
@@ -33,12 +48,17 @@ export interface WorkspaceState {
    */
   resetSnapshot: ImageSpec | null;
   transition: Transition | null;
+  /** Session-only record of the LAST preset application (undo target). */
+  presetTransaction: PresetTransaction | null;
+  lastPresetUndo: PresetUndoResult | null;
 }
 
 export const initialWorkspaceState = (registry: CatalogRegistry): WorkspaceState => ({
   spec: createEmptySpec(registry),
   resetSnapshot: null,
   transition: null,
+  presetTransaction: null,
+  lastPresetUndo: null,
 });
 
 const diffInactive = (registry: CatalogRegistry, before: ImageSpec, after: ImageSpec, prevId: number): Transition | null => {
@@ -73,7 +93,40 @@ export const createWorkspaceReducer =
           next = clearSelection(state.spec, action.attributeId);
         }
         if (next === state.spec) return state;
-        return { ...state, spec: next, transition: diffInactive(registry, state.spec, next, prevId) ?? state.transition };
+        return {
+          ...state,
+          spec: next,
+          transition: diffInactive(registry, state.spec, next, prevId) ?? state.transition,
+          // Any direct edit of a preset-changed attribute protects it from undo (even if set back to the same value).
+          presetTransaction: state.presetTransaction ? markUserEdited(state.presetTransaction, action.attributeId) : null,
+        };
+      }
+      case "applyPreset": {
+        const { spec, transaction } = applyPresetPlan(state.spec, registry, action.plan, action.mode);
+        if (transaction.changes.length === 0) return state;
+        return {
+          ...state,
+          spec,
+          transition: diffInactive(registry, state.spec, spec, prevId) ?? state.transition,
+          presetTransaction: transaction,
+          lastPresetUndo: null,
+        };
+      }
+      case "undoPreset": {
+        if (!state.presetTransaction) return state;
+        const result = undoPresetTransaction(state.spec, state.presetTransaction);
+        return {
+          ...state,
+          spec: result.spec,
+          transition: diffInactive(registry, state.spec, result.spec, prevId) ?? state.transition,
+          presetTransaction: null,
+          lastPresetUndo: {
+            id: (state.lastPresetUndo?.id ?? 0) + 1,
+            presetId: state.presetTransaction.presetId,
+            restored: result.restored,
+            kept: result.kept,
+          },
+        };
       }
       case "reset": {
         const isEmpty = Object.keys(state.spec.selections).length === 0;
@@ -82,12 +135,14 @@ export const createWorkspaceReducer =
           // Resetting an already-empty spec must not destroy an existing snapshot.
           resetSnapshot: isEmpty ? state.resetSnapshot : state.spec,
           transition: null,
+          presetTransaction: null,
+          lastPresetUndo: null,
         };
       }
       case "restoreResetSnapshot":
         if (!state.resetSnapshot) return state;
-        return { spec: state.resetSnapshot, resetSnapshot: null, transition: null };
+        return { ...state, spec: state.resetSnapshot, resetSnapshot: null, transition: null, presetTransaction: null };
       case "replace":
-        return { ...state, spec: action.spec, transition: null };
+        return { ...state, spec: action.spec, transition: null, presetTransaction: null };
     }
   };

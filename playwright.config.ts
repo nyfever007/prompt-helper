@@ -16,8 +16,9 @@ export default defineConfig({
     { name: "mobile", use: { ...devices["Pixel 7"] } },
   ],
   webServer: {
-    // Runs against the production build so E2E also exercises `next build` output.
+    // E2E-only build flavor: production build + test catalog page (PROMPTER_E2E_FIXTURES=1, .next-e2e).
     command: `pnpm build && pnpm exec next start -p ${PORT}`,
+    env: { PROMPTER_E2E_FIXTURES: "1", PROMPTER_DIST_DIR: ".next-e2e" },
     url: `http://localhost:${PORT}`,
     reuseExistingServer: false,
     timeout: 240_000,

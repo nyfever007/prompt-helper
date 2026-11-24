@@ -12,11 +12,13 @@ import {
   type ImageSpec,
   type InactiveSelection,
   type KeyValueStore,
+  type PresetPlan,
+  type PresetTransaction,
   type PromptCompilation,
   type SelectionValue,
   type SpecStorage,
 } from "@/domain";
-import { createWorkspaceReducer, initialWorkspaceState, type Transition } from "./workspaceReducer";
+import { createWorkspaceReducer, initialWorkspaceState, type PresetUndoResult, type Transition } from "./workspaceReducer";
 
 export type HydrationState =
   | { status: "pending" }
@@ -39,6 +41,10 @@ export interface Workspace {
   save: SaveState;
   storage: SpecStorage | null;
   hasResetSnapshot: boolean;
+  presetTransaction: PresetTransaction | null;
+  lastPresetUndo: PresetUndoResult | null;
+  applyPreset(plan: PresetPlan, mode: "all" | "onlyEmpty"): void;
+  undoPreset(): void;
   setValue(attributeId: string, value: SelectionValue): void;
   clear(attributeId: string): void;
   reset(): void;
@@ -106,6 +112,8 @@ export const useWorkspace = (registry: CatalogRegistry, store: KeyValueStore | n
   const reset = useCallback(() => dispatch({ type: "reset" }), []);
   const restoreResetSnapshot = useCallback(() => dispatch({ type: "restoreResetSnapshot" }), []);
   const replace = useCallback((next: ImageSpec) => dispatch({ type: "replace", spec: next }), []);
+  const applyPreset = useCallback((plan: PresetPlan, mode: "all" | "onlyEmpty") => dispatch({ type: "applyPreset", plan, mode }), []);
+  const undoPreset = useCallback(() => dispatch({ type: "undoPreset" }), []);
   const applyRecovery = useCallback(() => {
     if (hydration.status !== "recoverable") return;
     dispatch({ type: "replace", spec: hydration.proposed });
@@ -125,6 +133,10 @@ export const useWorkspace = (registry: CatalogRegistry, store: KeyValueStore | n
     save,
     storage,
     hasResetSnapshot: state.resetSnapshot !== null,
+    presetTransaction: state.presetTransaction,
+    lastPresetUndo: state.lastPresetUndo,
+    applyPreset,
+    undoPreset,
     setValue,
     clear,
     reset,

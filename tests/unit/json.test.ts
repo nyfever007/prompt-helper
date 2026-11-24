@@ -7,6 +7,7 @@ import {
   MAX_IMPORT_BYTES,
   migrateRawSpec,
   parseImageSpec,
+  SPEC_MIGRATIONS,
 } from "@/domain";
 import { extendedRegistry } from "../fixtures/catalogs";
 import { buildSpec, multi, single, text } from "../fixtures/specs";
@@ -131,6 +132,7 @@ describe("7. invalid JSON and schema input", () => {
     const old = { ...JSON.parse(exportSpecJson(createEmptySpec(core))), schemaVersion: "0.0.9", legacy: true };
     expect(parseImageSpec(old).ok).toBe(false);
     const migrated = migrateRawSpec(old, [
+      ...SPEC_MIGRATIONS,
       {
         from: "0.0.9",
         to: "0.1.0",

@@ -44,12 +44,12 @@ describe("5. deterministic prompt compilation", () => {
     expect(c.negativePrompt).toBe("");
     expect(c.blocked).toBe(false);
     expect(c.meta).toEqual({
-      compilerVersion: "0.2.0",
+      compilerVersion: "0.3.0",
       adapterId: "generic-en",
       adapterVersion: "0.1.0",
-      specSchemaVersion: "0.1.0",
+      specSchemaVersion: "0.2.0",
       catalogId: "prompter.core",
-      catalogVersion: "0.2.0",
+      catalogVersion: "0.3.0",
       safetyPolicyId: "prompter.baseline",
       safetyPolicyVersion: "0.1.0",
     });

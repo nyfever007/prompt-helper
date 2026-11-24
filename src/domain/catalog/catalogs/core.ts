@@ -24,9 +24,9 @@ const ORIENTED_SUBJECTS = ["person", "group", "animal", "object", "vehicle", "ar
 const NON_ABSTRACT = [...ORIENTED_SUBJECTS, "landscape"];
 
 export const coreCatalog = {
-  formatVersion: "0.2.0",
+  formatVersion: "0.3.0",
   id: "prompter.core",
-  version: "0.2.0",
+  version: "0.3.0",
   title: { en: "Prompter core catalog", ko: "Prompter 기본 카탈로그" },
   groups: [
     { id: "what", order: 0, label: { en: "What to depict", ko: "무엇을 그릴까요" } },
@@ -50,11 +50,58 @@ export const coreCatalog = {
     },
     { id: "output", order: 50, label: { en: "Output", ko: "출력" } },
   ],
+  categories: [
+    // Detailed navigation (expert taxonomy). Person areas are DRAFT structure only:
+    // their attributes are designed and approved separately (docs/catalogs/, Sprint 2-B).
+    { id: "essentials", order: 0, status: "approved", label: { en: "Essentials", ko: "기본" }, description: { en: "What the image is about.", ko: "이미지의 기본 내용입니다." } },
+    {
+      id: "person",
+      order: 10,
+      status: "draft",
+      label: { en: "Person", ko: "인물" },
+      description: { en: "Detailed person attributes (in design).", ko: "인물 상세 속성 (설계 중)" },
+      appliesWhen: forSubjects("person", "group"),
+    },
+    ...(
+      [
+        ["identity", "Identity", "인물 기본 정보"],
+        ["face", "Face", "얼굴"],
+        ["eyes", "Eyes", "눈"],
+        ["eyebrows", "Eyebrows", "눈썹"],
+        ["nose", "Nose", "코"],
+        ["lips", "Lips", "입술"],
+        ["skin", "Skin", "피부"],
+        ["hair", "Hair", "헤어"],
+        ["body", "Body", "신체"],
+        ["expression", "Expression & appeal", "표정 및 시각적 인상"],
+        ["makeup", "Makeup", "메이크업"],
+        ["wardrobe", "Wardrobe", "의상"],
+        ["accessories", "Accessories", "액세서리"],
+        ["pose", "Pose & action", "자세 및 행동"],
+      ] as const
+    ).map(([id, en, ko], i) => ({
+      id: `person_${id}`,
+      parentId: "person",
+      order: 11 + i,
+      status: "draft" as const,
+      label: { en, ko },
+      docPath: `docs/catalogs/person/${id === "expression" ? "expression" : id}.md`,
+    })),
+    { id: "shared", order: 40, status: "approved", label: { en: "Shared", ko: "공통" } },
+    { id: "shared_camera", parentId: "shared", order: 41, status: "approved", label: { en: "Camera", ko: "카메라" }, docPath: "docs/catalogs/shared/camera.md" },
+    { id: "shared_lighting", parentId: "shared", order: 42, status: "approved", label: { en: "Lighting", ko: "조명" }, docPath: "docs/catalogs/shared/lighting.md" },
+    { id: "shared_style", parentId: "shared", order: 43, status: "approved", label: { en: "Style", ko: "스타일" } },
+    { id: "shared_scene", parentId: "shared", order: 44, status: "approved", label: { en: "Place & background", ko: "장소와 배경" } },
+    { id: "shared_mood", parentId: "shared", order: 45, status: "approved", label: { en: "Mood", ko: "분위기" } },
+    { id: "shared_output", parentId: "shared", order: 46, status: "approved", label: { en: "Output", ko: "출력" } },
+  ],
   attributes: [
     // ── What ────────────────────────────────────────────────────────────────
     {
       id: "intent.description",
       domain: "intent",
+      status: "approved",
+      categoryId: "essentials",
       groupId: "what",
       type: "text",
       tier: "basic",
@@ -71,6 +118,8 @@ export const coreCatalog = {
     {
       id: SUBJECT,
       domain: "subject",
+      status: "approved",
+      categoryId: "essentials",
       groupId: "what",
       type: "single",
       tier: "basic",
@@ -97,6 +146,8 @@ export const coreCatalog = {
     {
       id: "style.preset",
       domain: "style",
+      status: "approved",
+      categoryId: "shared_style",
       groupId: "style",
       type: "single",
       tier: "basic",
@@ -294,6 +345,8 @@ export const coreCatalog = {
     {
       id: "style.medium",
       domain: "style",
+      status: "deferred",
+      categoryId: "shared_style",
       groupId: "style_axes",
       type: "single",
       tier: "detailed",
@@ -317,6 +370,8 @@ export const coreCatalog = {
     {
       id: "style.realism",
       domain: "style",
+      status: "deferred",
+      categoryId: "shared_style",
       groupId: "style_axes",
       type: "single",
       tier: "detailed",
@@ -333,6 +388,8 @@ export const coreCatalog = {
     {
       id: "style.technique",
       domain: "style",
+      status: "deferred",
+      categoryId: "shared_style",
       groupId: "style_axes",
       type: "multi",
       tier: "detailed",
@@ -352,6 +409,8 @@ export const coreCatalog = {
     {
       id: "style.movement",
       domain: "style",
+      status: "deferred",
+      categoryId: "shared_style",
       groupId: "style_axes",
       type: "single",
       tier: "detailed",
@@ -369,6 +428,8 @@ export const coreCatalog = {
     {
       id: "style.aesthetic",
       domain: "style",
+      status: "deferred",
+      categoryId: "shared_style",
       groupId: "style_axes",
       type: "multi",
       tier: "detailed",
@@ -390,6 +451,8 @@ export const coreCatalog = {
     {
       id: "composition.framing",
       domain: "composition",
+      status: "approved",
+      categoryId: "shared_camera",
       groupId: "composition",
       type: "single",
       tier: "basic",
@@ -418,6 +481,8 @@ export const coreCatalog = {
     {
       id: "composition.view_direction",
       domain: "composition",
+      status: "approved",
+      categoryId: "shared_camera",
       groupId: "composition",
       type: "single",
       tier: "basic",
@@ -440,6 +505,8 @@ export const coreCatalog = {
     {
       id: "camera.angle",
       domain: "camera",
+      status: "approved",
+      categoryId: "shared_camera",
       groupId: "composition",
       type: "single",
       tier: "basic",
@@ -465,6 +532,8 @@ export const coreCatalog = {
     {
       id: "scene.setting",
       domain: "scene",
+      status: "approved",
+      categoryId: "shared_scene",
       groupId: "scene",
       type: "single",
       tier: "basic",
@@ -498,6 +567,8 @@ export const coreCatalog = {
     {
       id: "scene.background",
       domain: "scene",
+      status: "approved",
+      categoryId: "shared_scene",
       groupId: "scene",
       type: "single",
       tier: "basic",
@@ -522,6 +593,8 @@ export const coreCatalog = {
     {
       id: "mood.tone",
       domain: "mood",
+      status: "approved",
+      categoryId: "shared_mood",
       groupId: "atmosphere",
       type: "multi",
       tier: "basic",
@@ -548,6 +621,8 @@ export const coreCatalog = {
     {
       id: "lighting.preset",
       domain: "lighting",
+      status: "approved",
+      categoryId: "shared_lighting",
       groupId: "atmosphere",
       type: "single",
       tier: "basic",
@@ -559,18 +634,18 @@ export const coreCatalog = {
       },
       prompt: { template: "Lighting: {value}." },
       options: [
-        { id: "natural_daylight", label: { en: "Natural daylight", ko: "자연광" }, prompt: { text: "soft natural daylight" }, classification: { "lighting.source": ["daylight_sky"], "lighting.softness": ["soft"], "lighting.color_temperature": ["neutral"] } },
-        { id: "golden_hour", label: { en: "Golden hour", ko: "골든아워" }, prompt: { text: "warm golden-hour sunlight" }, classification: { "lighting.source": ["sun"], "lighting.direction": ["side"], "lighting.softness": ["soft"], "lighting.color_temperature": ["warm"] } },
-        { id: "midday_sun", label: { en: "Midday sun", ko: "한낮 햇빛" }, prompt: { text: "harsh midday sunlight" }, classification: { "lighting.source": ["sun"], "lighting.direction": ["top"], "lighting.softness": ["hard"], "lighting.intensity": ["bright"], "lighting.contrast": ["high"] } },
-        { id: "overcast", label: { en: "Overcast", ko: "흐린 날" }, prompt: { text: "soft, diffuse overcast light" }, classification: { "lighting.source": ["daylight_sky"], "lighting.direction": ["ambient"], "lighting.softness": ["soft"], "lighting.contrast": ["low"] } },
-        { id: "blue_hour", label: { en: "Blue hour", ko: "블루아워 (해질녘 직후)" }, prompt: { text: "cool blue-hour twilight" }, classification: { "lighting.source": ["daylight_sky"], "lighting.softness": ["soft"], "lighting.intensity": ["dim"], "lighting.color_temperature": ["cool"] } },
-        { id: "moonlight", label: { en: "Moonlight", ko: "달빛" }, prompt: { text: "dim, cool moonlight" }, classification: { "lighting.source": ["moon"], "lighting.intensity": ["dim"], "lighting.color_temperature": ["cool"] } },
+        { id: "natural_daylight", label: { en: "Natural daylight", ko: "자연광" }, prompt: { text: "soft natural daylight", parts: [{ axis: "lighting.softness", values: ["soft"], text: "soft" }, "natural daylight"] }, classification: { "lighting.source": ["daylight_sky"], "lighting.softness": ["soft"], "lighting.color_temperature": ["neutral"] } },
+        { id: "golden_hour", label: { en: "Golden hour", ko: "골든아워" }, prompt: { text: "warm golden-hour sunlight", parts: [{ axis: "lighting.color_temperature", values: ["warm"], text: "warm" }, "golden-hour sunlight"] }, classification: { "lighting.source": ["sun"], "lighting.direction": ["side"], "lighting.softness": ["soft"], "lighting.color_temperature": ["warm"] } },
+        { id: "midday_sun", label: { en: "Midday sun", ko: "한낮 햇빛" }, prompt: { text: "harsh midday sunlight", parts: [{ axis: "lighting.softness", values: ["hard"], text: "harsh" }, "midday sunlight"] }, classification: { "lighting.source": ["sun"], "lighting.direction": ["top"], "lighting.softness": ["hard"], "lighting.intensity": ["bright"], "lighting.contrast": ["high"] } },
+        { id: "overcast", label: { en: "Overcast", ko: "흐린 날" }, prompt: { text: "soft, diffuse overcast light", parts: [{ axis: "lighting.softness", values: ["soft"], text: "soft, diffuse" }, "overcast light"] }, classification: { "lighting.source": ["daylight_sky"], "lighting.direction": ["ambient"], "lighting.softness": ["soft"], "lighting.contrast": ["low"] } },
+        { id: "blue_hour", label: { en: "Blue hour", ko: "블루아워 (해질녘 직후)" }, prompt: { text: "cool blue-hour twilight", parts: [{ axis: "lighting.color_temperature", values: ["cool"], text: "cool" }, "blue-hour twilight"] }, classification: { "lighting.source": ["daylight_sky"], "lighting.softness": ["soft"], "lighting.intensity": ["dim"], "lighting.color_temperature": ["cool"] } },
+        { id: "moonlight", label: { en: "Moonlight", ko: "달빛" }, prompt: { text: "dim, cool moonlight", parts: [{ list: [{ axis: "lighting.intensity", values: ["dim"], text: "dim" }, { axis: "lighting.color_temperature", values: ["cool"], text: "cool" }], sep: ", " }, "moonlight"] }, classification: { "lighting.source": ["moon"], "lighting.intensity": ["dim"], "lighting.color_temperature": ["cool"] } },
         { id: "studio_softbox", label: { en: "Studio softbox", ko: "스튜디오 소프트박스" }, prompt: { text: "even studio softbox lighting" }, classification: { "lighting.source": ["studio"], "lighting.direction": ["front"], "lighting.softness": ["soft"], "lighting.contrast": ["low"] } },
         { id: "low_key", label: { en: "Low-key (deep shadows)", ko: "로우키 (깊은 그림자)" }, prompt: { text: "dramatic low-key lighting with deep shadows" }, classification: { "lighting.direction": ["side"], "lighting.softness": ["hard"], "lighting.intensity": ["dim"], "lighting.contrast": ["high"] } },
-        { id: "high_key", label: { en: "High-key (bright)", ko: "하이키 (밝고 화사함)" }, prompt: { text: "bright high-key lighting" }, classification: { "lighting.softness": ["soft"], "lighting.intensity": ["bright"], "lighting.contrast": ["low"] } },
+        { id: "high_key", label: { en: "High-key (bright)", ko: "하이키 (밝고 화사함)" }, prompt: { text: "bright high-key lighting", parts: [{ axis: "lighting.intensity", values: ["bright"], text: "bright" }, "high-key lighting"] }, classification: { "lighting.softness": ["soft"], "lighting.intensity": ["bright"], "lighting.contrast": ["low"] } },
         { id: "backlit_rim", label: { en: "Backlit / rim light", ko: "역광 / 림 라이트" }, prompt: { text: "strong backlighting with a bright rim light" }, classification: { "lighting.direction": ["back"], "lighting.contrast": ["high"] } },
         { id: "neon", label: { en: "Neon", ko: "네온" }, prompt: { text: "colorful neon lighting" }, classification: { "lighting.source": ["neon"], "lighting.color_temperature": ["mixed_color"], "lighting.contrast": ["high"] } },
-        { id: "candlelight", label: { en: "Candlelight", ko: "촛불" }, prompt: { text: "warm, flickering candlelight" }, classification: { "lighting.source": ["fire"], "lighting.softness": ["soft"], "lighting.intensity": ["dim"], "lighting.color_temperature": ["warm"] } },
+        { id: "candlelight", label: { en: "Candlelight", ko: "촛불" }, prompt: { text: "warm, flickering candlelight", parts: [{ list: [{ axis: "lighting.color_temperature", values: ["warm"], text: "warm" }, "flickering"], sep: ", " }, "candlelight"] }, classification: { "lighting.source": ["fire"], "lighting.softness": ["soft"], "lighting.intensity": ["dim"], "lighting.color_temperature": ["warm"] } },
       ],
     },
     ...(
@@ -598,6 +673,8 @@ export const coreCatalog = {
     ).map(([id, order, label, template, options]) => ({
       id,
       domain: "lighting",
+      status: "approved" as const, // approved for Detailed editing (Sprint 2-A, D1)
+      categoryId: "shared_lighting",
       groupId: "lighting_axes",
       type: "single" as const,
       tier: "detailed" as const,
@@ -611,6 +688,8 @@ export const coreCatalog = {
     {
       id: "output.aspect_ratio",
       domain: "output",
+      status: "approved",
+      categoryId: "shared_output",
       groupId: "output",
       type: "single",
       tier: "basic",
@@ -714,6 +793,25 @@ export const coreCatalog = {
       },
     })),
     {
+      id: "backlight-vs-direction",
+      kind: "conflict",
+      severity: "warning",
+      when: [
+        { op: "anyOf", attributeId: "lighting.preset", optionIds: ["backlit_rim"] },
+        { op: "noneOf", attributeId: "lighting.direction", optionIds: ["back"] },
+      ],
+      involves: ["lighting.preset", "lighting.direction"],
+      message: {
+        en: "The backlit preset is defined by light from behind, but the light direction is set to something else.",
+        ko: "역광 프리셋은 뒤에서 오는 빛이 핵심인데, 빛의 방향이 다른 값으로 설정되어 있습니다.",
+      },
+      guidance: {
+        en: "Clear the light direction to keep the backlit look, or pick a different lighting preset.",
+        ko: "역광 연출을 유지하려면 ‘빛의 방향’을 해제하고, 다른 방향이 의도라면 다른 조명 프리셋을 고르세요.",
+      },
+      actions: [{ kind: "clear", attributeId: "lighting.direction" }, { kind: "clear", attributeId: "lighting.preset" }],
+    },
+    {
       id: "silhouette-hides-face",
       kind: "visibility",
       severity: "info",
@@ -748,5 +846,13 @@ export const coreCatalog = {
         },
       ],
     },
+    {
+      fromVersion: "0.2.0",
+      toVersion: "0.3.0",
+      // No ID changes: 0.3.0 adds categories, approval status and phrase units only.
+      changes: [],
+    },
   ],
+  // Product composite presets require separate approval (none yet). Test-only presets live in the E2E fixture catalog.
+  presets: [],
 } satisfies CatalogInput;

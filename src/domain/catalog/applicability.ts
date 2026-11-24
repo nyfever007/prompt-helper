@@ -45,3 +45,29 @@ export const findInactiveSelections = (spec: ImageSpec, registry: CatalogRegistr
 };
 
 export const inactiveKey = (i: InactiveSelection): string => `${i.attributeId}:${i.scope}:${i.optionIds.join(",")}`;
+
+/** Is this option currently restricted by policy (shown disabled with a reason)? */
+export const isOptionRestricted = (registry: CatalogRegistry, option: OptionDefinition, spec: ImageSpec): boolean =>
+  option.restriction !== undefined && evaluateAll(option.restriction.when, spec, registry);
+
+export interface RestrictedSelection {
+  attributeId: string;
+  optionIds: string[];
+}
+
+/** Selected options that are restricted by policy in the current spec. Deterministic order. */
+export const findRestrictedSelections = (spec: ImageSpec, registry: CatalogRegistry): RestrictedSelection[] => {
+  const out: RestrictedSelection[] = [];
+  for (const attribute of registry.attributes()) {
+    const selection = spec.selections[attribute.id];
+    if (!selection || (attribute.type !== "single" && attribute.type !== "multi")) continue;
+    const v = selection.value;
+    const ids = v.kind === "single" ? [v.optionId] : v.kind === "multi" ? v.optionIds : [];
+    const restricted = ids.filter((id) => {
+      const o = attribute.options.find((x) => x.id === id);
+      return o !== undefined && isOptionRestricted(registry, o, spec);
+    });
+    if (restricted.length) out.push({ attributeId: attribute.id, optionIds: restricted });
+  }
+  return out;
+};

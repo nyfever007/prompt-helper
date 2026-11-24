@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
+import { closePreview, ensurePreviewOpen } from "./helpers";
 
 const EXPECTED = "A quiet harbor at dawn. Main subject: a single person. Visual style: watercolor painting.";
 const SHOTS = process.env.E2E_SCREENSHOT_DIR;
@@ -36,15 +37,15 @@ test("Basic flow: compose, copy, switch modes, reload, export, reset, import", a
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/${testInfo.project.name}-basic.png`, fullPage: true, scale: "css" });
 
   // copy
-  await page.getByRole("button", { name: "프롬프트 복사" }).click();
+  await ensurePreviewOpen(page);
+  await page.getByRole("button", { name: "프롬프트 복사", exact: true }).click();
   await expect(page.getByRole("button", { name: "복사됨!" })).toBeVisible();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(EXPECTED);
 
   // modes share one spec
+  await closePreview(page);
   await page.getByRole("tab", { name: /Detailed/ }).click();
-  await expect(page.getByText("Detailed 모드는 후속 개발 예정입니다 (Sprint 2)")).toBeVisible();
-  const summary = page.getByRole("region", { name: "현재 공유 명세" });
-  await expect(summary.locator('[data-attribute-id="subject.kind"] dd')).toHaveText("인물 (1인)");
+  await expect(page.locator('[data-attribute-id="subject.kind"]').getByRole("radio", { name: "인물 (1인)" })).toBeChecked();
   await expect(output(page)).toHaveText(EXPECTED);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/${testInfo.project.name}-detailed.png`, fullPage: true, scale: "css" });
   await page.getByRole("tab", { name: /Precision/ }).click();
@@ -66,7 +67,7 @@ test("Basic flow: compose, copy, switch modes, reload, export, reset, import", a
   const exportedPath = testInfo.outputPath("exported.json");
   await download.saveAs(exportedPath);
   const exported = JSON.parse(await readFile(exportedPath, "utf8"));
-  expect(exported).toMatchObject({ kind: "prompter.image-spec", schemaVersion: "0.1.0", catalog: { id: "prompter.core" } });
+  expect(exported).toMatchObject({ kind: "prompter.image-spec", schemaVersion: "0.2.0", catalog: { id: "prompter.core" } });
   expect(Object.keys(exported.selections).sort()).toEqual(["intent.description", "style.preset", "subject.kind"]);
 
   // reset (cancel, then confirm) — then undo restores, then reset again for the import checks
@@ -117,7 +118,8 @@ test("English UI toggle keeps the spec and prompt", async ({ page }) => {
   await chip(page, "픽셀 아트").click();
   await page.getByRole("combobox").selectOption("en");
   await expect(page.getByRole("radio", { name: "Pixel art" })).toBeChecked();
-  await expect(page.getByRole("tab", { name: /Detailed/ })).toContainText("Planned");
+  await expect(page.getByRole("tab", { name: /Precision/ })).toContainText("Planned");
+  await expect(page.getByRole("tab", { name: /Detailed/ })).not.toContainText("Planned");
   await expect(output(page)).toHaveText("Visual style: pixel art.");
 });
 

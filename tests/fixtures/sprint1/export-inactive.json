@@ -1,0 +1,39 @@
+{
+  "kind": "prompter.image-spec",
+  "schemaVersion": "0.1.0",
+  "task": "text-to-image",
+  "catalog": {
+    "id": "prompter.core",
+    "version": "0.2.0"
+  },
+  "selections": {
+    "composition.framing": {
+      "value": {
+        "kind": "single",
+        "optionId": "full_body"
+      },
+      "source": "user"
+    },
+    "intent.description": {
+      "value": {
+        "kind": "text",
+        "text": "안개 낀 호수"
+      },
+      "source": "user"
+    },
+    "lighting.preset": {
+      "value": {
+        "kind": "single",
+        "optionId": "moonlight"
+      },
+      "source": "user"
+    },
+    "subject.kind": {
+      "value": {
+        "kind": "single",
+        "optionId": "landscape"
+      },
+      "source": "user"
+    }
+  }
+}

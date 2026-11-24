@@ -39,6 +39,24 @@ export const describeDiagnostic = (
     const options = ids.map((id) => optionLabel(registry, d.attributeId!, id, locale)).join(", ");
     return { text: `${attributeLabel(registry, d.attributeId, locale)}: ${fmt(t.field.optionInactive, { options })}` };
   }
+  if (d.code === "selection.restricted" || d.code === "policy.restricted_selection") {
+    const ids = String(d.params?.optionIds ?? "").split(",").filter(Boolean);
+    const attribute = d.attributeId ? registry.getAttribute(d.attributeId) : undefined;
+    const reasons = ids
+      .map((id) => (attribute && (attribute.type === "single" || attribute.type === "multi") ? attribute.options.find((o) => o.id === id)?.restriction?.reason : undefined))
+      .filter((r) => r !== undefined)
+      .map((r) => resolveText(r, locale));
+    const what = `${attributeLabel(registry, d.attributeId ?? "", locale)}: ${ids.map((id) => optionLabel(registry, d.attributeId ?? "", id, locale)).join(", ")}`;
+    return {
+      text: locale === "ko" ? `사용이 제한된 선택지가 있어 프롬프트 출력이 차단되었습니다 — ${what}` : `A restricted option blocks the prompt output — ${what}`,
+      ...(reasons[0] ? { guidance: reasons[0] } : {}),
+      actions: d.attributeId ? [{ kind: "clear" as const, attributeId: d.attributeId }] : [],
+    };
+  }
+  if (d.code === "preset.unit_overridden") {
+    const preset = attributeLabel(registry, String(d.params?.preset ?? ""), locale);
+    return { text: fmt(t.detailed.takenOverOverride, { preset }) };
+  }
   if (d.code === "prompt.mixed_language") {
     return { text: fmt(t.preview.mixedLanguage, { scripts: String(d.params?.scripts ?? "") }) };
   }

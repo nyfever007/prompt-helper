@@ -1,10 +1,11 @@
-# Prompter CI — runs on GitHub Actions (remote connected 2026-11-24).
-# Mirrors the local `pnpm verify` command.
+# Prompter CI — runs on GitHub Actions. Mirrors the local `pnpm verify` command.
+# Action versions (checked 2026-11-24): all run on Node 24. pnpm/action-setup stays on v5
+# because v6 requires pnpm >= 11 (this project pins pnpm 10 via "packageManager").
 name: ci
 
 on:
   push:
-    branches: [main]
+    branches: [main, "feature/**"]
   pull_request:
 
 permissions:
@@ -13,11 +14,11 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4 # version comes from package.json "packageManager"
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v5 # version comes from package.json "packageManager"
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -25,11 +26,14 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test
+      # Normal production build — must NOT contain the test catalog.
       - run: pnpm build
+      - run: pnpm verify:isolation
+      # E2E-only build flavor (PROMPTER_E2E_FIXTURES=1 → .next-e2e) is built by Playwright's webServer.
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e
       - if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-traces
           path: test-results/

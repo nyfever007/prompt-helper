@@ -24,7 +24,7 @@ export const coreAttr = (c: CatalogInput, id: string): MutableSingle => {
  */
 export const buildExtendedCatalog = (): CatalogInput => {
   const c = cloneCore();
-  c.version = "0.3.0";
+  c.version = "0.4.0";
 
   // Hierarchical subject sub-categories (Sprint 4 will expand these for real).
   coreAttr(c, "subject.kind").options.push(
@@ -42,6 +42,7 @@ export const buildExtendedCatalog = (): CatalogInput => {
   c.attributes.push(
     {
       id: "x.palette",
+      status: "approved",
       domain: "color",
       type: "multi",
       tier: "basic",
@@ -57,6 +58,7 @@ export const buildExtendedCatalog = (): CatalogInput => {
     },
     {
       id: "x.expression",
+      status: "approved",
       domain: "person",
       type: "single",
       tier: "basic",
@@ -71,6 +73,7 @@ export const buildExtendedCatalog = (): CatalogInput => {
     },
     {
       id: "x.focal_length",
+      status: "approved",
       domain: "camera",
       type: "number",
       tier: "detailed",
@@ -78,17 +81,20 @@ export const buildExtendedCatalog = (): CatalogInput => {
       min: 8,
       max: 800,
       unit: "mm",
+      semantics: "physical",
       label: { en: "Focal length" },
       prompt: { template: "Lens: {value} focal length." },
     },
     {
       id: "x.people_count",
+      status: "approved",
       domain: "scene",
       type: "range",
       tier: "precision",
       order: 115,
       min: 0,
       max: 50,
+      semantics: "count",
       label: { en: "People in scene" },
       prompt: { template: "From {value} people in the scene." },
     },
@@ -112,8 +118,8 @@ export const buildExtendedCatalog = (): CatalogInput => {
   c.migrations = [
     ...(c.migrations ?? []),
     {
-      fromVersion: "0.2.0",
-      toVersion: "0.3.0",
+      fromVersion: "0.3.0",
+      toVersion: "0.4.0",
       changes: [
         { op: "renameOption", attributeId: "style.preset", from: "render_3d", to: "cgi_render", reason: { en: "Clearer id", ko: "더 명확한 ID" } },
         { op: "renameOption", attributeId: "mood.tone", from: "eerie", to: "uncanny", reason: { en: "Clearer id", ko: "더 명확한 ID" } },
@@ -142,9 +148,9 @@ export const extendedRegistry = (): CatalogRegistry => CatalogRegistry.createOrT
  */
 export const buildPolicyCatalog = (): CatalogInput => {
   const c = cloneCore();
-  c.version = "0.2.0";
   const single = (id: string, order: number, options: Array<[string, string[]]>) => ({
     id,
+    status: "approved" as const,
     domain: "person",
     type: "single" as const,
     tier: "detailed" as const,

@@ -1,4 +1,4 @@
-import { findInactiveSelections } from "../catalog/applicability";
+import { findInactiveSelections, findRestrictedSelections } from "../catalog/applicability";
 import { evaluateAll } from "../catalog/conditions";
 import type { CatalogRegistry } from "../catalog/registry";
 import { checkValueForAttribute } from "../catalog/valueCheck";
@@ -96,6 +96,24 @@ export const validateSpecAgainstCatalog = (spec: ImageSpec, registry: CatalogReg
               `"${inactive.attributeId}": option(s) ${inactive.optionIds.join(", ")} not applicable to the current spec; kept but not compiled`,
               { attributeId: inactive.attributeId, path, params: { optionIds: inactive.optionIds.join(",") } },
             ),
+      );
+    }
+  }
+
+  if (valuesOk) {
+    for (const r of findRestrictedSelections(spec, registry)) {
+      const attribute = registry.getAttribute(r.attributeId)!;
+      const option = attribute.type === "single" || attribute.type === "multi" ? attribute.options.find((o) => o.id === r.optionIds[0]) : undefined;
+      out.push(
+        error("selection.restricted", `"${r.attributeId}": option(s) ${r.optionIds.join(", ")} are restricted by policy in the current spec`, {
+          attributeId: r.attributeId,
+          path: `selections.${r.attributeId}`,
+          params: {
+            optionIds: r.optionIds.join(","),
+            reason: option?.restriction ? resolveText(option.restriction.reason, "en") : "",
+            ...(option?.restriction?.policyRuleId ? { policyRuleId: option.restriction.policyRuleId } : {}),
+          },
+        }),
       );
     }
   }

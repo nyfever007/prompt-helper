@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
+import { closePreview, ensurePreviewOpen } from "./helpers";
 
 const SHOTS = process.env.E2E_SCREENSHOT_DIR;
 const WORKSPACE_KEY = "prompter:v1:workspace";
@@ -75,7 +76,8 @@ test("Basic Composer: every attribute → exact prompt, parameters, copy and .tx
   await expect(page.getByTestId("classification-style.preset")).toContainText("매체: 수채 물감");
   await shot(page, "composer-full", info.project.name);
 
-  await page.getByRole("button", { name: "프롬프트 복사" }).click();
+  await ensurePreviewOpen(page);
+  await page.getByRole("button", { name: "프롬프트 복사", exact: true }).click();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(expected);
 
   const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "프롬프트 .txt 내보내기" }).click()]);
@@ -83,6 +85,7 @@ test("Basic Composer: every attribute → exact prompt, parameters, copy and .tx
   await download.saveAs(txtPath);
   expect(await readFile(txtPath, "utf8")).toBe(`${expected}\n\n# parameters\naspectRatio: 4:5\n`);
 
+  await closePreview(page);
   // survives reload exactly
   await page.reload();
   await expect(output(page)).toHaveText(expected);
@@ -120,10 +123,12 @@ test("conflict: guidance shown on both fields; resolution only on user click", a
 test("safety: blocked output is not shown/copyable/exportable; JSON keeps the original", async ({ page }, info) => {
   await page.goto("/");
   await page.getByRole("textbox", { name: /이미지 설명/ }).fill("sexy schoolgirl");
+  await ensurePreviewOpen(page);
   await expect(page.getByTestId("prompt-blocked")).toContainText("안전 정책에 의해 프롬프트 출력이 차단되었습니다");
-  await expect(page.getByRole("button", { name: "프롬프트 복사" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "프롬프트 복사", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "프롬프트 .txt 내보내기" })).toBeDisabled();
   await shot(page, "safety-blocked", info.project.name);
+  await closePreview(page);
   const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "JSON 내보내기" }).click()]);
   const p = info.outputPath("blocked.json");
   await download.saveAs(p);
@@ -195,14 +200,14 @@ test("partially damaged saved data: recovery requires confirmation and keeps the
   expect(await page.evaluate((k) => localStorage.getItem(`${k}:corrupt-backup`), WORKSPACE_KEY)).toBe(damaged);
 });
 
-test("Detailed and Precision remain clearly marked as future milestones", async ({ page }, info) => {
+test("Detailed is the editor; Precision remains clearly marked as a future milestone", async ({ page }, info) => {
   await page.goto("/");
   await pick(page, "subject.kind", "건축물");
   await page.getByRole("tab", { name: /Detailed/ }).click();
-  await expect(page.getByText("Detailed 모드는 후속 개발 예정입니다 (Sprint 2)")).toBeVisible();
-  await shot(page, "detailed-placeholder", info.project.name);
+  await expect(field(page, "subject.kind").getByRole("radio", { name: "건축물" })).toBeChecked();
   await page.getByRole("tab", { name: /Precision/ }).click();
   await expect(page.getByText("Precision 모드는 후속 개발 예정입니다 (Sprint 3)")).toBeVisible();
+  await shot(page, "precision-placeholder", info.project.name);
   await page.getByRole("tab", { name: /Basic/ }).click();
   await expect(output(page)).toHaveText("Main subject: an architectural structure.");
 });

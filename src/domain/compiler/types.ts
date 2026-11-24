@@ -9,6 +9,12 @@ export interface PromptFragment {
   /** Option ids that contributed (only applicable ones), for option attributes. */
   optionIds?: string[];
   priority?: number;
+  /**
+   * Semantic units of this (preset) phrase that were taken over by direct
+   * selections of other attributes. `equivalent` = same meaning (output once,
+   * by the direct selection); `override` = the direct selection replaced it.
+   */
+  takenOverBy?: Array<{ attributeId: string; relation: "equivalent" | "override" }>;
 }
 
 /**

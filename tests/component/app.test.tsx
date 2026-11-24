@@ -152,9 +152,15 @@ describe("Basic Composer: search, presets, conflicts, parameters", () => {
     const panel = screen.getByTestId("classification-style.preset");
     expect(panel).toHaveTextContent("매체: 디지털 아트");
     expect(panel).toHaveTextContent("‘이미지 스타일’ 항목만 설정됩니다");
+    // Detailed: the style category edits the preset; the deferred style axes are not exposed
     await user.click(tab(/Detailed/));
+    await user.click(screen.getByRole("button", { name: "스타일" }));
+    expect(field("style.preset").dataset.state).toBe("set");
+    expect(fieldFor("style.medium")).toBeNull();
+    // Precision summary (read-only) shows set values only for exposed/set attributes
+    await user.click(tab(/Precision/));
     const summary = screen.getByRole("region", { name: "현재 공유 명세" });
-    expect(summary.querySelector('[data-attribute-id="style.medium"]')).toHaveAttribute("data-state", "unset");
+    expect(summary.querySelector('[data-attribute-id="style.medium"]')).toBeNull();
     expect(summary.querySelector('[data-attribute-id="style.preset"]')).toHaveAttribute("data-state", "set");
   });
 
@@ -218,23 +224,29 @@ describe("safety in the UI", () => {
   });
 });
 
-describe("9. mode switching keeps settings", () => {
-  it("Basic → Detailed → Precision → Basic preserves the same spec", async () => {
+describe("9. mode switching keeps settings (Basic ⊂ Detailed, one spec)", () => {
+  it("Basic → Detailed (edit) → Precision → Basic preserves and shares the same spec", async () => {
     const { user } = await setUp();
     await fillBasics(user);
     await user.click(tab(/Detailed/));
-    expect(screen.getByText(/Detailed 모드는 후속 개발 예정/)).toBeInTheDocument();
-    const summary = screen.getByRole("region", { name: "현재 공유 명세" });
-    expect(within(summary).getByText("인물 (1인)")).toBeInTheDocument();
-    expect(within(summary).getByText("수채화")).toBeInTheDocument();
-    expect(within(summary).getByText("A quiet harbor")).toBeInTheDocument();
-    expect(prompt()).toBe(EXPECTED);
-    await user.click(tab(/Precision/));
-    expect(screen.getByText(/Precision 모드는 후속 개발 예정/)).toBeInTheDocument();
-    await user.click(tab(/Basic/));
-    expect(screen.getByRole("radio", { name: "수채화" })).toBeChecked();
+    // Detailed shows the same values (essentials category first)
+    expect(within(field("subject.kind")).getByRole("radio", { name: "인물 (1인)" })).toBeChecked();
     expect(screen.getByRole("textbox", { name: /이미지 설명/ })).toHaveValue("A quiet harbor");
     expect(prompt()).toBe(EXPECTED);
+    // edit a camera attribute in Detailed
+    await user.click(screen.getByRole("button", { name: "카메라" }));
+    await user.click(within(field("camera.angle")).getByRole("radio", { name: "로우 앵글 (올려다봄)" }));
+    const withAngle = `${EXPECTED} Camera angle: low angle looking up.`;
+    expect(prompt()).toBe(withAngle);
+
+    await user.click(tab(/Precision/));
+    expect(screen.getByText(/Precision 모드는 후속 개발 예정/)).toBeInTheDocument();
+    expect(prompt()).toBe(withAngle);
+
+    await user.click(tab(/Basic/));
+    expect(screen.getByRole("radio", { name: "수채화" })).toBeChecked();
+    expect(within(field("camera.angle")).getByRole("radio", { name: "로우 앵글 (올려다봄)" })).toBeChecked(); // "more settings" auto-opened
+    expect(prompt()).toBe(withAngle);
   });
 });
 
