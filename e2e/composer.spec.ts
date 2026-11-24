@@ -16,6 +16,21 @@ const shot = async (page: Page, name: string, project: string) => {
 };
 const moreSettings = (page: Page, groupId: string) => page.locator(`[data-group-id="${groupId}"] .more__toggle`);
 
+/**
+ * Seed localStorage BEFORE any app script runs on the first navigation (once per tab).
+ * Writing after page load would race with the app's own hydration + autosave on slow
+ * machines (seen on CI): the first page could migrate/save the data before the test reloads.
+ */
+const seedStorage = (page: Page, key: string, value: string) =>
+  page.addInitScript(
+    ([k, v]) => {
+      if (sessionStorage.getItem("__seeded")) return;
+      sessionStorage.setItem("__seeded", "1");
+      localStorage.setItem(k, v);
+    },
+    [key, value] as const,
+  );
+
 /** Records every request that leaves the local app server. */
 const guardNetwork = (page: Page, baseURL: string) => {
   const external: string[] = [];
@@ -142,9 +157,8 @@ test("reset → edit → undo restores the pre-reset state after confirmation", 
 
 test("Sprint 0 saved data is migrated on load with the reason shown and the original kept", async ({ page }, info) => {
   const raw = readFileSync(join(__dirname, "../tests/fixtures/sprint0/localstorage-workspace.txt"), "utf8");
+  await seedStorage(page, WORKSPACE_KEY, raw);
   await page.goto("/");
-  await page.evaluate(([k, v]) => localStorage.setItem(k!, v!), [WORKSPACE_KEY, raw]);
-  await page.reload();
   await expect(page.getByText("이전 버전 데이터를 현재 카탈로그에 맞게 변환했습니다")).toBeVisible();
   await expect(page.getByText(/style\.visual → style\.preset/)).toBeVisible();
   await expect(output(page)).toContainText("Visual style: watercolor painting.");
@@ -169,9 +183,8 @@ test("partially damaged saved data: recovery requires confirmation and keeps the
       },
     },
   });
+  await seedStorage(page, WORKSPACE_KEY, damaged);
   await page.goto("/");
-  await page.evaluate(([k, v]) => localStorage.setItem(k!, v!), [WORKSPACE_KEY, damaged]);
-  await page.reload();
   const dialog = page.getByRole("alertdialog", { name: "저장된 작업 일부를 복원할 수 없습니다" });
   await expect(dialog).toContainText("selections.subject.kind");
   await expect(page.getByTestId("storage-status")).toContainText("일시 중지");

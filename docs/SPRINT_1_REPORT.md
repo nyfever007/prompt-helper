@@ -134,7 +134,7 @@
 | `pnpm build` | ✅ 성공 |
 | `pnpm test:e2e` (Playwright) | ✅ **26 / 26** (13개 × Desktop Chrome·Pixel 7) |
 | `pnpm verify` (위 전체) | ✅ 종료 코드 0 |
-| 원격 CI (GitHub Actions) | ⏳ 이 보고서 작성 시점에는 미확인 — push 이후 첫 실행 |
+| 원격 CI (GitHub Actions) | 1차 실행(`c4dce16`): typecheck·lint·test·build 통과, **E2E 24/26** — Sprint 0 마이그레이션 테스트 2건이 CI의 느린 hydration과 테스트 데이터 주입 사이의 **타이밍 경쟁**으로 실패(앱 결함 아님). 테스트가 앱 실행 전에 저장소를 채우도록(`addInitScript`) 수정하고, 로컬에서 26/26과 해당 테스트 5회 반복 통과를 확인. 2차 실행 결과는 아래 §5.1 |
 
 | 테스트 파일 | 수 | 다루는 요구 항목 |
 |---|---|---|
@@ -154,6 +154,12 @@
 | `unit/spec.test.ts` | 5 | ImageSpec 생성과 검증 |
 | `unit/recovery.test.ts` | 4 | 제외 항목·사유·원본, 입력 불변 |
 | `unit/provider.test.ts` | 3 | 네트워크 호출 없음, 도메인의 UI 비의존 |
+
+### 5.1 원격 CI 실행 이력
+| 실행 | 커밋 | 결과 |
+|---|---|---|
+| 1차 | `c4dce16` | ❌ E2E 2건 실패 (테스트 타이밍 경쟁) — 위 표 참고 |
+| 2차 | E2E 수정 커밋 | 확인 후 기재 |
 
 ## 6. 실제 브라우저 검증 결과
 
