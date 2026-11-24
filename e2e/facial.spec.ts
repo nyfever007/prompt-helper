@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { ensurePreviewOpen, guardNetwork } from "./helpers";
+import { pickColor, ensurePreviewOpen, guardNetwork } from "./helpers";
 
 /**
  * Sprint 2-B.2 — Person › Face, Eyes, Eyebrows, Nose, Lips on the PRODUCT catalog (/), desktop and mobile.
@@ -17,7 +17,7 @@ const pickChip = (page: Page, id: string, label: string) =>
 const go = async (page: Page, label: string) => {
   const toggle = page.locator(".nav-toggle");
   if ((await toggle.isVisible()) && (await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
-  await nav(page).getByRole("button", { name: label, exact: true }).click();
+  await nav(page).getByRole("treeitem", { name: label, exact: true }).locator(":scope > .cat-row").click() // the row itself (an expanded item also contains its children);
 };
 /** Relative slider: the unset display sits in the middle (3); each arrow key is one explicit user step. */
 const slide = async (page: Page, id: string, steps: number) => {
@@ -50,7 +50,7 @@ test("facial features: shapes, relative sliders, colors, multi traits, custom va
   await slide(page, "person.eyes.size", 1);
   await expect(page.getByTestId("slider-value-person.eyes.size")).toHaveText("큼");
   await slide(page, "person.eyes.outer_corner_angle", 1);
-  await pickChip(page, "person.eyes.iris_color", "짙은 갈색");
+  await pickColor(page, "person.eyes.iris_color", "짙은 갈색");
   await shot(page, "eyes", project);
 
   // Eyebrows, nose (shape covers the same bridge meaning), lips with exclusion
@@ -62,7 +62,7 @@ test("facial features: shapes, relative sliders, colors, multi traits, custom va
   await expect(page.getByTestId("covered-person.nose.bridge_shape")).toBeVisible();
   await go(page, "입술");
   await slide(page, "person.lips.lower_thickness", 1);
-  await pickChip(page, "person.lips.natural_color", "장밋빛");
+  await pickColor(page, "person.lips.natural_color", "장밋빛");
   await field(page, "person.lips.natural_color").getByRole("switch", { name: /프롬프트에 포함/ }).uncheck();
   await shot(page, "lips", project);
 

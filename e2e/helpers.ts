@@ -16,6 +16,15 @@ export const closePreview = async (page: Page) => {
   if ((await toggle.getAttribute("aria-expanded")) === "true") await toggle.click();
 };
 
+/** Color pickers are collapsed (Sprint 2-C.1, TD-13): open the palette, choose, and check the collapsed value. */
+export const pickColor = async (page: Page, id: string, label: string) => {
+  const f = page.locator(`[data-attribute-id="${id}"]`);
+  await f.getByRole("button", { name: /색상 선택$|색상 변경$/ }).click();
+  await f.locator("label.chip").filter({ has: page.getByText(label, { exact: true }) }).click();
+  await expect(f.getByTestId(`color-current-${id}`)).toContainText(label);
+  await expect(f.locator(".color-palette")).toHaveCount(0); // a single choice closes the palette
+};
+
 /** Records every request that leaves the local app server. */
 export const guardNetwork = (page: Page, baseURL: string) => {
   const external: string[] = [];

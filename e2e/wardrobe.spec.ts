@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { closePreview, ensurePreviewOpen, guardNetwork } from "./helpers";
+import { pickColor, closePreview, ensurePreviewOpen, guardNetwork } from "./helpers";
 
 /**
  * Sprint 2-B.5 — Expression, Impression, Makeup, Wardrobe & Accessories on the PRODUCT
@@ -22,7 +22,7 @@ const pickListed = async (page: Page, id: string, query: string, role: "radio" |
 const go = async (page: Page, label: string) => {
   const toggle = page.locator(".nav-toggle");
   if ((await toggle.isVisible()) && (await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
-  await nav(page).getByRole("button", { name: label, exact: true }).click();
+  await nav(page).getByRole("treeitem", { name: label, exact: true }).locator(":scope > .cat-row").click() // the row itself (an expanded item also contains its children);
 };
 const closeNav = async (page: Page) => {
   const toggle = page.locator(".nav-toggle");
@@ -56,7 +56,7 @@ test("expression, makeup, garments and accessories: independent values, none/app
   await go(page, "메이크업");
   await pickListed(page, "person.makeup.style", "내추럴", "checkbox", /^내추럴/);
   await pickChip(page, "person.makeup.base_finish", "듀이");
-  await pickChip(page, "person.makeup.lip_color", "더스티 로즈");
+  await pickColor(page, "person.makeup.lip_color", "더스티 로즈");
   await shot(page, "makeup", project);
 
   await go(page, "전체 설정");
@@ -64,7 +64,7 @@ test("expression, makeup, garments and accessories: independent values, none/app
 
   await go(page, "상의");
   await pickListed(page, "person.clothing.tops.type", "버튼다운", "radio", /^버튼다운 셔츠/);
-  await pickChip(page, "person.clothing.tops.primary_color", "아이보리");
+  await pickColor(page, "person.clothing.tops.primary_color", "아이보리");
   await pickListed(page, "person.clothing.tops.material", "린넨", "radio", /^린넨/);
   await pickChip(page, "person.clothing.tops.fit", "오버사이즈");
   await field(page, "person.clothing.tops.fit").getByRole("switch", { name: /프롬프트에 포함/ }).uncheck();
@@ -72,11 +72,11 @@ test("expression, makeup, garments and accessories: independent values, none/app
 
   await go(page, "하의");
   await pickListed(page, "person.clothing.bottoms.type", "테일러드", "radio", /^테일러드 바지/);
-  await pickChip(page, "person.clothing.bottoms.primary_color", "네이비");
+  await pickColor(page, "person.clothing.bottoms.primary_color", "네이비");
 
   await go(page, "신발");
   await pickListed(page, "person.clothing.footwear.type", "로퍼", "radio", /^로퍼/);
-  await pickChip(page, "person.clothing.footwear.primary_color", "초콜릿 브라운");
+  await pickColor(page, "person.clothing.footwear.primary_color", "초콜릿 브라운");
   await pickListed(page, "person.clothing.footwear.material", "가죽", "radio", /^가죽/);
   await pickChip(page, "person.clothing.footwear.heel_type", "블록 힐");
   await pickChip(page, "person.clothing.footwear.heel_height", "플랫"); // flat heels: the heel type is kept but not output

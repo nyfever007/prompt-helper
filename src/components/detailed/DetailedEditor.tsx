@@ -14,9 +14,12 @@ import {
 import { fmt, type Messages } from "@/i18n/messages";
 import type { Workspace } from "@/state/useWorkspace";
 import { WorkspaceField } from "../controls/WorkspaceField";
+import { ModalDialog } from "../ModalDialog";
 import { attributeLabel } from "../format";
 import { CategoryNav } from "./CategoryNav";
 import { PresetDialog } from "./PresetDialog";
+
+const PAGE_TITLE = "\u0000page-title";
 
 /**
  * Detailed Editor: navigation, editing panel and (in the app shell) preview.
@@ -49,13 +52,20 @@ export function DetailedEditor({
     const id = pendingFocus.current;
     if (!id) return;
     pendingFocus.current = null;
+    if (id === PAGE_TITLE) {
+      const title = document.getElementById("cat-panel-title");
+      title?.scrollIntoView?.({ block: "nearest" });
+      title?.focus();
+      return;
+    }
     const el = document.getElementById(`attr-${id}`);
     el?.scrollIntoView?.({ block: "center" });
     el?.focus();
   }, [selectedId]);
 
   const select = (categoryId: string, attributeId?: string) => {
-    pendingFocus.current = attributeId ?? null;
+    // With the (mobile) category drawer open, the chosen item disappears with the drawer: continue on the page title.
+    pendingFocus.current = attributeId ?? (navOpen ? PAGE_TITLE : null);
     setSelectedId(categoryId);
     setNavOpen(false);
     if (attributeId && categoryId === selectedId) {
@@ -75,7 +85,7 @@ export function DetailedEditor({
   return (
     <div className="detailed" data-nav-open={navOpen}>
       <div className="detailed__navbar">
-        <button type="button" className="button nav-toggle" aria-expanded={navOpen} onClick={() => setNavOpen(!navOpen)}>
+        <button type="button" className="button nav-toggle" aria-expanded={navOpen} aria-controls="detailed-nav" onClick={() => setNavOpen(!navOpen)}>
           ☰ {navOpen ? t.detailed.closeNav : t.detailed.openNav}
           {node && <span className="muted small"> · {resolveText(node.category.label, locale)}</span>}
         </button>
@@ -109,7 +119,23 @@ export function DetailedEditor({
             </button>
           </div>
         )}
-        {node && <CategoryPanel key={node.category.id} node={node} registry={registry} workspace={workspace} locale={locale} t={t} onSelect={select} onOpenPreset={setDialogPresetId} />}
+        {node && (
+          <CategoryPanel
+            key={node.category.id}
+            node={node}
+            registry={registry}
+            workspace={workspace}
+            locale={locale}
+            t={t}
+            onSelect={select}
+            onOpenPreset={setDialogPresetId}
+            sequence={sequenceAround(flat, node.category.id)}
+            onStep={(id) => {
+              pendingFocus.current = PAGE_TITLE;
+              setSelectedId(id);
+            }}
+          />
+        )}
       </div>
       {dialogPresetId && (
         <PresetDialog
@@ -131,6 +157,20 @@ export function DetailedEditor({
   );
 }
 
+/**
+ * Previous / next page with editable attributes, in navigation order (approved, applicable pages
+ * only), so a long area such as Wardrobe or Camera can be walked through without reopening the
+ * navigation (mobile in particular). Purely navigational.
+ */
+const sequenceAround = (flat: CategoryNode[], id: string) => {
+  const pages = flat.filter((n) => n.approved && n.applicable && n.attributes.length > 0);
+  const order = flat.map((n) => n.category.id);
+  const at = order.indexOf(id);
+  const before = pages.filter((n) => order.indexOf(n.category.id) < at);
+  const after = pages.filter((n) => order.indexOf(n.category.id) > at);
+  return { previous: before[before.length - 1], next: after[0] };
+};
+
 function CategoryPanel({
   node,
   registry,
@@ -139,6 +179,8 @@ function CategoryPanel({
   t,
   onSelect,
   onOpenPreset,
+  sequence,
+  onStep,
 }: {
   node: CategoryNode;
   registry: CatalogRegistry;
@@ -147,6 +189,8 @@ function CategoryPanel({
   t: Messages;
   onSelect(id: string): void;
   onOpenPreset(id: string): void;
+  sequence: { previous: CategoryNode | undefined; next: CategoryNode | undefined };
+  onStep(id: string): void;
 }) {
   const c = node.category;
   const path = registry.categoryPath(c.id).map((id) => resolveText(registry.getCategory(id)?.label, locale));
@@ -167,7 +211,7 @@ function CategoryPanel({
     <section className="cat-panel" aria-labelledby="cat-panel-title" data-category-id={c.id}>
       <p className="breadcrumb muted small">{path.join(" › ")}</p>
       <div className="cat-panel__head">
-        <h2 id="cat-panel-title">
+        <h2 id="cat-panel-title" tabIndex={-1}>
           {resolveText(c.label, locale)} {!node.approved && <span className="badge badge--planned">{t.detailed.draft}</span>}
           {targets.length > 0 && <span className="badge badge--set"> {fmt(t.detailed.setCount, { n: targets.length })}</span>}
         </h2>
@@ -185,7 +229,13 @@ function CategoryPanel({
         )}
       </div>
       {confirming && (
-        <div className="modal" role="dialog" aria-modal="true" aria-labelledby="cat-reset-title" data-testid="category-reset-dialog" onKeyDown={(e) => e.key === "Escape" && setConfirming(false)}>
+        <ModalDialog
+          labelledBy="cat-reset-title"
+          testId="category-reset-dialog"
+          onClose={() => setConfirming(false)}
+          // After a reset the button is disabled (nothing left): focus the undo button, else the page title.
+          returnFocus={() => document.querySelector<HTMLElement>('[data-testid="category-reset-bar"] button') ?? document.getElementById("cat-panel-title")}
+        >
           <div className="modal__card">
             <h3 id="cat-reset-title">{fmt(t.categoryReset.title, { name: resolveText(c.label, locale) })}</h3>
             <p>{fmt(t.categoryReset.body, { n: targets.length })}</p>
@@ -211,12 +261,12 @@ function CategoryPanel({
               >
                 {fmt(t.categoryReset.confirm, { n: targets.length })}
               </button>
-              <button type="button" className="button" autoFocus onClick={() => setConfirming(false)}>
+              <button type="button" className="button" data-autofocus onClick={() => setConfirming(false)}>
                 {t.categoryReset.cancel}
               </button>
             </div>
           </div>
-        </div>
+        </ModalDialog>
       )}
       {c.description && <p className="muted">{resolveText(c.description, locale)}</p>}
       {!node.applicable && (
@@ -271,6 +321,22 @@ function CategoryPanel({
         </div>
       )}
       {node.approved && node.attributes.length === 0 && node.children.length === 0 && <p className="muted">{t.detailed.emptyApproved}</p>}
+      {(sequence.previous || sequence.next) && (
+        <nav className="cat-sequence" aria-label={t.detailed.sequence} data-testid="category-sequence">
+          {sequence.previous ? (
+            <button type="button" className="button button--small" onClick={() => onStep(sequence.previous!.category.id)}>
+              ← {fmt(t.detailed.previous, { name: resolveText(sequence.previous.category.label, locale) })}
+            </button>
+          ) : (
+            <span />
+          )}
+          {sequence.next && (
+            <button type="button" className="button button--small" onClick={() => onStep(sequence.next!.category.id)}>
+              {fmt(t.detailed.next, { name: resolveText(sequence.next.category.label, locale) })} →
+            </button>
+          )}
+        </nav>
+      )}
     </section>
   );
 }

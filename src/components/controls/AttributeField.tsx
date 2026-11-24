@@ -130,12 +130,20 @@ export function AttributeField(props: AttributeFieldProps) {
           {isSet ? (excluded ? t.field.excludedBadge : t.field.set) : t.field.notSet}
         </span>
         {presetName && <span className="badge badge--preset">{fmt(t.detailed.fromPreset, { name: presetName })}</span>}
+        {/* Sprint 2-C.1: include/exclude and clear sit together in the header, next to the state. */}
+        {attribute.outputToggle && isSet && props.onSetExcluded && (
+          <label className="output-toggle" data-testid={`output-toggle-${attribute.id}`}>
+            <input type="checkbox" role="switch" checked={!excluded} aria-checked={!excluded} onChange={(e) => props.onSetExcluded!(!e.target.checked)} />
+            <span>{t.field.includeInPrompt}</span>
+          </label>
+        )}
         {isSet && (
-          <button type="button" className="link-button" onClick={onClear} aria-label={`${t.field.clear}: ${label}`}>
+          <button type="button" className="link-button field__clear" onClick={onClear} aria-label={`${t.field.clear}: ${label}`}>
             {t.field.clear}
           </button>
         )}
       </header>
+      {excluded && <p className="muted small field__excluded">{t.field.excludedHint}</p>}
       {description && <p className="field__description">{description}</p>}
       {isSet && !active && <p className="field__inactive">{t.field.inactive}</p>}
       {inactiveOptions.length > 0 && (
@@ -172,14 +180,6 @@ export function AttributeField(props: AttributeFieldProps) {
         <button type="button" className="link-button" onClick={() => onSet(attribute.defaultValue!)}>
           {t.field.useDefault}: {describeValue(attribute, attribute.defaultValue, locale)}
         </button>
-      )}
-
-      {attribute.outputToggle && isSet && props.onSetExcluded && (
-        <label className="output-toggle" data-testid={`output-toggle-${attribute.id}`}>
-          <input type="checkbox" role="switch" checked={!excluded} aria-checked={!excluded} onChange={(e) => props.onSetExcluded!(!e.target.checked)} />
-          <span>{t.field.includeInPrompt}</span>
-          {excluded && <span className="muted small"> — {t.field.excludedHint}</span>}
-        </label>
       )}
 
       {classified.length > 0 && (

@@ -22,7 +22,7 @@ const pickChip = (page: Page, id: string, label: string) =>
 const go = async (page: Page, label: string) => {
   const toggle = page.locator(".nav-toggle");
   if ((await toggle.isVisible()) && (await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
-  await nav(page).getByRole("button", { name: label, exact: true }).click();
+  await nav(page).getByRole("treeitem", { name: label, exact: true }).locator(":scope > .cat-row").click() // the row itself (an expanded item also contains its children);
 };
 const stored = async (page: Page) =>
   page.evaluate(() => JSON.parse(localStorage.getItem("prompter:v1:workspace") ?? "{}").spec?.selections ?? {});
@@ -147,7 +147,7 @@ test.describe("Person › Identity (product catalog)", () => {
   test("category reset clears ALL stored identity values even while searching, then undo restores them", async ({ page }, info) => {
     await page.goto("/");
     await page.getByRole("tab", { name: /Detailed/ }).click();
-    await go(page, "조명");
+    await go(page, "조명 프리셋 및 광원");
     await pickChip(page, "lighting.preset", "골든아워");
     await go(page, "사회");
     await field(page, P + "occupation").getByRole("searchbox").fill("요리");

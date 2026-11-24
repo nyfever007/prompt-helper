@@ -18,7 +18,7 @@ const go = async (page: Page, label: string) => {
   if (await toggle.isVisible()) {
     if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
   }
-  await nav(page).getByRole("button", { name: label, exact: true }).click();
+  await nav(page).getByRole("treeitem", { name: label, exact: true }).locator(":scope > .cat-row").click() // the row itself (an expanded item also contains its children);
 };
 const isMobile = (project: string) => project === "mobile";
 
@@ -35,8 +35,9 @@ test.describe("product catalog (/)", () => {
     await page.getByRole("tab", { name: /Detailed/ }).click();
     await expect(field(page, "subject.kind").getByRole("radio", { name: "인물 (1인)" })).toBeChecked();
 
-    await go(page, "조명");
+    await go(page, "조명 프리셋 및 광원"); // Lighting subcategories (Sprint 2-C.1)
     await pick(page, "lighting.preset", "골든아워");
+    await go(page, "색상 및 색온도");
     await pick(page, "lighting.color_temperature", "차가운");
     await expect(output(page)).toHaveText(
       "Main subject: a single person. Visual style: watercolor painting. Lighting: golden-hour sunlight. Color temperature: cool.",
@@ -66,7 +67,7 @@ test.describe("product catalog (/)", () => {
     if (await toggle.isVisible()) await toggle.click();
     await nav(page).getByRole("searchbox").fill("색온도");
     await nav(page).getByRole("button", { name: /색온도/ }).first().click();
-    await expect(page.getByRole("heading", { level: 2, name: "조명" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "색상 및 색온도" })).toBeVisible();
     await expect(field(page, "lighting.color_temperature")).toBeFocused();
   });
 
@@ -134,6 +135,7 @@ test.describe("E2E-only fixture catalog (/e2e-fixtures)", () => {
     await shot(page, "fixture-cards", info.project.name);
 
     await go(page, "눈");
+    await field(page, "x.eyes.color").getByRole("button", { name: /색상 선택$/ }).click(); // collapsed picker (Sprint 2-C.1)
     await field(page, "x.eyes.color").locator("label.chip").filter({ hasText: "헤이즐" }).click();
     await go(page, "메이크업");
     await field(page, "x.makeup.finish").getByRole("combobox").selectOption("dewy");
@@ -173,7 +175,7 @@ test.describe("E2E-only fixture catalog (/e2e-fixtures)", () => {
   test("composite preset: preview, overwrite confirmation, apply, undo that spares user edits", async ({ page }, info) => {
     await openFixture(page);
     await pick(page, "subject.kind", "인물 (1인)");
-    await go(page, "카메라");
+    await go(page, "프레이밍 및 시점");
     await pick(page, "composition.framing", "전신");
     await go(page, "표정 및 시각적 인상");
     await page.getByRole("button", { name: /변경 내용 확인… 부드러운 인물 사진/ }).click();

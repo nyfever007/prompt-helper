@@ -1,7 +1,7 @@
 import type { CatalogInput, Condition } from "../schema";
 import { appearanceAttribute } from "./person/appearance";
-import { cameraAttributes, cameraRules } from "./shared/camera";
-import { lightingAttributes, lightingRules } from "./shared/lighting";
+import { cameraAttributes, cameraCategories, cameraCategoryOf, cameraRules } from "./shared/camera";
+import { lightingAttributes, lightingCategories, lightingCategoryOf, lightingRules } from "./shared/lighting";
 import { POSE_CATEGORY_DESCRIPTION, poseAttributes, poseCategories, poseRules } from "./person/pose";
 import { ACCESSORIES_CATEGORY_DESCRIPTION, accessoriesAttributes, accessoriesRules } from "./person/accessories";
 import { BODY_CATEGORY_DESCRIPTION, bodyAttributes, bodyCategories } from "./person/body";
@@ -35,6 +35,8 @@ const APPROVED_PERSON_AREAS: Record<string, { en: string; ko: string }> = {
  * 0.8.0 Sprint 2-B.5 (Person › Expression & impression, Makeup, Wardrobe, Accessories — approved; order 354–477).
  * 0.9.0 Sprint 2-B.6 (Appearance direction 195 — subject 200 → 190; Pose & action 478–499; Camera 1605–1675;
  * Lighting 2025–2095 + options added to the six lighting properties — no ID changes, prompts unchanged).
+ * 0.10.0 Sprint 2-C.1 (Camera → 5 and Lighting → 6 subcategories for the Detailed navigation — no ID, option,
+ * order or output changes).
  *
  * Every list here is an extensible STARTING POINT, not a final scope. No option
  * count limits are implied; add entries as data and bump `version`.
@@ -59,7 +61,7 @@ const NON_ABSTRACT = [...ORIENTED_SUBJECTS, "landscape"];
 export const coreCatalog = {
   formatVersion: "0.4.0",
   id: "prompter.core",
-  version: "0.9.0",
+  version: "0.10.0",
   title: { en: "Prompter core catalog", ko: "Prompter 기본 카탈로그" },
   groups: [
     { id: "what", order: 0, label: { en: "What to depict", ko: "무엇을 그릴까요" } },
@@ -142,6 +144,8 @@ export const coreCatalog = {
     { id: "shared", order: 40, status: "approved", label: { en: "Shared", ko: "공통" } },
     { id: "shared_camera", parentId: "shared", order: 41, status: "approved", label: { en: "Camera", ko: "카메라" }, docPath: "docs/catalogs/shared/camera.md" },
     { id: "shared_lighting", parentId: "shared", order: 42, status: "approved", label: { en: "Lighting", ko: "조명" }, docPath: "docs/catalogs/shared/lighting.md" },
+    ...cameraCategories,
+    ...lightingCategories,
     { id: "shared_style", parentId: "shared", order: 43, status: "approved", label: { en: "Style", ko: "스타일" } },
     { id: "shared_scene", parentId: "shared", order: 44, status: "approved", label: { en: "Place & background", ko: "장소와 배경" } },
     { id: "shared_mood", parentId: "shared", order: 45, status: "approved", label: { en: "Mood", ko: "분위기" } },
@@ -504,7 +508,7 @@ export const coreCatalog = {
       id: "composition.framing",
       domain: "composition",
       status: "approved",
-      categoryId: "shared_camera",
+      categoryId: cameraCategoryOf("composition.framing"),
       groupId: "composition",
       type: "single",
       tier: "basic",
@@ -534,7 +538,7 @@ export const coreCatalog = {
       id: "composition.view_direction",
       domain: "composition",
       status: "approved",
-      categoryId: "shared_camera",
+      categoryId: cameraCategoryOf("composition.view_direction"),
       groupId: "composition",
       type: "single",
       tier: "basic",
@@ -558,7 +562,7 @@ export const coreCatalog = {
       id: "camera.angle",
       domain: "camera",
       status: "approved",
-      categoryId: "shared_camera",
+      categoryId: cameraCategoryOf("camera.angle"),
       groupId: "composition",
       type: "single",
       tier: "basic",
@@ -674,7 +678,7 @@ export const coreCatalog = {
       id: "lighting.preset",
       domain: "lighting",
       status: "approved",
-      categoryId: "shared_lighting",
+      categoryId: lightingCategoryOf("lighting.preset"),
       groupId: "atmosphere",
       type: "single",
       tier: "basic",
@@ -728,7 +732,7 @@ export const coreCatalog = {
       id,
       domain: "lighting",
       status: "approved" as const, // approved for Detailed editing (Sprint 2-A, D1)
-      categoryId: "shared_lighting",
+      categoryId: lightingCategoryOf(id),
       groupId: "lighting_axes",
       type: "single" as const,
       tier: "detailed" as const,
@@ -971,6 +975,12 @@ export const coreCatalog = {
       fromVersion: "0.8.0",
       toVersion: "0.9.0",
       // No ID changes: 0.9.0 adds appearance direction, pose, camera and lighting attributes and options.
+      changes: [],
+    },
+    {
+      fromVersion: "0.9.0",
+      toVersion: "0.10.0",
+      // No ID changes: 0.10.0 only moves camera and lighting attributes into subcategories (navigation).
       changes: [],
     },
   ],

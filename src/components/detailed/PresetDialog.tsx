@@ -5,6 +5,7 @@ import { planPreset, resolveText, type CatalogRegistry, type PresetPlan, type Pr
 import { fmt, type Messages } from "@/i18n/messages";
 import type { Workspace } from "@/state/useWorkspace";
 import { describeDiagnostic } from "../diagnostics";
+import { ModalDialog } from "../ModalDialog";
 import { attributeLabel, describeValue } from "../format";
 
 /**
@@ -60,7 +61,7 @@ export function PresetDialog({
   };
 
   return (
-    <div className="modal" role="dialog" aria-modal="true" aria-labelledby="preset-dialog-title" onKeyDown={(e) => e.key === "Escape" && onClose()}>
+    <ModalDialog labelledBy="preset-dialog-title" onClose={onClose}>
       <div className="modal__card">
         <h2 id="preset-dialog-title">{fmt(t.presetDialog.title, { name })}</h2>
         {p.preset.description && <p className="muted">{resolveText(p.preset.description, locale)}</p>}
@@ -108,11 +109,11 @@ export function PresetDialog({
               {t.presetDialog.apply}
             </button>
           )}
-          <button type="button" className="button" onClick={onClose} autoFocus>
+          <button type="button" className="button" onClick={onClose} data-autofocus>
             {t.presetDialog.cancel}
           </button>
         </div>
       </div>
-    </div>
+    </ModalDialog>
   );
 }

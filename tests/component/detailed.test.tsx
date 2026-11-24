@@ -17,7 +17,7 @@ const prompt = () => screen.queryByTestId("prompt-output")?.textContent ?? "";
 const fieldFor = (id: string) => document.querySelector<HTMLElement>(`[data-attribute-id="${id}"]`);
 const field = (id: string) => fieldFor(id)!;
 const nav = () => screen.getByRole("navigation", { name: "카테고리" });
-const go = async (user: ReturnType<typeof userEvent.setup>, label: string) => user.click(within(nav()).getByRole("button", { name: label }));
+const go = async (user: ReturnType<typeof userEvent.setup>, label: string) => user.click(within(nav()).getByRole("treeitem", { name: label }));
 const saved = (store: KeyValueStore) => JSON.parse(store.getItem(WORKSPACE_STORAGE_KEY) ?? "{}").spec?.selections ?? {};
 
 const open = async (store: KeyValueStore = createMemoryStore()) => {
@@ -32,23 +32,26 @@ describe("Detailed navigation (data-driven)", () => {
   it("builds the category tree from the catalog and starts at the first editable category", async () => {
     await open();
     const n = nav();
-    for (const label of ["기본", "인물", "얼굴", "눈썹", "공통", "카메라", "조명"]) expect(within(n).getByRole("button", { name: label })).toBeInTheDocument();
+    for (const label of ["기본", "인물", "얼굴", "눈썹", "공통", "카메라", "조명"]) expect(within(n).getByRole("treeitem", { name: label })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "기본" })).toBeInTheDocument();
     expect(fieldFor("subject.kind")).not.toBeNull();
   });
 
-  it("collapses and expands branches", async () => {
+  it("collapses and expands branches (mouse toggle; the item states aria-expanded)", async () => {
     const { user } = await open();
-    expect(within(nav()).getByRole("button", { name: "얼굴" })).toBeInTheDocument();
-    await user.click(within(nav()).getByRole("button", { name: "인물 −" }));
-    expect(within(nav()).queryByRole("button", { name: "얼굴" })).toBeNull();
-    await user.click(within(nav()).getByRole("button", { name: "인물 +" }));
-    expect(within(nav()).getByRole("button", { name: "얼굴" })).toBeInTheDocument();
+    const person = within(nav()).getByRole("treeitem", { name: "인물" });
+    expect(person).toHaveAttribute("aria-expanded", "true");
+    expect(within(nav()).getByRole("treeitem", { name: "얼굴" })).toBeInTheDocument();
+    await user.click(person.querySelector(".cat-toggle")!);
+    expect(person).toHaveAttribute("aria-expanded", "false");
+    expect(within(nav()).queryByRole("treeitem", { name: "얼굴" })).toBeNull();
+    await user.click(person.querySelector(".cat-toggle")!);
+    expect(within(nav()).getByRole("treeitem", { name: "얼굴" })).toBeInTheDocument();
   });
 
   it("shows set counts and warning/blocked badges that follow the spec", async () => {
     const { user } = await open();
-    await go(user, "조명");
+    await go(user, "조명 프리셋 및 광원");
     await user.click(within(field("lighting.preset")).getByRole("radio", { name: "골든아워" }));
     expect(screen.getByTestId("count-shared_lighting")).toHaveTextContent("1");
     expect(screen.getByTestId("count-shared")).toHaveTextContent("1");
@@ -68,7 +71,7 @@ describe("Detailed navigation (data-driven)", () => {
     expect(document.activeElement).toBe(field("x.face.shape"));
     await user.type(within(nav()).getByRole("searchbox"), "golden");
     await user.click(within(nav()).getAllByRole("button", { name: /골든아워/ })[0]!);
-    expect(screen.getByRole("heading", { level: 2, name: "조명" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "조명 프리셋 및 광원" })).toBeInTheDocument();
   });
 
   it("draft areas are honest placeholders with their design document", async () => {
@@ -128,9 +131,12 @@ describe("generic controls and unset", () => {
   it("color: palette swatches (single and multi)", async () => {
     const { user } = await open();
     await go(user, "눈");
+    // Collapsed by default (Sprint 2-C.1, TD-13): the palette opens on request.
+    await user.click(within(field("x.eyes.color")).getByRole("button", { name: /색상 선택$/ }));
     await user.click(within(field("x.eyes.color")).getByRole("radio", { name: "헤이즐" }));
     expect(prompt()).toBe("Eye color: hazel eyes.");
     await go(user, "헤어");
+    await user.click(within(field("x.hair.colors")).getByRole("button", { name: /색상 선택$/ }));
     await user.click(within(field("x.hair.colors")).getByRole("checkbox", { name: "은발" }));
     await user.click(within(field("x.hair.colors")).getByRole("checkbox", { name: "검은색" }));
     expect(prompt()).toContain("Hair color: black, silver.");
@@ -207,7 +213,7 @@ describe("generic controls and unset", () => {
     unmount();
     // reload: the last complete valid value is restored
     await open(store);
-    await user.click(within(nav()).getByRole("button", { name: "장소와 배경" }));
+    await user.click(within(nav()).getByRole("treeitem", { name: "장소와 배경" }));
     expect(within(field("x.scene.people_count")).getByRole("spinbutton", { name: /최댓값/ })).toHaveValue(9);
     await user.click(within(field("x.scene.people_count")).getByRole("button", { name: /선택 해제/ }));
     expect(field("x.scene.people_count").dataset.state).toBe("unset");
@@ -255,7 +261,7 @@ describe("composite presets (UI)", () => {
     const { user } = await open();
     // existing explicit choices
     await user.click(within(field("subject.kind")).getByRole("radio", { name: "인물 (1인)" }));
-    await go(user, "카메라");
+    await go(user, "프레이밍 및 시점");
     await user.click(within(field("composition.framing")).getByRole("radio", { name: "전신" }));
     await go(user, "분위기");
     await user.click(within(field("mood.tone")).getByRole("checkbox", { name: "평온한" }));
@@ -289,7 +295,7 @@ describe("composite presets (UI)", () => {
   it("'apply only to empty attributes' keeps existing values", async () => {
     const { user } = await open();
     await user.click(within(field("subject.kind")).getByRole("radio", { name: "인물 (1인)" }));
-    await go(user, "카메라");
+    await go(user, "프레이밍 및 시점");
     await user.click(within(field("composition.framing")).getByRole("radio", { name: "전신" }));
     await go(user, "표정 및 시각적 인상");
     await user.click(screen.getByRole("button", { name: /변경 내용 확인… 부드러운 인물 사진/ }));
@@ -319,14 +325,16 @@ describe("composite presets (UI)", () => {
 describe("semantic units in the UI", () => {
   it("a direct light property equal to the preset's meaning is output once and attributed to the direct setting", async () => {
     const { user } = await open();
-    await go(user, "조명");
+    await go(user, "조명 프리셋 및 광원");
     await user.click(within(field("lighting.preset")).getByRole("radio", { name: "골든아워" }));
+    await go(user, "색상 및 색온도");
     await user.click(within(field("lighting.color_temperature")).getByRole("radio", { name: "따뜻한" }));
     expect(prompt()).toBe("Lighting: golden-hour sunlight. Color temperature: warm.");
     expect(screen.getByTestId("takeover-lighting.color_temperature")).toHaveTextContent("‘조명 (빠른 프리셋)’에도 포함된 표현");
     await user.click(within(field("lighting.color_temperature")).getByRole("radio", { name: "차가운" }));
     expect(prompt()).toBe("Lighting: golden-hour sunlight. Color temperature: cool.");
     expect(screen.getByTestId("takeover-lighting.color_temperature")).toHaveTextContent("직접 설정으로 대체했습니다");
+    await go(user, "조명 프리셋 및 광원");
     expect(field("lighting.preset").dataset.state).toBe("set");
   });
 });
@@ -347,7 +355,7 @@ describe("mobile toolbar", () => {
     expect(writeText).toHaveBeenCalledWith("Main subject: an animal.");
     await go(user, "장소와 배경");
     await user.click(within(field("scene.setting")).getByRole("radio", { name: "스튜디오" }));
-    await go(user, "조명");
+    await go(user, "조명 프리셋 및 광원");
     await user.click(within(field("lighting.preset")).getByRole("radio", { name: "달빛" }));
     expect(screen.getByTestId("mobile-status")).toHaveTextContent("⚠ 1");
   });

@@ -154,7 +154,7 @@ describe("Basic Composer: search, presets, conflicts, parameters", () => {
     expect(panel).toHaveTextContent("‘이미지 스타일’ 항목만 설정됩니다");
     // Detailed: the style category edits the preset; the deferred style axes are not exposed
     await user.click(tab(/Detailed/));
-    await user.click(screen.getByRole("button", { name: "스타일" }));
+    await user.click(screen.getByRole("treeitem", { name: "스타일" }));
     expect(field("style.preset").dataset.state).toBe("set");
     expect(fieldFor("style.medium")).toBeNull();
     // Precision summary (read-only) shows set values only for exposed/set attributes
@@ -234,7 +234,7 @@ describe("9. mode switching keeps settings (Basic ⊂ Detailed, one spec)", () =
     expect(screen.getByRole("textbox", { name: /이미지 설명/ })).toHaveValue("A quiet harbor");
     expect(prompt()).toBe(EXPECTED);
     // edit a camera attribute in Detailed
-    await user.click(screen.getByRole("button", { name: "카메라" }));
+    await user.click(screen.getByRole("treeitem", { name: "프레이밍 및 시점" })); // Camera › subcategory (Sprint 2-C.1)
     await user.click(within(field("camera.angle")).getByRole("radio", { name: "로우 앵글 (올려다봄)" }));
     const withAngle = `${EXPECTED} Camera angle: low angle looking up.`;
     expect(prompt()).toBe(withAngle);

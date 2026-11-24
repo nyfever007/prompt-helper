@@ -61,6 +61,13 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
   const [dismissed, setDismissed] = useState<ReadonlySet<string>>(new Set());
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const previewToggle = useRef<HTMLButtonElement>(null);
+  // Mobile bottom sheet (non-modal): opening moves focus to its title; Escape or “hide” returns it to the toolbar button.
+  const openPreview = (open: boolean, returnFocus = false) => {
+    setPreviewOpen(open);
+    if (open) window.requestAnimationFrame(() => document.getElementById("preview-title")?.focus());
+    else if (returnFocus) previewToggle.current?.focus();
+  };
   const [mobileCopied, setMobileCopied] = useState<"idle" | "copied" | "failed">("idle");
   const counter = useRef(0);
   const push = useCallback((n: Omit<Notice, "id">) => setEventNotices((ns) => [...ns, { ...n, id: `event-${++counter.current}` }]), []);
@@ -270,8 +277,16 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
             onPresetApplied={(name, count) => push({ kind: "success", text: fmt(t.presetDialog.applied, { name, n: count }), autoDismissMs: noticeTimeoutMs })}
           />
         </div>
-        <aside className="layout__preview">
-          <PromptPreview compilation={workspace.compilation} registry={registry} locale={locale} t={t} onClose={() => setPreviewOpen(false)} />
+        <aside
+          className="layout__preview"
+          onKeyDown={(e) => {
+            if (e.key === "Escape" && previewOpen) {
+              e.stopPropagation();
+              openPreview(false, true);
+            }
+          }}
+        >
+          <PromptPreview compilation={workspace.compilation} registry={registry} locale={locale} t={t} onClose={() => openPreview(false, true)} />
           <SpecToolbar
             registry={registry}
             spec={workspace.spec}
@@ -304,7 +319,7 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
         >
           {workspace.compilation.blocked ? t.mobile.blocked : warningCount ? fmt(t.mobile.warnings, { n: warningCount }) : t.mobile.ok}
         </span>
-        <button type="button" className="button button--small" aria-expanded={previewOpen} aria-controls="preview-panel" onClick={() => setPreviewOpen(!previewOpen)}>
+        <button ref={previewToggle} type="button" className="button button--small" aria-expanded={previewOpen} aria-controls="preview-panel" onClick={() => openPreview(!previewOpen)}>
           {previewOpen ? t.mobile.hidePreview : t.mobile.preview}
         </button>
         <button type="button" className="button button--small button--primary" aria-label={t.mobile.copyLabel} disabled={!output.ok} onClick={onMobileCopy}>
