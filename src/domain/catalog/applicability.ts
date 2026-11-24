@@ -1,4 +1,5 @@
 import type { ImageSpec } from "../spec/schema";
+import { selectedOptionIds } from "../spec/values";
 import { evaluateAll } from "./conditions";
 import type { CatalogRegistry } from "./registry";
 import type { AttributeDefinition, OptionDefinition } from "./schema";
@@ -33,8 +34,7 @@ export const findInactiveSelections = (spec: ImageSpec, registry: CatalogRegistr
       continue;
     }
     if (attribute.type !== "single" && attribute.type !== "multi") continue;
-    const v = selection.value;
-    const ids = v.kind === "single" ? [v.optionId] : v.kind === "multi" ? v.optionIds : [];
+    const ids = selectedOptionIds(selection.value);
     const inactive = ids.filter((id) => {
       const option = attribute.options.find((o) => o.id === id);
       return option !== undefined && !isOptionActive(registry, option, spec);
@@ -61,8 +61,7 @@ export const findRestrictedSelections = (spec: ImageSpec, registry: CatalogRegis
   for (const attribute of registry.attributes()) {
     const selection = spec.selections[attribute.id];
     if (!selection || (attribute.type !== "single" && attribute.type !== "multi")) continue;
-    const v = selection.value;
-    const ids = v.kind === "single" ? [v.optionId] : v.kind === "multi" ? v.optionIds : [];
+    const ids = selectedOptionIds(selection.value);
     const restricted = ids.filter((id) => {
       const o = attribute.options.find((x) => x.id === id);
       return o !== undefined && isOptionRestricted(registry, o, spec);

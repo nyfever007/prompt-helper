@@ -1,7 +1,7 @@
 import type { LexiconEntry, SafetyPolicy } from "./types";
 
 /**
- * prompter.baseline — LOCAL, KEYWORD-BASED baseline content policy (v0.1.0).
+ * prompter.baseline — LOCAL, KEYWORD-BASED baseline content policy (v0.2.0).
  *
  * Scope (approved for Sprint 1):
  *   1. Sexualization of minors (incl. ambiguous-age words) → block
@@ -23,7 +23,10 @@ const ko = (...terms: string[]): LexiconEntry[] => terms.map((term) => ({ term, 
 
 export const baselinePolicy: SafetyPolicy = {
   id: "prompter.baseline",
-  version: "0.1.0",
+  // 0.2.0 (Sprint 2-B.1): same signals, lexicon and rules; the INPUT now also covers values
+  // excluded from the prompt or inapplicable, custom names/expressions, all selected options'
+  // tags and structured age signals (age.minor / age.ambiguous_young). Nothing was relaxed.
+  version: "0.2.0",
   signals: [
     {
       id: "age.minor",

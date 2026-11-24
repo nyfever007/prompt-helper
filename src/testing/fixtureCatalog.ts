@@ -47,7 +47,7 @@ export const buildFixtureCatalog = (): CatalogInput => {
 
   c.attributes.push(
     {
-      ...base("x.identity.age_group", "person_identity", 200, "Age group (test)", "연령대 (테스트)"),
+      ...base("x.identity.age_group", "person_identity", 2000, "Age group (test)", "연령대 (테스트)"),
       type: "single",
       description: { en: "Test-only attribute for policy restrictions.", ko: "정책 제한 검증용 테스트 속성입니다." },
       prompt: { template: "Age group: {value}." },
@@ -57,14 +57,14 @@ export const buildFixtureCatalog = (): CatalogInput => {
       ],
     },
     {
-      ...base("x.identity.note", "person_identity", 201, "Character note", "인물 메모"),
+      ...base("x.identity.note", "person_identity", 2010, "Character note", "인물 메모"),
       type: "text",
       control: "text",
       maxLength: 120,
       prompt: { template: "Character note: {value}" },
     },
     {
-      ...base("x.face.shape", "person_face", 210, "Face shape (test)", "얼굴형 (테스트)"),
+      ...base("x.face.shape", "person_face", 2100, "Face shape (test)", "얼굴형 (테스트)"),
       type: "single",
       control: "cards",
       aliases: ["face outline", "윤곽"],
@@ -82,7 +82,7 @@ export const buildFixtureCatalog = (): CatalogInput => {
       ],
     },
     {
-      ...base("x.eyes.color", "person_eyes", 220, "Eye color (test)", "눈동자 색 (테스트)"),
+      ...base("x.eyes.color", "person_eyes", 2200, "Eye color (test)", "눈동자 색 (테스트)"),
       type: "single",
       control: "color",
       prompt: { template: "Eye color: {value}." },
@@ -94,7 +94,7 @@ export const buildFixtureCatalog = (): CatalogInput => {
       ],
     },
     {
-      ...base("x.hair.colors", "person_hair", 230, "Hair colors (test)", "머리색 (테스트)"),
+      ...base("x.hair.colors", "person_hair", 2300, "Hair colors (test)", "머리색 (테스트)"),
       type: "multi",
       control: "color",
       prompt: { template: "Hair color: {value}." },
@@ -106,7 +106,7 @@ export const buildFixtureCatalog = (): CatalogInput => {
       ],
     },
     {
-      ...base("x.expression.smile", "person_expression", 240, "Smile intensity (test)", "미소 정도 (테스트)"),
+      ...base("x.expression.smile", "person_expression", 2400, "Smile intensity (test)", "미소 정도 (테스트)"),
       type: "number",
       control: "slider",
       semantics: "degree",
@@ -122,7 +122,7 @@ export const buildFixtureCatalog = (): CatalogInput => {
       ],
     },
     {
-      ...base("x.expression.appeal", "person_expression", 241, "Visual impression (test)", "시각적 인상 (테스트)"),
+      ...base("x.expression.appeal", "person_expression", 2410, "Visual impression (test)", "시각적 인상 (테스트)"),
       type: "single",
       prompt: { template: "Impression: {value}." },
       options: [
@@ -145,7 +145,7 @@ export const buildFixtureCatalog = (): CatalogInput => {
       ],
     },
     {
-      ...base("x.body.height", "person_body", 250, "Height (test)", "키 (테스트)"),
+      ...base("x.body.height", "person_body", 2500, "Height (test)", "키 (테스트)"),
       type: "number",
       control: "number",
       semantics: "physical",
@@ -156,7 +156,7 @@ export const buildFixtureCatalog = (): CatalogInput => {
       prompt: { template: "Height: about {value}." },
     },
     {
-      ...base("x.makeup.finish", "person_makeup", 260, "Makeup finish (test)", "메이크업 마무리 (테스트)"),
+      ...base("x.makeup.finish", "person_makeup", 2600, "Makeup finish (test)", "메이크업 마무리 (테스트)"),
       type: "single",
       control: "dropdown",
       prompt: { template: "Makeup: {value}." },
@@ -167,7 +167,7 @@ export const buildFixtureCatalog = (): CatalogInput => {
       ],
     },
     {
-      ...base("x.wardrobe.style", "person_wardrobe", 270, "Outfit (test)", "의상 (테스트)"),
+      ...base("x.wardrobe.style", "person_wardrobe", 2700, "Outfit (test)", "의상 (테스트)"),
       type: "single",
       control: "searchable",
       prompt: { template: "Outfit: {value}." },
@@ -187,7 +187,7 @@ export const buildFixtureCatalog = (): CatalogInput => {
       ).map(([id, en, ko, aliases]) => ({ id, label: { en, ko }, aliases: [...aliases], prompt: { text: en.toLowerCase() } })),
     },
     {
-      ...base("x.wardrobe.coverage", "person_wardrobe", 271, "Garment coverage (test)", "의상 노출 범위 (테스트)"),
+      ...base("x.wardrobe.coverage", "person_wardrobe", 2710, "Garment coverage (test)", "의상 노출 범위 (테스트)"),
       type: "single",
       description: { en: "Independent from body shape, fit and impression.", ko: "체형·핏·인상과 독립적인 속성입니다." },
       prompt: { template: "Coverage: {value}." },
@@ -198,7 +198,7 @@ export const buildFixtureCatalog = (): CatalogInput => {
       ],
     },
     {
-      ...base("x.camera.subject_position", "shared_camera", 280, "Subject horizontal position (test)", "피사체 가로 위치 (테스트)"),
+      ...base("x.camera.subject_position", "shared_camera", 2800, "Subject horizontal position (test)", "피사체 가로 위치 (테스트)"),
       type: "number",
       control: "slider",
       semantics: "ratio",
@@ -209,7 +209,7 @@ export const buildFixtureCatalog = (): CatalogInput => {
       prompt: { template: "Subject placed {value} from the left edge." },
     },
     {
-      ...base("x.scene.people_count", "shared_scene", 290, "People in scene (test)", "등장 인원 (테스트)"),
+      ...base("x.scene.people_count", "shared_scene", 2900, "People in scene (test)", "등장 인원 (테스트)"),
       type: "range",
       control: "range",
       semantics: "count",
@@ -219,7 +219,7 @@ export const buildFixtureCatalog = (): CatalogInput => {
       prompt: { template: "Number of people: {value}." },
     },
     {
-      ...base("x.grading.tone", "shared_mood", 300, "Color grading (test)", "컬러 그레이딩 (테스트)"),
+      ...base("x.grading.tone", "shared_mood", 3000, "Color grading (test)", "컬러 그레이딩 (테스트)"),
       type: "single",
       description: { en: "Image color grading — a different axis from light color temperature.", ko: "이미지 색 보정 — 광원의 색온도와는 다른 축입니다." },
       prompt: { template: "Color grading: {value}." },
@@ -230,9 +230,9 @@ export const buildFixtureCatalog = (): CatalogInput => {
       ],
     },
     // Must NEVER be exposed in the product UI even though they are approved-looking data in this file:
-    { ...base("x.hidden.deferred", "person_face", 400, "Deferred sample", "보류 샘플"), status: "deferred", type: "text", maxLength: 50, prompt: { template: "{value}" } },
-    { ...base("x.hidden.draft", "person_face", 401, "Draft sample", "초안 샘플"), status: "draft", type: "text", maxLength: 50, prompt: { template: "{value}" } },
-    { ...base("x.hidden.precision", "person_face", 402, "Precision sample", "정밀 샘플"), tier: "precision", type: "text", maxLength: 50, prompt: { template: "{value}" } },
+    { ...base("x.hidden.deferred", "person_face", 4000, "Deferred sample", "보류 샘플"), status: "deferred", type: "text", maxLength: 50, prompt: { template: "{value}" } },
+    { ...base("x.hidden.draft", "person_face", 4010, "Draft sample", "초안 샘플"), status: "draft", type: "text", maxLength: 50, prompt: { template: "{value}" } },
+    { ...base("x.hidden.precision", "person_face", 4020, "Precision sample", "정밀 샘플"), tier: "precision", type: "text", maxLength: 50, prompt: { template: "{value}" } },
   );
 
   c.presets = [

@@ -1,7 +1,11 @@
 import type { CatalogInput, Condition } from "../schema";
+import { identityAgeModel, identityAttributes, identityCategories, identityRules } from "./person/identity";
 
 /**
- * prompter.core — catalog content v0.2.0 (Sprint 1, Basic Composer).
+ * prompter.core — catalog content v0.4.0.
+ * 0.2.0 Sprint 1 (Basic Composer) · 0.3.0 Sprint 2-A (Detailed foundation) ·
+ * 0.4.0 Sprint 2-B.1 (Person › Identity, approved; attribute `order` ×10 so new
+ * areas can sit between existing attributes — relative order unchanged).
  *
  * Every list here is an extensible STARTING POINT, not a final scope. No option
  * count limits are implied; add entries as data and bump `version`.
@@ -24,9 +28,9 @@ const ORIENTED_SUBJECTS = ["person", "group", "animal", "object", "vehicle", "ar
 const NON_ABSTRACT = [...ORIENTED_SUBJECTS, "landscape"];
 
 export const coreCatalog = {
-  formatVersion: "0.3.0",
+  formatVersion: "0.4.0",
   id: "prompter.core",
-  version: "0.3.0",
+  version: "0.4.0",
   title: { en: "Prompter core catalog", ko: "Prompter 기본 카탈로그" },
   groups: [
     { id: "what", order: 0, label: { en: "What to depict", ko: "무엇을 그릴까요" } },
@@ -51,15 +55,15 @@ export const coreCatalog = {
     { id: "output", order: 50, label: { en: "Output", ko: "출력" } },
   ],
   categories: [
-    // Detailed navigation (expert taxonomy). Person areas are DRAFT structure only:
-    // their attributes are designed and approved separately (docs/catalogs/, Sprint 2-B).
+    // Detailed navigation (expert taxonomy). Person areas are approved one by one after
+    // their catalog design is approved (docs/catalogs/). Identity: approved (Sprint 2-B.1).
     { id: "essentials", order: 0, status: "approved", label: { en: "Essentials", ko: "기본" }, description: { en: "What the image is about.", ko: "이미지의 기본 내용입니다." } },
     {
       id: "person",
       order: 10,
-      status: "draft",
+      status: "approved",
       label: { en: "Person", ko: "인물" },
-      description: { en: "Detailed person attributes (in design).", ko: "인물 상세 속성 (설계 중)" },
+      description: { en: "Detailed person attributes. Areas still in design are marked Draft.", ko: "인물 상세 속성입니다. 설계 중인 영역은 ‘설계 중’으로 표시됩니다." },
       appliesWhen: forSubjects("person", "group"),
     },
     ...(
@@ -83,10 +87,20 @@ export const coreCatalog = {
       id: `person_${id}`,
       parentId: "person",
       order: 11 + i,
-      status: "draft" as const,
+      status: id === "identity" ? ("approved" as const) : ("draft" as const),
       label: { en, ko },
       docPath: `docs/catalogs/person/${id === "expression" ? "expression" : id}.md`,
+      ...(id === "identity"
+        ? {
+            description: {
+              en: "Identity and context of a single person. Nothing here adds face, body, clothing or other appearance details.",
+              ko: "한 인물의 정체성과 맥락입니다. 얼굴·신체·의상 등 외형은 추가되지 않습니다.",
+            },
+            appliesWhen: forSubjects("person"),
+          }
+        : {}),
     })),
+    ...identityCategories,
     { id: "shared", order: 40, status: "approved", label: { en: "Shared", ko: "공통" } },
     { id: "shared_camera", parentId: "shared", order: 41, status: "approved", label: { en: "Camera", ko: "카메라" }, docPath: "docs/catalogs/shared/camera.md" },
     { id: "shared_lighting", parentId: "shared", order: 42, status: "approved", label: { en: "Lighting", ko: "조명" }, docPath: "docs/catalogs/shared/lighting.md" },
@@ -105,7 +119,7 @@ export const coreCatalog = {
       groupId: "what",
       type: "text",
       tier: "basic",
-      order: 10,
+      order: 100,
       maxLength: 2000,
       label: { en: "Describe the image", ko: "이미지 설명 (자유 입력)" },
       description: {
@@ -123,7 +137,7 @@ export const coreCatalog = {
       groupId: "what",
       type: "single",
       tier: "basic",
-      order: 20,
+      order: 200,
       label: { en: "Main subject", ko: "피사체" },
       description: {
         en: "What kind of subject the image is about. Other options adapt to it. No appearance details are added.",
@@ -151,7 +165,7 @@ export const coreCatalog = {
       groupId: "style",
       type: "single",
       tier: "basic",
-      order: 30,
+      order: 300,
       searchable: true,
       label: { en: "Image style", ko: "이미지 스타일" },
       description: {
@@ -350,7 +364,7 @@ export const coreCatalog = {
       groupId: "style_axes",
       type: "single",
       tier: "detailed",
-      order: 31,
+      order: 310,
       label: { en: "Medium", ko: "매체" },
       prompt: { template: "Medium: {value}." },
       options: [
@@ -375,7 +389,7 @@ export const coreCatalog = {
       groupId: "style_axes",
       type: "single",
       tier: "detailed",
-      order: 32,
+      order: 320,
       label: { en: "Realism", ko: "사실감" },
       prompt: { template: "Realism: {value}." },
       options: [
@@ -393,7 +407,7 @@ export const coreCatalog = {
       groupId: "style_axes",
       type: "multi",
       tier: "detailed",
-      order: 33,
+      order: 330,
       label: { en: "Technique", ko: "기법" },
       prompt: { template: "Technique: {value}." },
       options: [
@@ -414,7 +428,7 @@ export const coreCatalog = {
       groupId: "style_axes",
       type: "single",
       tier: "detailed",
-      order: 34,
+      order: 340,
       label: { en: "Art movement", ko: "미술 사조" },
       prompt: { template: "Art movement: {value}." },
       options: [
@@ -433,7 +447,7 @@ export const coreCatalog = {
       groupId: "style_axes",
       type: "multi",
       tier: "detailed",
-      order: 35,
+      order: 350,
       label: { en: "Aesthetic / genre", ko: "미학 / 장르" },
       prompt: { template: "Aesthetic: {value}." },
       options: [
@@ -456,7 +470,7 @@ export const coreCatalog = {
       groupId: "composition",
       type: "single",
       tier: "basic",
-      order: 40,
+      order: 400,
       label: { en: "Framing", ko: "구도 (화면에 담는 범위)" },
       description: {
         en: "How much of the subject is in frame. Choices depend on the subject.",
@@ -487,7 +501,7 @@ export const coreCatalog = {
       type: "single",
       tier: "basic",
       prominence: "secondary",
-      order: 50,
+      order: 500,
       label: { en: "Viewing direction", ko: "보는 방향" },
       description: {
         en: "Which side of the subject faces the camera. Independent of framing and camera angle.",
@@ -511,7 +525,7 @@ export const coreCatalog = {
       type: "single",
       tier: "basic",
       prominence: "secondary",
-      order: 60,
+      order: 600,
       label: { en: "Camera angle", ko: "카메라 각도 (높이)" },
       description: {
         en: "Camera height relative to the subject. Independent of viewing direction.",
@@ -537,7 +551,7 @@ export const coreCatalog = {
       groupId: "scene",
       type: "single",
       tier: "basic",
-      order: 70,
+      order: 700,
       searchable: true,
       label: { en: "Place / environment", ko: "장소 / 환경" },
       description: { en: "Where the scene takes place.", ko: "장면이 펼쳐지는 장소입니다." },
@@ -573,7 +587,7 @@ export const coreCatalog = {
       type: "single",
       tier: "basic",
       prominence: "secondary",
-      order: 80,
+      order: 800,
       label: { en: "Background treatment", ko: "배경 처리" },
       description: {
         en: "How the background is rendered — independent of where the scene is.",
@@ -598,7 +612,7 @@ export const coreCatalog = {
       groupId: "atmosphere",
       type: "multi",
       tier: "basic",
-      order: 90,
+      order: 900,
       label: { en: "Mood", ko: "분위기" },
       description: { en: "Choose any number. Mood never changes clothing, body or other settings.", ko: "여러 개를 고를 수 있습니다. 분위기는 의상·체형 등 다른 설정을 바꾸지 않습니다." },
       prompt: { template: "Mood: {value}." },
@@ -626,7 +640,7 @@ export const coreCatalog = {
       groupId: "atmosphere",
       type: "single",
       tier: "basic",
-      order: 100,
+      order: 1000,
       label: { en: "Lighting (quick preset)", ko: "조명 (빠른 프리셋)" },
       description: {
         en: "Sets only this item. The listed light properties are for reference; they are not applied to any other setting.",
@@ -650,23 +664,23 @@ export const coreCatalog = {
     },
     ...(
       [
-        ["lighting.source", 101, { en: "Light source", ko: "광원" }, "Light source: {value}.", [
+        ["lighting.source", 1010, { en: "Light source", ko: "광원" }, "Light source: {value}.", [
           ["sun", "Sun", "태양", "direct sunlight"], ["daylight_sky", "Sky / diffuse daylight", "하늘광 (확산광)", "diffuse skylight"], ["moon", "Moon", "달", "moonlight"],
           ["studio", "Studio lights", "스튜디오 조명", "studio lights"], ["practical", "Lamps / practical lights", "실내 조명기구", "practical lamps"], ["neon", "Neon", "네온", "neon signs"], ["fire", "Fire / candles", "불 / 촛불", "firelight"],
         ]],
-        ["lighting.direction", 102, { en: "Light direction", ko: "빛의 방향" }, "Light direction: {value}.", [
+        ["lighting.direction", 1020, { en: "Light direction", ko: "빛의 방향" }, "Light direction: {value}.", [
           ["front", "Front", "정면광", "front lighting"], ["side", "Side", "측광", "side lighting"], ["back", "Back", "역광", "backlighting"], ["top", "Top", "탑 라이트", "top lighting"], ["bottom", "Below", "아래에서", "lighting from below"], ["ambient", "Ambient / all around", "전방위 (확산)", "ambient all-around light"],
         ]],
-        ["lighting.softness", 103, { en: "Softness / hardness", ko: "빛의 질감 (부드러움)" }, "Light quality: {value}.", [
+        ["lighting.softness", 1030, { en: "Softness / hardness", ko: "빛의 질감 (부드러움)" }, "Light quality: {value}.", [
           ["soft", "Soft", "부드러운", "soft light"], ["medium", "Medium", "중간", "moderately soft light"], ["hard", "Hard", "딱딱한", "hard light"],
         ]],
-        ["lighting.intensity", 104, { en: "Intensity", ko: "밝기" }, "Light intensity: {value}.", [
+        ["lighting.intensity", 1040, { en: "Intensity", ko: "밝기" }, "Light intensity: {value}.", [
           ["dim", "Dim", "어두운", "dim"], ["moderate", "Moderate", "보통", "moderate"], ["bright", "Bright", "밝은", "bright"],
         ]],
-        ["lighting.color_temperature", 105, { en: "Color temperature", ko: "색온도" }, "Color temperature: {value}.", [
+        ["lighting.color_temperature", 1050, { en: "Color temperature", ko: "색온도" }, "Color temperature: {value}.", [
           ["warm", "Warm", "따뜻한", "warm"], ["neutral", "Neutral", "중립", "neutral"], ["cool", "Cool", "차가운", "cool"], ["mixed_color", "Mixed colors", "여러 색", "mixed colored light"],
         ]],
-        ["lighting.contrast", 106, { en: "Contrast", ko: "명암 대비" }, "Lighting contrast: {value}.", [
+        ["lighting.contrast", 1060, { en: "Contrast", ko: "명암 대비" }, "Lighting contrast: {value}.", [
           ["low", "Low", "낮음", "low contrast"], ["medium", "Medium", "중간", "medium contrast"], ["high", "High", "높음", "high contrast"],
         ]],
       ] as const
@@ -684,6 +698,9 @@ export const coreCatalog = {
       options: options.map(([oid, en, ko, text]) => ({ id: oid, label: { en, ko }, prompt: { text } })),
     })),
 
+    // ── Person › Identity (Sprint 2-B.1, order 201–216 → right after the subject, 200) ──
+    ...identityAttributes,
+
     // ── Output ──────────────────────────────────────────────────────────────
     {
       id: "output.aspect_ratio",
@@ -693,7 +710,7 @@ export const coreCatalog = {
       groupId: "output",
       type: "single",
       tier: "basic",
-      order: 110,
+      order: 1100,
       label: { en: "Aspect ratio", ko: "화면비" },
       description: {
         en: "Optional. Also exported as a structured parameter for future image APIs.",
@@ -829,6 +846,7 @@ export const coreCatalog = {
         ko: "얼굴 디테일이 중요하다면 다른 조명 프리셋을 고려하세요.",
       },
     },
+    ...identityRules,
   ],
   migrations: [
     {
@@ -852,7 +870,14 @@ export const coreCatalog = {
       // No ID changes: 0.3.0 adds categories, approval status and phrase units only.
       changes: [],
     },
+    {
+      fromVersion: "0.3.0",
+      toVersion: "0.4.0",
+      // No ID changes: 0.4.0 adds Person › Identity and renumbers `order` (relative order kept).
+      changes: [],
+    },
   ],
   // Product composite presets require separate approval (none yet). Test-only presets live in the E2E fixture catalog.
   presets: [],
+  ageModel: identityAgeModel,
 } satisfies CatalogInput;

@@ -36,11 +36,27 @@ const num = (value: number): SelectionValue => ({ kind: "number", value });
 const fixture = (dir: string, name: string) => readFileSync(join(__dirname, "../fixtures", dir, name), "utf8");
 
 describe("product exposure is separate from catalog expressiveness (D1)", () => {
-  it("core: Detailed edits every approved Basic attribute + the 6 approved lighting properties, nothing else", () => {
+  it("core: Detailed edits every approved Basic attribute + the 6 lighting properties + the 16 identity attributes, nothing else", () => {
     const ids = core.exposedAttributes("detailed").map((a) => a.id);
     expect(ids).toEqual([
       "intent.description",
       "subject.kind",
+      "person.identity.entity_type",
+      "person.identity.species",
+      "person.identity.character_origin",
+      "person.identity.age_group",
+      "person.identity.age",
+      "person.identity.apparent_age",
+      "person.identity.gender",
+      "person.identity.gender_presentation",
+      "person.identity.nationality",
+      "person.identity.ethnic_background",
+      "person.identity.cultural_background",
+      "person.identity.historical_period",
+      "person.identity.occupation",
+      "person.identity.narrative_role",
+      "person.identity.social_status",
+      "person.identity.description",
       "style.preset",
       "composition.framing",
       "composition.view_direction",
@@ -65,16 +81,24 @@ describe("product exposure is separate from catalog expressiveness (D1)", () => 
     expect(core.exposedAttributes("basic").map((a) => a.id)).toEqual(core.attributesForTier("basic").map((a) => a.id));
   });
 
-  it("core: person areas are DRAFT structure only (no attributes) with a design document", () => {
+  it("core: only Identity is approved among person areas; the other 13 stay DRAFT structure only (no attributes)", () => {
     const person = core.categories.filter((c) => c.parentId === "person");
     expect(person.map((c) => c.id)).toEqual([
       "person_identity", "person_face", "person_eyes", "person_eyebrows", "person_nose", "person_lips", "person_skin",
       "person_hair", "person_body", "person_expression", "person_makeup", "person_wardrobe", "person_accessories", "person_pose",
     ]);
+    expect(core.getCategory("person")?.status).toBe("approved");
     for (const c of person) {
-      expect(c.status).toBe("draft");
       expect(c.docPath).toMatch(/^docs\/catalogs\/person\/.+\.md$/);
-      expect(core.attributes().filter((a) => a.categoryId === c.id)).toEqual([]);
+      const inSubtree = core.attributes().filter((a) => a.categoryId !== undefined && core.categoryPath(a.categoryId).includes(c.id));
+      if (c.id === "person_identity") {
+        expect(c.status).toBe("approved");
+        expect(inSubtree).toHaveLength(16);
+        expect(inSubtree.every((a) => core.isExposed(a, "detailed"))).toBe(true);
+      } else {
+        expect(c.status).toBe("draft");
+        expect(inSubtree).toEqual([]);
+      }
     }
     expect(core.presets).toEqual([]); // product composite presets need separate approval
   });
@@ -457,8 +481,8 @@ describe("ImageSpec 0.2.0 compatibility (D2)", () => {
     const r = importSpecJson(fixture("sprint1", "export-full.json"), core);
     expect(r.status).toBe("valid");
     if (r.status !== "valid") return;
-    expect(r.spec.schemaVersion).toBe("0.2.0");
-    expect(r.spec.catalog).toEqual({ id: "prompter.core", version: "0.3.0" });
+    expect(r.spec.schemaVersion).toBe("0.3.0"); // migrated 0.1.0 → 0.2.0 → 0.3.0 (version-only steps)
+    expect(r.spec.catalog).toEqual({ id: "prompter.core", version: "0.4.0" });
     expect(r.spec.selections).toEqual(raw.selections);
     expect(r.migrations).toEqual([]);
     expect(r.diagnostics.filter((d) => d.severity !== "info")).toEqual([]);
@@ -475,7 +499,7 @@ describe("ImageSpec 0.2.0 compatibility (D2)", () => {
     expect(r.status === "valid" && r.spec.selections["composition.framing"]!.value).toEqual(single("full_body"));
   });
 
-  it("new exports are 0.2.0 (older apps cannot read them — documented limitation)", () => {
-    expect(JSON.parse(exportSpecJson(createEmptySpec(core))).schemaVersion).toBe("0.2.0");
+  it("new exports are 0.3.0 (older apps cannot read them — documented limitation)", () => {
+    expect(JSON.parse(exportSpecJson(createEmptySpec(core))).schemaVersion).toBe("0.3.0");
   });
 });

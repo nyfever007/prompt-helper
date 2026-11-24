@@ -2,7 +2,8 @@
 
 > 각 영역 문서(`person/*.md`, `shared/*.md`)는 이 템플릿을 따릅니다.
 > 속성(attribute) 하나마다 §3~§14를 반복합니다.
-> 이 문서는 **설계 문서**입니다. 카탈로그 데이터(`src/domain/catalog/catalogs/core.ts`)에는 승인된 설계만 반영합니다.
+> 이 문서는 **설계 문서**입니다. 카탈로그 데이터(`src/domain/catalog/catalogs/`)에는 승인된 설계만 반영합니다.
+> **기준 규격:** [CATALOG_DESIGN_STANDARD.md](CATALOG_DESIGN_STANDARD.md)가 공통 설계 규격이며, 이 템플릿과 다르면 규격이 우선합니다. 승인된 예: [person/identity.md](person/identity.md).
 
 ## 1. 설계 상태
 - 상태: `DRAFT` | `REVIEW` | `APPROVED` | `DEFERRED`
@@ -30,28 +31,34 @@
 | 설명(description) | |
 
 ## 6. 입력 방식
-- 데이터 타입: `single` / `multi` / `number` / `range` / `text`
-- UI 컨트롤(`control`): `chips` / `dropdown` / `cards` / `searchable` / `color` / `slider` / `number` / `range` / `text` / `textarea`
+- 데이터 타입: `single` / `multi` / `number` / `range` / `quantity`(숫자 또는 범위 + 단위, 단위 정규화는 판단에만 사용) / `text`
+- UI 컨트롤(`control`): `chips` / `dropdown` / `cards` / `searchable` / `color` / `slider` / `number` / `range` / `quantity` / `text` / `textarea`
+- 표현 역할(`expression.role`): `direct`(보이는 것) / `context`(해석·맥락) / `metadata`(관리용, 출력 안 함), 의미 종류(`expression.kind`): categorical / relative / interpretive / numeric / freeText
+- 프롬프트 포함 토글(`outputToggle`): 제공 여부 (제외는 `excludedFromPrompt`로 값과 별도 저장, 안전 검사는 계속 적용)
+- 사용자 정의 값(`custom`): 허용 여부, 이름 200자·표현 2,000자 이하, 이름만 입력 시 안내(`nameOnlyNotice`, Direct 역할)
 - number/range인 경우 의미(`semantics`): `degree`(정성 bands 필수) / `physical`(unit 필수) / `ratio` / `position` / `count`
 - tier(가장 먼저 노출되는 모드): basic / detailed / precision
 - 노출 상태(`status`): approved / draft / deferred
 - 권장 기본값(`defaultValue`, 제안만 함 — 자동 적용 금지):
 
 ## 7. 선택지 정의
-| option id | 한국어 | English | 설명 | 상위(parentId) | 정책 태그 |
-|---|---|---|---|---|---|
+| option id | 한국어 | English | 설명 | 상위(parentId) | 표시 묶음(group) | 정책 태그 |
+|---|---|---|---|---|---|---|
 
 선택지 개수에 임의 상한을 두지 않습니다. 목록은 확장 가능한 시작점입니다.
 
 ## 8. 선택지별 영어 프롬프트 표현
-| option id | prompt.text | 의미 단위(`parts`, 해당 시) | 모델별 표현(byAdapter, 해당 시) |
-|---|---|---|---|
+| option id | prompt.text | 조건별 표현(`variants`, 해당 시) | 의미 단위(`parts`) / 의미 포함(`covers`, 해당 시) | 모델별 표현(byAdapter, 해당 시) |
+|---|---|---|---|---|
+
+속성 문장 틀(`prompt.template`)과 결합된 **최종 출력 문장**을 함께 검토합니다.
 
 규칙: 표현은 선택지의 의미만 담습니다. 선택하지 않은 외형·연령·국적·체형·의상·노출을 덧붙이지 않습니다.
 
 ## 9. 적용 조건
 - 속성 적용 조건(`appliesWhen`):
 - 선택지별 적용 조건:
+- 일반적인 조합 제안(`suggestedWhen`, 정렬·비차단 안내 전용 — 숨기거나 비활성화하지 않음):
 - 적용 불가가 된 기존 선택은 **유지하고 컴파일에서 제외**하며 사용자에게 알립니다.
 
 ## 10. 속성 독립성
@@ -61,13 +68,14 @@
 | 규칙 id | 종류(conflict/dependency/visibility) | 조건 | 심각도 | 해결 안내(ko/en) | 제안 동작 |
 |---|---|---|---|---|---|
 
-실제로 양립하기 어려운 조합만 충돌로 정의합니다. 서로 다른 의미 축(예: 촬영 시간대 ↔ 컬러 그레이딩)은 충돌이 아닙니다.
+실제로 양립하기 어려운 조합만 충돌로 정의합니다. 서로 다른 의미 축(예: 촬영 시간대 ↔ 컬러 그레이딩)은 충돌이 아닙니다. 의미 중복(`covers`) / 직접 설정 우선 / 독립 축 / 실제 충돌 / 비전형 조합(비차단 안내)을 구분합니다.
 
 ## 12. 안전 정책
 - 정책 태그(`policyTags`): 체형(`body.*`)·핏(`fit.*`)·노출 범위(`coverage.*`)·인상(`appeal.*`)은 **서로 다른 축**으로 태깅합니다.
 - 정책 제한(`restriction`): 조건, 사유(ko/en), 정책 규칙 id
 - 허용되어야 하는 정상 조합 테스트 목록:
 - 로컬 키워드 검사의 한계와 별개로, 구조화 선택은 태그·제한으로 검증합니다.
+- 프롬프트 제외·적용 불가 값과 사용자 정의 이름·표현도 검사 대상입니다. 연령 관련 조건은 공통 연령 판단(`age.class`)을 사용합니다.
 
 ## 13. 시각 예시 제작 기준
 - 통제 비교: 같은 피사체·구도·조명에서 **해당 속성만** 바꿉니다.
@@ -82,6 +90,7 @@
 
 ## 15. 테스트 요구사항
 - unset 유지와 명시적 기본값 구분
+- 프롬프트 포함·제외(값 유지, 안전 검사 유지), 사용자 정의 값(이름·표현 분리, 병합 금지), 단위·범위(해당 시)
 - 다른 속성과의 독립성(모든 쌍)
 - 적용 조건과 복귀
 - 프롬프트 기대 출력(결정론)

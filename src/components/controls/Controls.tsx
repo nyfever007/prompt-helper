@@ -2,6 +2,7 @@
 
 import { useId, useMemo, useState } from "react";
 import {
+  normalizeSearch,
   resolveText,
   searchOptions,
   type AttributeDefinition,
@@ -22,6 +23,12 @@ export interface OptionControlProps {
   onSelect(optionId: string): void;
   onToggle(optionId: string): void;
   onClear(): void;
+  /** Typical in the current context (`suggestedWhen`) — ordering only, never hides. */
+  isSuggested?(option: OptionDefinition): boolean;
+  /** Offer "add ‘query’ as a custom value" (attributes that allow custom values). */
+  onAddCustomRequest?(name: string): void;
+  /** Names of custom entries already in the value (an exact match hides the “add” shortcut). */
+  customLabels?: readonly string[];
 }
 
 /** Options offered: applicable ones + current selections (kept) + restricted ones (shown disabled). */
@@ -130,47 +137,173 @@ export function CardsControl(p: OptionControlProps) {
   );
 }
 
+/** Path of an option within its hierarchy, e.g. "수인족 › 고양이 수인". */
+const optionPath = (attribute: OptionAttributeDefinition, o: OptionDefinition, locale: string): string => {
+  const parts: string[] = [];
+  let cur: OptionDefinition | undefined = o;
+  while (cur && parts.length < 8) {
+    parts.unshift(resolveText(cur.label, locale));
+    cur = cur.parentId ? attribute.options.find((x) => x.id === cur!.parentId) : undefined;
+  }
+  return parts.join(" › ");
+};
+const depthOf = (attribute: OptionAttributeDefinition, o: OptionDefinition): number => {
+  let d = 0;
+  let cur = o.parentId;
+  while (cur && d < 8) {
+    d++;
+    cur = attribute.options.find((x) => x.id === cur)?.parentId;
+  }
+  return d;
+};
+
+/**
+ * Searchable list for large vocabularies: Korean/English labels + aliases,
+ * hierarchy (children indented under their parent; search hits show the path),
+ * display-only option groups, typical options first (nothing hidden), and an
+ * "add as custom value" shortcut. Selected values stay visible while filtering.
+ */
 export function SearchableListControl(p: OptionControlProps) {
   const [query, setQuery] = useState("");
   const isMulti = p.attribute.type === "multi";
   const offered = offeredOptions(p);
-  const { visible, matchCount } = useMemo(() => {
-    if (!query.trim()) return { visible: offered, matchCount: offered.length };
+  const groups = p.attribute.optionGroups ? [...p.attribute.optionGroups].sort((a, b) => a.order - b.order) : null;
+
+  // Browsing order: hierarchy (parent then children); typical ones first when a suggestion context exists.
+  const browse = useMemo(() => {
+    const roots = offered.filter((o) => !o.parentId || !offered.some((x) => x.id === o.parentId));
+    const withChildren = (o: OptionDefinition): OptionDefinition[] => [o, ...offered.filter((c) => c.parentId === o.id).flatMap(withChildren)];
+    const suggested = (o: OptionDefinition) => !p.isSuggested || p.isSuggested(o);
+    return {
+      typical: roots.filter(suggested).flatMap(withChildren),
+      other: roots.filter((o) => !suggested(o)).flatMap(withChildren),
+    };
+  }, [offered, p]);
+
+  const { visible, matchCount, hits } = useMemo(() => {
+    if (!query.trim()) return { visible: offered, matchCount: offered.length, hits: null };
     const ordered = searchOptions(p.attribute, query)
       .map((h) => h.option)
       .filter((o) => offered.includes(o));
-    const hits = new Set(ordered.map((o) => o.id));
-    const pinned = offered.filter((o) => p.selectedIds.includes(o.id) && !hits.has(o.id));
-    return { visible: [...pinned, ...ordered], matchCount: ordered.length };
+    const hitIds = new Set(ordered.map((o) => o.id));
+    const pinned = offered.filter((o) => p.selectedIds.includes(o.id) && !hitIds.has(o.id));
+    return { visible: [...pinned, ...ordered], matchCount: ordered.length, hits: hitIds };
   }, [query, offered, p.attribute, p.selectedIds]);
-  return (
-    <div className="option-picker">
-      <div className="option-search">
-        <input type="search" value={query} placeholder={p.t.field.searchPlaceholder} aria-label={`${p.label} ${p.t.field.search}`} onChange={(e) => setQuery(e.target.value)} />
-        {query.trim() && <span className="counter">{fmt(p.t.field.searchCount, { n: matchCount })}</span>}
-      </div>
-      <ul className="list-options" role={isMulti ? "group" : "radiogroup"} aria-label={p.label}>
-        {visible.map((o) => {
-          const en = englishTerm(o, p.locale);
+
+  const exactMatch =
+    query.trim() !== "" &&
+    (visible.some((o) => [...Object.values(o.label), ...(o.aliases ?? [])].some((x) => normalizeSearch(x) === normalizeSearch(query))) ||
+      (p.customLabels ?? []).some((l) => normalizeSearch(l) === normalizeSearch(query)));
+  const selectedOptions = p.attribute.options.filter((o) => p.selectedIds.includes(o.id));
+
+  const item = (o: OptionDefinition, flat: boolean) => {
+    const en = englishTerm(o, p.locale);
+    const checked = p.selectedIds.includes(o.id);
+    const depth = flat ? 0 : depthOf(p.attribute, o);
+    return (
+      <li
+        key={o.id}
+        data-option-id={o.id}
+        data-checked={checked}
+        data-depth={depth || undefined}
+        data-restricted={p.isRestricted(o) || undefined}
+        style={depth ? { paddingInlineStart: depth * 18 } : undefined}
+      >
+        <label>
+          <input
+            type={isMulti ? "checkbox" : "radio"}
+            name={isMulti ? undefined : p.attribute.id}
+            checked={checked}
+            disabled={p.isRestricted(o) && !checked}
+            onChange={() => (isMulti ? p.onToggle(o.id) : p.onSelect(o.id))}
+          />
+          <span>{flat && o.parentId ? optionPath(p.attribute, o, p.locale) : resolveText(o.label, p.locale)}</span>
+          {en && <span className="muted small" lang="en"> {en}</span>}
+          {o.description && <span className="muted small"> — {resolveText(o.description, p.locale)}</span>}
+          {flat && hits && !hits.has(o.id) && <span className="badge badge--set"> {p.t.field.selected}</span>}
+        </label>
+      </li>
+    );
+  };
+
+  const groupedList = (list: OptionDefinition[]) =>
+    groups ? (
+      <>
+        {groups.map((g) => {
+          const members = list.filter((o) => o.group === g.id);
+          if (members.length === 0) return null;
           return (
-            <li key={o.id} data-option-id={o.id} data-checked={p.selectedIds.includes(o.id)} data-restricted={p.isRestricted(o) || undefined}>
-              <label>
-                <input
-                  type={isMulti ? "checkbox" : "radio"}
-                  name={isMulti ? undefined : p.attribute.id}
-                  checked={p.selectedIds.includes(o.id)}
-                  disabled={p.isRestricted(o) && !p.selectedIds.includes(o.id)}
-                  onChange={() => (isMulti ? p.onToggle(o.id) : p.onSelect(o.id))}
-                />
-                <span>{resolveText(o.label, p.locale)}</span>
-                {en && <span className="muted small" lang="en"> {en}</span>}
-                {o.description && <span className="muted small"> — {resolveText(o.description, p.locale)}</span>}
-              </label>
+            <li key={`g-${g.id}`} className="list-group" role="presentation">
+              <span className="list-group__title" aria-hidden="true">
+                {resolveText(g.label, p.locale)}
+              </span>
+              <ul role="presentation">{members.map((o) => item(o, false))}</ul>
             </li>
           );
         })}
+        {list.filter((o) => !o.group || !groups.some((g) => g.id === o.group)).map((o) => item(o, false))}
+      </>
+    ) : (
+      list.map((o) => item(o, false))
+    );
+
+  return (
+    <div className="option-picker">
+      {selectedOptions.length > 0 && (
+        // Large lists: what is selected stays visible regardless of scrolling or filtering.
+        <div className="selected-summary small" data-testid={`selected-${p.attribute.id}`}>
+          <span className="muted">{p.t.field.selectedSummary}:</span>
+          {selectedOptions.map((o) => (
+            <button
+              key={o.id}
+              type="button"
+              className="selected-chip"
+              aria-label={fmt(p.t.field.deselect, { name: resolveText(o.label, p.locale) })}
+              onClick={() => (isMulti ? p.onToggle(o.id) : p.onClear())}
+            >
+              {resolveText(o.label, p.locale)} <span aria-hidden="true">×</span>
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="option-search">
+        <input type="search" value={query} placeholder={p.t.field.searchPlaceholder} aria-label={`${p.label} ${p.t.field.search}`} onChange={(e) => setQuery(e.target.value)} />
+        {query.trim() && (
+          <span className="counter" aria-live="polite">
+            {fmt(p.t.field.searchCount, { n: matchCount })}
+          </span>
+        )}
+      </div>
+      <ul className="list-options" role={isMulti ? "group" : "radiogroup"} aria-label={p.label}>
+        {query.trim() ? (
+          visible.map((o) => item(o, true))
+        ) : (
+          <>
+            {groupedList(browse.typical)}
+            {browse.other.length > 0 && (
+              <>
+                <li className="list-group__title list-group__title--other" role="presentation" data-testid={`atypical-${p.attribute.id}`}>
+                  {p.t.field.otherOptions}
+                </li>
+                {groupedList(browse.other)}
+              </>
+            )}
+          </>
+        )}
       </ul>
       {query.trim() && matchCount === 0 && <p className="muted small">{p.t.field.noResults}</p>}
+      {p.onAddCustomRequest && query.trim() && !exactMatch && (
+        <button
+          type="button"
+          className="link-button"
+          onClick={() => {
+            p.onAddCustomRequest!(query.trim());
+            setQuery("");
+          }}
+        >
+          {fmt(p.t.custom.addFromSearch, { name: query.trim() })}
+        </button>
+      )}
     </div>
   );
 }

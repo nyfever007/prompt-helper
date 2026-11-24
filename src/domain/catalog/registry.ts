@@ -1,5 +1,7 @@
 import { error, fail, fromZodIssues, hasErrors, ok, type Diagnostic, type Result } from "../shared/diagnostics";
-import type { ConditionContext } from "./conditions";
+import type { ImageSpec } from "../spec/schema";
+import { assessAge, intervalMismatch } from "./age";
+import { conditionAttributeIds, type ConditionContext } from "./conditions";
 import { phraseUnits, renderPhraseParts } from "./phrase";
 import {
   CatalogSchema,
@@ -8,9 +10,11 @@ import {
   type Catalog,
   type CatalogMigration,
   type CatalogRule,
+  type AgeModel,
   type CategoryDefinition,
   type Condition,
   type Control,
+  type DerivedFact,
   type GroupDefinition,
   type OptionDefinition,
   type PresetDefinition,
@@ -33,6 +37,7 @@ export const CONTROL_TYPES: Record<Control, ReadonlyArray<AttributeDefinition["t
   range: ["range"],
   text: ["text"],
   textarea: ["text"],
+  quantity: ["quantity"],
 };
 
 export const defaultControl = (a: AttributeDefinition): Control =>
@@ -104,6 +109,20 @@ export class CatalogRegistry implements ConditionContext {
   }
   get presets(): readonly PresetDefinition[] {
     return this.catalog.presets;
+  }
+  get ageModel(): AgeModel | undefined {
+    return this.catalog.ageModel;
+  }
+
+  /** ConditionContext: facts derived from the whole spec (see domain/catalog/age.ts). */
+  derivedFact(fact: DerivedFact, spec: ImageSpec): string {
+    const a = assessAge(spec, this);
+    return fact === "age.class" ? a.ageClass : a.being;
+  }
+
+  /** ConditionContext: `intervalMismatch` condition. */
+  intervalMismatch(spec: ImageSpec, quantityAttributeId: string, groupAttributeId: string): boolean {
+    return intervalMismatch(spec, this, quantityAttributeId, groupAttributeId);
   }
 
   getCategory(id: string): CategoryDefinition | undefined {
@@ -224,7 +243,7 @@ function checkIntegrity(catalog: Catalog): Diagnostic[] {
     if (a.groupId !== undefined && !groupIds.has(a.groupId)) {
       out.push(error("catalog.unknown_group", `Attribute "${a.id}" references unknown group "${a.groupId}"`));
     }
-    if ((a.type === "number" || a.type === "range") && a.min > a.max) {
+    if ((a.type === "number" || a.type === "range" || a.type === "quantity") && a.max !== undefined && a.min > a.max) {
       out.push(error("catalog.invalid_bounds", `Attribute "${a.id}" has min > max`));
     }
     if (a.type === "single" || a.type === "multi") {
@@ -249,7 +268,7 @@ function checkIntegrity(catalog: Catalog): Diagnostic[] {
       }
     }
     for (const c of a.appliesWhen ?? []) {
-      if (c.attributeId === a.id) {
+      if (conditionAttributeIds(c).includes(a.id)) {
         out.push(error("catalog.self_condition", `Attribute "${a.id}" cannot depend on itself`));
       }
       out.push(...checkCondition(c, attributes, `attribute "${a.id}"`));
@@ -264,7 +283,7 @@ function checkIntegrity(catalog: Catalog): Diagnostic[] {
     if (!isOptionAttribute(a)) continue;
     for (const o of a.options) {
       for (const c of o.appliesWhen ?? []) {
-        if (c.attributeId === a.id) out.push(error("catalog.self_condition", `Option "${a.id}/${o.id}" cannot depend on its own attribute`));
+        if (conditionAttributeIds(c).includes(a.id)) out.push(error("catalog.self_condition", `Option "${a.id}/${o.id}" cannot depend on its own attribute`));
         out.push(...checkCondition(c, attributes, `option "${a.id}/${o.id}"`));
       }
       for (const [axisId, valueIds] of Object.entries(o.classification ?? {})) {
@@ -286,6 +305,7 @@ function checkIntegrity(catalog: Catalog): Diagnostic[] {
   }
 
   out.push(...checkCategories(catalog));
+  out.push(...checkSemantics(catalog, attributes));
   for (const a of catalog.attributes) out.push(...checkAttributeUi(a, attributes, catalog));
   out.push(...checkPresets(catalog, attributes));
   out.push(...checkMigrations(catalog, attributes));
@@ -298,6 +318,67 @@ function checkIntegrity(catalog: Catalog): Diagnostic[] {
     for (const id of [...r.involves, ...(r.actions ?? []).map((x) => x.attributeId)]) {
       if (!attributes.has(id)) out.push(error("catalog.unknown_attribute_ref", `Rule "${r.id}" involves unknown "${id}"`));
     }
+  }
+  return out;
+}
+
+/** Sprint 2-B.1 catalog semantics: groups, covers, suggestions, intervals, variants, custom, quantity, age model. */
+function checkSemantics(catalog: Catalog, attributes: Map<string, AttributeDefinition>): Diagnostic[] {
+  const out: Diagnostic[] = [];
+  for (const a of catalog.attributes) {
+    if (a.type === "quantity") {
+      const ids = new Set<string>();
+      for (const u of a.units) {
+        if (ids.has(u.id)) out.push(error("catalog.invalid_quantity", `Attribute "${a.id}": duplicate unit "${u.id}"`));
+        ids.add(u.id);
+      }
+      if (new Set(a.forms).size !== a.forms.length) out.push(error("catalog.invalid_quantity", `Attribute "${a.id}": duplicate forms`));
+    }
+    if (!isOptionAttribute(a)) continue;
+    const groupIds = new Set((a.optionGroups ?? []).map((g) => g.id));
+    if (groupIds.size !== (a.optionGroups ?? []).length) out.push(error("catalog.duplicate_option_group", `Attribute "${a.id}": duplicate option group id`));
+    for (const o of a.options) {
+      const where = `option "${a.id}/${o.id}"`;
+      if (o.group !== undefined && !groupIds.has(o.group)) out.push(error("catalog.unknown_option_group", `${where} references unknown group "${o.group}"`));
+      for (const cv of o.covers ?? []) {
+        const target = attributes.get(cv.attributeId);
+        if (!target || !isOptionAttribute(target) || cv.attributeId === a.id) {
+          out.push(error("catalog.invalid_covers", `${where}: covers needs another option attribute ("${cv.attributeId}")`));
+          continue;
+        }
+        for (const id of cv.optionIds) {
+          if (!target.options.some((x) => x.id === id)) out.push(error("catalog.invalid_covers", `${where}: covers unknown option "${cv.attributeId}/${id}"`));
+        }
+      }
+      for (const c of [...(o.suggestedWhen ?? []), ...(o.prompt.variants ?? []).flatMap((v) => v.when)]) {
+        if (conditionAttributeIds(c).includes(a.id)) out.push(error("catalog.self_condition", `${where}: condition cannot depend on its own attribute`));
+        out.push(...checkCondition(c, attributes, where));
+      }
+      if (o.interval && o.interval.maxExclusive !== undefined && o.interval.maxExclusive <= o.interval.min) {
+        out.push(error("catalog.invalid_interval", `${where}: interval maxExclusive must be greater than min`));
+      }
+    }
+  }
+  const m = catalog.ageModel;
+  if (m) {
+    const need = (id: string, ok: (x: AttributeDefinition) => boolean, what: string) => {
+      const x = attributes.get(id);
+      if (!x || !ok(x)) out.push(error("catalog.invalid_age_model", `ageModel: "${id}" must be ${what}`));
+      return x;
+    };
+    need(m.actualAgeAttributeId, (x) => x.type === "quantity", "a quantity attribute");
+    need(m.apparentAgeAttributeId, (x) => x.type === "quantity", "a quantity attribute");
+    need(m.ageGroupAttributeId, isOptionAttribute, "an option attribute");
+    const entity = need(m.entityTypeAttributeId, isOptionAttribute, "an option attribute");
+    const species = need(m.speciesAttributeId, isOptionAttribute, "an option attribute");
+    const checkKinds = (attr: AttributeDefinition | undefined, kinds: Record<string, string>) => {
+      if (!attr || !isOptionAttribute(attr)) return;
+      for (const id of Object.keys(kinds)) {
+        if (!attr.options.some((o) => o.id === id)) out.push(error("catalog.invalid_age_model", `ageModel: unknown option "${attr.id}/${id}"`));
+      }
+    };
+    checkKinds(entity, m.entityKinds);
+    checkKinds(species, m.speciesKinds);
   }
   return out;
 }
@@ -354,7 +435,7 @@ function checkAttributeUi(a: AttributeDefinition, attributes: Map<string, Attrib
   for (const o of a.options) {
     const where = `option "${a.id}/${o.id}"`;
     for (const c of o.restriction?.when ?? []) {
-      if (c.attributeId === a.id) out.push(error("catalog.self_condition", `${where}: restriction cannot depend on its own attribute`));
+      if (conditionAttributeIds(c).includes(a.id)) out.push(error("catalog.self_condition", `${where}: restriction cannot depend on its own attribute`));
       out.push(...checkCondition(c, attributes, where));
     }
     if (o.prompt.parts) {
@@ -461,9 +542,21 @@ function checkMigrations(catalog: Catalog, attributes: Map<string, AttributeDefi
 }
 
 function checkCondition(c: Condition, attributes: Map<string, AttributeDefinition>, where: string): Diagnostic[] {
+  if (c.op === "derived") return [];
+  if (c.op === "intervalMismatch") {
+    const q = attributes.get(c.attributeId);
+    const g = attributes.get(c.groupAttributeId);
+    if (!q || q.type !== "quantity" || !g || !isOptionAttribute(g)) {
+      return [error("catalog.invalid_condition", `${where}: intervalMismatch needs a quantity attribute and an option attribute`)];
+    }
+    return [];
+  }
   const target = attributes.get(c.attributeId);
   if (!target) {
     return [error("catalog.unknown_attribute_ref", `${where} references unknown attribute "${c.attributeId}"`)];
+  }
+  if (c.op === "selectedCount" && !isOptionAttribute(target)) {
+    return [error("catalog.invalid_condition", `${where}: selectedCount requires an option attribute ("${c.attributeId}")`)];
   }
   if (c.op === "anyOf" || c.op === "noneOf") {
     if (target.type !== "single" && target.type !== "multi") {

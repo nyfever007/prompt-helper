@@ -1,3 +1,4 @@
+import type { AgeAssessment } from "../catalog/age";
 import type { SafetyReport } from "../safety/types";
 import type { Diagnostic } from "../shared/diagnostics";
 
@@ -8,6 +9,8 @@ export interface PromptFragment {
   text: string;
   /** Option ids that contributed (only applicable ones), for option attributes. */
   optionIds?: string[];
+  /** Number of user-defined entries that contributed. */
+  customCount?: number;
   priority?: number;
   /**
    * Semantic units of this (preset) phrase that were taken over by direct
@@ -33,6 +36,9 @@ export interface PromptAdapter {
 
 export type PromptParameterValue = string | number;
 
+/** Why a set, valid selection produced no fragment. */
+export type HiddenReason = "excluded" | "inactive" | "metadata" | "covered";
+
 export interface PromptCompilation {
   /** Empty when nothing is selected OR when blocked by the safety policy. */
   prompt: string;
@@ -47,6 +53,10 @@ export interface PromptCompilation {
   blocked: boolean;
   safety: SafetyReport;
   diagnostics: Diagnostic[];
+  /** Structured age assessment (shared by safety, consistency checks and conditional wording). */
+  age: AgeAssessment;
+  /** Attributes whose meaning another produced option already states (output once, provenance kept). */
+  covered?: Array<{ attributeId: string; coveredBy: string; byOptionIds: string[] }>;
   meta: {
     compilerVersion: string;
     adapterId: string;

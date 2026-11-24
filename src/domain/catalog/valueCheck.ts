@@ -1,5 +1,5 @@
 import { error, type Diagnostic } from "../shared/diagnostics";
-import type { SelectionValue } from "../spec/values";
+import { CUSTOM_EXPRESSION_MAX, CUSTOM_LABEL_MAX, customKey, selectedCustomEntries, type SelectionValue } from "../spec/values";
 import type { AttributeDefinition } from "./schema";
 
 /**
@@ -13,37 +13,54 @@ export const checkValueForAttribute = (
 ): Diagnostic[] => {
   const attributeId = attribute.id;
   const at = { attributeId, path };
-  if (value.kind !== attribute.type) {
+  const kindOk = attribute.type === "quantity" ? (attribute.forms as string[]).includes(value.kind) : value.kind === attribute.type;
+  if (!kindOk) {
+    const expected = attribute.type === "quantity" ? attribute.forms.join("|") : attribute.type;
     return [
-      error("value.kind_mismatch", `${attributeId}: expected a "${attribute.type}" value but got "${value.kind}"`, {
+      error("value.kind_mismatch", `${attributeId}: expected a "${expected}" value but got "${value.kind}"`, {
         ...at,
-        params: { expected: attribute.type, actual: value.kind },
+        params: { expected, actual: value.kind },
       }),
     ];
   }
 
   const out: Diagnostic[] = [];
+  const unknownOption = (id: string) => error("value.unknown_option", `${attributeId}: unknown option "${id}"`, { ...at, params: { optionId: id } });
+
+  // User-defined entries: only where the catalog allows them, within its limits.
+  const custom = selectedCustomEntries(value);
+  if (custom.length > 0) {
+    if (attribute.type !== "single" && attribute.type !== "multi") return out;
+    if (!attribute.custom) {
+      out.push(error("value.custom_not_allowed", `${attributeId}: custom values are not allowed`, at));
+    } else {
+      const labelMax = attribute.custom.labelMaxLength ?? CUSTOM_LABEL_MAX;
+      const exprMax = attribute.custom.expressionMaxLength ?? CUSTOM_EXPRESSION_MAX;
+      for (const c of custom) {
+        if (c.label.length > labelMax || (c.expression?.length ?? 0) > exprMax) {
+          out.push(error("value.text_too_long", `${attributeId}: custom entry exceeds ${labelMax}/${exprMax} characters`, { ...at, params: { max: labelMax } }));
+        }
+      }
+      if (new Set(custom.map((c) => customKey(c.label))).size !== custom.length) {
+        out.push(error("value.duplicate_custom", `${attributeId}: custom entries must have distinct labels`, at));
+      }
+    }
+  }
+
   switch (attribute.type) {
     case "single": {
-      const v = value as Extract<SelectionValue, { kind: "single" }>;
-      if (!attribute.options.some((o) => o.id === v.optionId)) {
-        out.push(
-          error("value.unknown_option", `${attributeId}: unknown option "${v.optionId}"`, {
-            ...at,
-            params: { optionId: v.optionId },
-          }),
-        );
+      if (value.kind === "single" && "optionId" in value && !attribute.options.some((o) => o.id === value.optionId)) {
+        out.push(unknownOption(value.optionId));
       }
       break;
     }
     case "multi": {
       const v = value as Extract<SelectionValue, { kind: "multi" }>;
       for (const id of v.optionIds) {
-        if (!attribute.options.some((o) => o.id === id)) {
-          out.push(error("value.unknown_option", `${attributeId}: unknown option "${id}"`, { ...at, params: { optionId: id } }));
-        }
+        if (!attribute.options.some((o) => o.id === id)) out.push(unknownOption(id));
       }
-      if (attribute.maxSelections !== undefined && v.optionIds.length > attribute.maxSelections) {
+      const count = v.optionIds.length + (v.custom?.length ?? 0);
+      if (attribute.maxSelections !== undefined && count > attribute.maxSelections) {
         out.push(
           error("value.too_many_options", `${attributeId}: at most ${attribute.maxSelections} options allowed`, {
             ...at,
@@ -74,6 +91,31 @@ export const checkValueForAttribute = (
             params: { min: attribute.min, max: attribute.max },
           }),
         );
+      }
+      break;
+    }
+    case "quantity": {
+      const v = value as Extract<SelectionValue, { kind: "number" | "range" }>;
+      if (!attribute.units.some((u) => u.id === v.unit)) {
+        out.push(
+          error("value.unknown_unit", `${attributeId}: unit "${v.unit ?? ""}" is not one of ${attribute.units.map((u) => u.id).join(", ")}`, {
+            ...at,
+            params: { unit: v.unit ?? "" },
+          }),
+        );
+      }
+      const nums = v.kind === "number" ? [v.value] : [v.min, v.max];
+      const max = attribute.max ?? Number.POSITIVE_INFINITY;
+      if (nums.some((n) => n < attribute.min || n > max)) {
+        out.push(
+          error("value.out_of_range", `${attributeId}: ${nums.join("-")} is outside ${attribute.min}..${attribute.max ?? "∞"}`, {
+            ...at,
+            params: { min: attribute.min, max: attribute.max ?? "∞" },
+          }),
+        );
+      }
+      if (attribute.integer && nums.some((n) => !Number.isInteger(n))) {
+        out.push(error("value.not_integer", `${attributeId}: whole numbers only`, at));
       }
       break;
     }

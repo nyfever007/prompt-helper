@@ -5,9 +5,11 @@ import { SelectionValueSchema } from "./values";
 /**
  * Current ImageSpec schema version. Bump on any persisted-shape change.
  * 0.2.0 (Sprint 2-A): optional `AttributeSelection.origin` (preset provenance).
- * Older apps cannot read 0.2.0 files; this app reads 0.1.0 via migration.
+ * 0.3.0 (Sprint 2-B.1): optional `AttributeSelection.excludedFromPrompt`,
+ * custom entries in single/multi values, `unit` on number/range values.
+ * Older apps cannot read newer files; this app reads 0.1.0 and 0.2.0 via migration.
  */
-export const IMAGE_SPEC_SCHEMA_VERSION = "0.2.0" as const;
+export const IMAGE_SPEC_SCHEMA_VERSION = "0.3.0" as const;
 export const IMAGE_SPEC_KIND = "prompter.image-spec" as const;
 
 export const SelectionSourceSchema = z.enum(["user", "preset", "import"]);
@@ -32,6 +34,12 @@ export const AttributeSelectionSchema = z
     priority: z.number().int().min(1).max(5).optional(),
     /** Which preset set this value. Only valid with `source: "preset"`; cleared on any direct user edit. */
     origin: SelectionOriginSchema.optional(),
+    /**
+     * Output state, independent of the value: the selection is kept (and still
+     * safety-checked) but not compiled into the prompt. Absent = included.
+     * Kept when the value changes; removed together with the selection.
+     */
+    excludedFromPrompt: z.literal(true).optional(),
   })
   .strict()
   .refine((s) => s.origin === undefined || s.source === "preset", {

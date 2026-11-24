@@ -18,7 +18,14 @@ import {
   type SelectionValue,
   type SpecStorage,
 } from "@/domain";
-import { createWorkspaceReducer, initialWorkspaceState, type PresetUndoResult, type Transition } from "./workspaceReducer";
+import {
+  createWorkspaceReducer,
+  initialWorkspaceState,
+  type CategoryResetRecord,
+  type CategoryRestoreResult,
+  type PresetUndoResult,
+  type Transition,
+} from "./workspaceReducer";
 
 export type HydrationState =
   | { status: "pending" }
@@ -45,6 +52,11 @@ export interface Workspace {
   lastPresetUndo: PresetUndoResult | null;
   applyPreset(plan: PresetPlan, mode: "all" | "onlyEmpty"): void;
   undoPreset(): void;
+  lastCategoryReset: CategoryResetRecord | null;
+  lastCategoryRestore: CategoryRestoreResult | null;
+  setExcluded(attributeId: string, excluded: boolean): void;
+  resetCategory(categoryId: string): void;
+  undoCategoryReset(): void;
   setValue(attributeId: string, value: SelectionValue): void;
   clear(attributeId: string): void;
   reset(): void;
@@ -114,6 +126,9 @@ export const useWorkspace = (registry: CatalogRegistry, store: KeyValueStore | n
   const replace = useCallback((next: ImageSpec) => dispatch({ type: "replace", spec: next }), []);
   const applyPreset = useCallback((plan: PresetPlan, mode: "all" | "onlyEmpty") => dispatch({ type: "applyPreset", plan, mode }), []);
   const undoPreset = useCallback(() => dispatch({ type: "undoPreset" }), []);
+  const setExcluded = useCallback((attributeId: string, excluded: boolean) => dispatch({ type: "setExcluded", attributeId, excluded }), []);
+  const resetCategory = useCallback((categoryId: string) => dispatch({ type: "resetCategory", categoryId }), []);
+  const undoCategoryReset = useCallback(() => dispatch({ type: "undoCategoryReset" }), []);
   const applyRecovery = useCallback(() => {
     if (hydration.status !== "recoverable") return;
     dispatch({ type: "replace", spec: hydration.proposed });
@@ -137,6 +152,11 @@ export const useWorkspace = (registry: CatalogRegistry, store: KeyValueStore | n
     lastPresetUndo: state.lastPresetUndo,
     applyPreset,
     undoPreset,
+    lastCategoryReset: state.lastCategoryReset,
+    lastCategoryRestore: state.lastCategoryRestore,
+    setExcluded,
+    resetCategory,
+    undoCategoryReset,
     setValue,
     clear,
     reset,

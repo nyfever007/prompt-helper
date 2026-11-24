@@ -1,0 +1,66 @@
+import { writeFileSync, mkdirSync } from "node:fs";
+import { join } from "node:path";
+import { it } from "vitest";
+import {
+  applyPresetPlan, applySelection, compilePrompt, createEmptySpec, createMemoryStore, createSpecStorage, exportSpecJson,
+  getCoreRegistry, planPreset, WORKSPACE_STORAGE_KEY, type ImageSpec, type SelectionValue,
+} from "@/domain";
+import { CatalogRegistry } from "@/domain";
+import { buildFixtureCatalog } from "@/testing/fixtureCatalog";
+
+const OUT = process.env.CAPTURE_OUT!;
+const set = (spec: ImageSpec, reg: CatalogRegistry, id: string, v: SelectionValue) => {
+  const r = applySelection(spec, reg, id, v);
+  if (!r.ok) throw new Error(id + JSON.stringify(r.diagnostics));
+  return r.value;
+};
+it("capture Sprint 2-A fixtures", () => {
+  mkdirSync(OUT, { recursive: true });
+  const core = getCoreRegistry();
+  // 1) Core: every approved Detailed attribute (Basic + 6 lighting properties) incl. a preset-unit takeover context
+  let s = createEmptySpec(core);
+  const vals: Array<[string, SelectionValue]> = [
+    ["intent.description", { kind: "text", text: "A violinist rehearsing on an empty stage" }],
+    ["subject.kind", { kind: "single", optionId: "person" }],
+    ["style.preset", { kind: "single", optionId: "cinematic_still" }],
+    ["composition.framing", { kind: "single", optionId: "upper_body" }],
+    ["composition.view_direction", { kind: "single", optionId: "three_quarter" }],
+    ["camera.angle", { kind: "single", optionId: "low_angle" }],
+    ["scene.setting", { kind: "single", optionId: "nature" }],
+    ["scene.background", { kind: "single", optionId: "blurred" }],
+    ["mood.tone", { kind: "multi", optionIds: ["calm", "dramatic"] }],
+    ["lighting.preset", { kind: "single", optionId: "golden_hour" }],
+    ["lighting.source", { kind: "single", optionId: "sun" }],
+    ["lighting.direction", { kind: "single", optionId: "side" }],
+    ["lighting.softness", { kind: "single", optionId: "soft" }],
+    ["lighting.intensity", { kind: "single", optionId: "moderate" }],
+    ["lighting.color_temperature", { kind: "single", optionId: "cool" }],
+    ["lighting.contrast", { kind: "single", optionId: "high" }],
+    ["output.aspect_ratio", { kind: "single", optionId: "landscape_16_9" }],
+  ];
+  const skipped: string[] = [];
+  for (const [id, v] of vals) {
+    const r = applySelection(s, core, id, v);
+    if (r.ok) s = r.value; else skipped.push(id);
+  }
+  // 2) Fixture catalog spec with preset provenance (origin), produced by the real preset flow
+  const fx = CatalogRegistry.createOrThrow(buildFixtureCatalog());
+  let f = createEmptySpec(fx);
+  f = set(f, fx, "subject.kind", { kind: "single", optionId: "person" });
+  const presetId = fx.presets[0]!.id;
+  const plan = planPreset(f, fx, presetId);
+  if (!plan.ok) throw new Error("plan");
+  f = applyPresetPlan(f, fx, plan.value, "all").spec;
+  const store = createMemoryStore();
+  createSpecStorage(store, core).save(s, new Date("2026-11-24T00:00:00Z"));
+  writeFileSync(join(OUT, "export-core-detailed.json"), exportSpecJson(s));
+  writeFileSync(join(OUT, "export-fixture-preset.json"), exportSpecJson(f));
+  writeFileSync(join(OUT, "localstorage-workspace.txt"), store.getItem(WORKSPACE_STORAGE_KEY)!);
+  const cc = compilePrompt(s, core);
+  const fc = compilePrompt(f, fx);
+  writeFileSync(join(OUT, "expected-prompts.json"), JSON.stringify({
+    "export-core-detailed.json": { prompt: cc.prompt, parameters: cc.parameters, blocked: cc.blocked, fragments: cc.fragments, meta: cc.meta },
+    "export-fixture-preset.json": { presetId, prompt: fc.prompt, blocked: fc.blocked, fragments: fc.fragments, meta: fc.meta },
+    skippedInvalidSamples: skipped,
+  }, null, 2) + "\n");
+});

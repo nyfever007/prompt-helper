@@ -67,7 +67,7 @@ test("Basic flow: compose, copy, switch modes, reload, export, reset, import", a
   const exportedPath = testInfo.outputPath("exported.json");
   await download.saveAs(exportedPath);
   const exported = JSON.parse(await readFile(exportedPath, "utf8"));
-  expect(exported).toMatchObject({ kind: "prompter.image-spec", schemaVersion: "0.2.0", catalog: { id: "prompter.core" } });
+  expect(exported).toMatchObject({ kind: "prompter.image-spec", schemaVersion: "0.3.0", catalog: { id: "prompter.core" } });
   expect(Object.keys(exported.selections).sort()).toEqual(["intent.description", "style.preset", "subject.kind"]);
 
   // reset (cancel, then confirm) — then undo restores, then reset again for the import checks

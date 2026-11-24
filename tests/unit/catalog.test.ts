@@ -18,11 +18,11 @@ import { buildSpec, multi, single } from "../fixtures/specs";
 
 const core = getCoreRegistry();
 
-describe("8. core catalog 0.3.0", () => {
+describe("8. core catalog 0.4.0", () => {
   it("is valid, versioned and declares its format", () => {
     expect(core.id).toBe("prompter.core");
-    expect(core.version).toBe("0.3.0");
-    expect(coreCatalog.formatVersion).toBe("0.3.0");
+    expect(core.version).toBe("0.4.0");
+    expect(coreCatalog.formatVersion).toBe("0.4.0");
   });
 
   it("Basic tier attributes in order", () => {
@@ -43,6 +43,23 @@ describe("8. core catalog 0.3.0", () => {
 
   it("independent style and lighting axes exist (Detailed tier, not shown in Basic)", () => {
     expect(core.attributesForTier("detailed").map((a) => a.id)).toEqual([
+      // Person › Identity (Sprint 2-B.1, order 201–216: right after the subject)
+      "person.identity.entity_type",
+      "person.identity.species",
+      "person.identity.character_origin",
+      "person.identity.age_group",
+      "person.identity.age",
+      "person.identity.apparent_age",
+      "person.identity.gender",
+      "person.identity.gender_presentation",
+      "person.identity.nationality",
+      "person.identity.ethnic_background",
+      "person.identity.cultural_background",
+      "person.identity.historical_period",
+      "person.identity.occupation",
+      "person.identity.narrative_role",
+      "person.identity.social_status",
+      "person.identity.description",
       "style.medium",
       "style.realism",
       "style.technique",

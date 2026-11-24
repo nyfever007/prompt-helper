@@ -1,0 +1,194 @@
+{
+  "export-core-detailed.json": {
+    "prompt": "A violinist rehearsing on an empty stage. Main subject: a single person. Visual style: cinematic film still. Framing: upper-body shot. Viewing direction: three-quarter view. Camera angle: low angle looking up. Setting: a natural outdoor environment. Background: softly blurred background. Mood: calm, dramatic. Lighting: golden-hour sunlight. Light source: direct sunlight. Light direction: side lighting. Light quality: soft light. Light intensity: moderate. Color temperature: cool. Lighting contrast: high contrast. Aspect ratio: widescreen 16:9.",
+    "parameters": {
+      "aspectRatio": "16:9"
+    },
+    "blocked": false,
+    "fragments": [
+      {
+        "attributeId": "intent.description",
+        "text": "A violinist rehearsing on an empty stage"
+      },
+      {
+        "attributeId": "subject.kind",
+        "text": "Main subject: a single person.",
+        "optionIds": [
+          "person"
+        ]
+      },
+      {
+        "attributeId": "style.preset",
+        "text": "Visual style: cinematic film still.",
+        "optionIds": [
+          "cinematic_still"
+        ]
+      },
+      {
+        "attributeId": "composition.framing",
+        "text": "Framing: upper-body shot.",
+        "optionIds": [
+          "upper_body"
+        ]
+      },
+      {
+        "attributeId": "composition.view_direction",
+        "text": "Viewing direction: three-quarter view.",
+        "optionIds": [
+          "three_quarter"
+        ]
+      },
+      {
+        "attributeId": "camera.angle",
+        "text": "Camera angle: low angle looking up.",
+        "optionIds": [
+          "low_angle"
+        ]
+      },
+      {
+        "attributeId": "scene.setting",
+        "text": "Setting: a natural outdoor environment.",
+        "optionIds": [
+          "nature"
+        ]
+      },
+      {
+        "attributeId": "scene.background",
+        "text": "Background: softly blurred background.",
+        "optionIds": [
+          "blurred"
+        ]
+      },
+      {
+        "attributeId": "mood.tone",
+        "text": "Mood: calm, dramatic.",
+        "optionIds": [
+          "calm",
+          "dramatic"
+        ]
+      },
+      {
+        "attributeId": "lighting.preset",
+        "text": "Lighting: golden-hour sunlight.",
+        "optionIds": [
+          "golden_hour"
+        ],
+        "takenOverBy": [
+          {
+            "attributeId": "lighting.color_temperature",
+            "relation": "override"
+          }
+        ]
+      },
+      {
+        "attributeId": "lighting.source",
+        "text": "Light source: direct sunlight.",
+        "optionIds": [
+          "sun"
+        ]
+      },
+      {
+        "attributeId": "lighting.direction",
+        "text": "Light direction: side lighting.",
+        "optionIds": [
+          "side"
+        ]
+      },
+      {
+        "attributeId": "lighting.softness",
+        "text": "Light quality: soft light.",
+        "optionIds": [
+          "soft"
+        ]
+      },
+      {
+        "attributeId": "lighting.intensity",
+        "text": "Light intensity: moderate.",
+        "optionIds": [
+          "moderate"
+        ]
+      },
+      {
+        "attributeId": "lighting.color_temperature",
+        "text": "Color temperature: cool.",
+        "optionIds": [
+          "cool"
+        ]
+      },
+      {
+        "attributeId": "lighting.contrast",
+        "text": "Lighting contrast: high contrast.",
+        "optionIds": [
+          "high"
+        ]
+      },
+      {
+        "attributeId": "output.aspect_ratio",
+        "text": "Aspect ratio: widescreen 16:9.",
+        "optionIds": [
+          "landscape_16_9"
+        ]
+      }
+    ],
+    "meta": {
+      "compilerVersion": "0.3.0",
+      "adapterId": "generic-en",
+      "adapterVersion": "0.1.0",
+      "specSchemaVersion": "0.2.0",
+      "catalogId": "prompter.core",
+      "catalogVersion": "0.3.0",
+      "safetyPolicyId": "prompter.baseline",
+      "safetyPolicyVersion": "0.1.0"
+    }
+  },
+  "export-fixture-preset.json": {
+    "presetId": "p_soft_portrait",
+    "prompt": "Main subject: a single person. Framing: head-and-shoulders portrait. Background: softly blurred background. Lighting: even studio softbox lighting. Expression: a gentle smile.",
+    "blocked": false,
+    "fragments": [
+      {
+        "attributeId": "subject.kind",
+        "text": "Main subject: a single person.",
+        "optionIds": [
+          "person"
+        ]
+      },
+      {
+        "attributeId": "composition.framing",
+        "text": "Framing: head-and-shoulders portrait.",
+        "optionIds": [
+          "head_and_shoulders"
+        ]
+      },
+      {
+        "attributeId": "scene.background",
+        "text": "Background: softly blurred background.",
+        "optionIds": [
+          "blurred"
+        ]
+      },
+      {
+        "attributeId": "lighting.preset",
+        "text": "Lighting: even studio softbox lighting.",
+        "optionIds": [
+          "studio_softbox"
+        ]
+      },
+      {
+        "attributeId": "x.expression.smile",
+        "text": "Expression: a gentle smile."
+      }
+    ],
+    "meta": {
+      "compilerVersion": "0.3.0",
+      "adapterId": "generic-en",
+      "adapterVersion": "0.1.0",
+      "specSchemaVersion": "0.2.0",
+      "catalogId": "prompter.e2e-fixture",
+      "catalogVersion": "0.3.0",
+      "safetyPolicyId": "prompter.baseline",
+      "safetyPolicyVersion": "0.1.0"
+    }
+  },
+  "skippedInvalidSamples": []
+}
