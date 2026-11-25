@@ -9,6 +9,22 @@
 - 컴파일러(`COMPILER_VERSION`): 0.1.0 / generic-en adapter: 0.1.0
 - 로컬 저장 envelope(`STORAGE_FORMAT_VERSION`): 1
 
+## [0.15.0] — 2026-11-25 — Sprint 2-D.3: Hair, body & clothing visual editor
+
+버전 변화: core 카탈로그 0.14.0 → **0.15.0**(ID·값·저장 형식·출력 변경 없음, 마이그레이션 `changes: []`). 형식·컴파일러·ImageSpec·안전 정책은 그대로.
+
+### Added
+- 헤어 스케치(`src/visual/hair-sketch.ts`): Face Builder와 같은 기준 얼굴·시점. 대표 헤어스타일 37(목록에 썸네일), 길이 11(전신), 형태 5, 앞머리 9, 가르마 6 카드. Face Builder에 헤어 영역 추가, 헤어 볼륨 슬라이더 프리뷰.
+- 전신 스케치(`src/visual/figure-sketch.ts`): 기본 옷을 입은 중립 마네킹. 체형 7·실루엣 5·신체 비율 5·상하체 비율 3·어깨 기울기 3·다리 형태 4 카드, 신체 비율 슬라이더 25개 프리뷰.
+- 의상 도식화(고스트 마네킹 위): 넥라인 13·칼라 11·소매 길이 7·소매 형태 10·상의 기장 4·핏 6·밑위 3·바지 통 5·하의 기장 5·원피스 허리 6·기장 6·스커트 실루엣 7 카드, 상의 23·하의 23·원피스 15 종류는 목록에 썸네일.
+- Figure Builder: 신체·의상 페이지에서 신체 비율·의상(팔레트 색상)·헤어 길이를 한 마네킹으로 표시. ImageSpec 읽기 전용, 선택 안 한 부분의 기본 옷은 저장·출력하지 않음, 그리지 않는 설정 목록.
+- 공통: `src/visual/sketch-core.ts`(요소 모델·직렬화), `components/sketch/bindings.ts`(ImageSpec → 스케치 매핑 공통 규칙).
+- 테스트: `unit/figure-sketch`(67), `component/figure-builder`(3), e2e `body` Figure Builder 시나리오(데스크톱·모바일), 시각 예시 테스트에 부분 목록·모듈 일치 검사.
+
+### Changed
+- 위 카드 속성의 컨트롤: 칩·목록 → 카드(넥라인 포함). 헤어스타일·상의·하의·원피스 종류는 검색 목록을 유지하고 썸네일만 추가.
+- tsconfig `allowImportingTsExtensions`(시각 모듈이 Node 생성 스크립트와 앱에서 같은 파일을 import).
+
 ## [0.14.0] — 2026-11-25 — Sprint 2-D.2: Face visual editor
 
 버전 변화: core 카탈로그 0.13.0 → **0.14.0**(ID·값·저장 형식·출력 변경 없음, 마이그레이션 `changes: []`). 형식·컴파일러·ImageSpec·안전 정책은 그대로.

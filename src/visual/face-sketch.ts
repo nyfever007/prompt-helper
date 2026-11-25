@@ -3,13 +3,35 @@
  * (scripts/generate-visual-assets.mjs) and the live Face Builder / slider previews (React).
  *
  * - Pure and deterministic: parameters in, primitive elements out (numbers rounded to 0.1).
- * - Self-contained (no imports, erasable TypeScript only) so Node can run the generator directly.
+ * - Erasable TypeScript only, relative `.ts` imports, so Node can run the generator directly.
  * - Explains MEANING with simple, neutral line art: no skin tone, hair, makeup, age or gender cues;
  *   it never predicts what an image model will generate and never ranks appearance.
  * - Every relative slider is 1–5 with 3 = neutral; option ids are the catalog's own ids.
  * - Colours are CSS classes (see SKETCH_STYLE / globals.css `.face-sketch`) so light/dark themes work;
  *   only chosen iris / lip / brow swatches are applied as explicit fills.
  */
+
+import {
+  along,
+  bezier,
+  clamp,
+  closedSpline,
+  ellipse,
+  lv,
+  mirrorX,
+  openSpline,
+  pt,
+  r1,
+  type Box,
+  type El,
+  type Layer,
+  type P,
+} from "./sketch-core.ts";
+
+export { boxAttr, cardSvg, layersString, SKETCH_STYLE, type Box, type El, type Layer, type LayerId } from "./sketch-core.ts";
+
+export const FRONT_BOX: Box = [0, 0, 200, 250];
+export const PROFILE_BOX: Box = [20, 14, 180, 236];
 
 export type FaceShape = "oval" | "round" | "square" | "rectangular" | "heart" | "diamond" | "triangular" | "inverted_triangular";
 export type JawShape = "rounded" | "soft" | "angular" | "defined" | "v_shaped" | "u_shaped";
@@ -44,20 +66,6 @@ export const NEUTRAL: FaceParams = {
 
 export const neutralParams = (): FaceParams => JSON.parse(JSON.stringify(NEUTRAL)) as FaceParams;
 
-export type LayerId = "base" | "face" | "eyes" | "brows" | "nose" | "lips";
-export type El =
-  | { t: "path"; d: string; c: string; fill?: string; opacity?: number }
-  | { t: "circle"; cx: number; cy: number; r: number; c: string; fill?: string }
-  | { t: "clip"; d: string; children: El[] };
-export interface Layer {
-  id: LayerId;
-  els: El[];
-}
-
-// ── Views and crops (viewBox x y w h) ───────────────────────────────────────────────────────
-export type Box = readonly [number, number, number, number];
-export const FRONT_BOX: Box = [0, 0, 200, 250];
-export const PROFILE_BOX: Box = [20, 14, 180, 236];
 export const CROPS = {
   face: [-41.3, 14, 282.7, 212],
   jaw: [17.3, 94, 165.3, 124],
@@ -73,72 +81,10 @@ export const CROPS = {
   noseProfileTall: [142, 112, 32, 48],
   noseFrontTall: [84, 124, 32, 48],
 } as const satisfies Record<string, Box>;
-export const boxAttr = (b: Box): string => b.map(r1).join(" ");
-
-// ── Small helpers ───────────────────────────────────────────────────────────────────────────
-type P = [number, number];
-const r1 = (n: number): number => Math.round(n * 10) / 10 + 0; // + 0 turns -0 into 0
-const pt = (p: P): string => `${r1(p[0])} ${r1(p[1])}`;
-const lv = (v: number): number => v - 3;
-const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
-
-/** Closed Catmull-Rom spline through points → cubic Bézier path. A repeated point makes a corner. */
-const closedSpline = (pts: P[]): string => {
-  const n = pts.length;
-  let d = `M${pt(pts[0]!)}`;
-  for (let i = 0; i < n; i++) {
-    const p0 = pts[(i - 1 + n) % n]!;
-    const p1 = pts[i]!;
-    const p2 = pts[(i + 1) % n]!;
-    const p3 = pts[(i + 2) % n]!;
-    d += ` C${pt([p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6])} ${pt([p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6])} ${pt(p2)}`;
-  }
-  return `${d} Z`;
-};
-/** Open Catmull-Rom spline (end points repeated as phantoms). */
-const openSpline = (pts: P[]): string => {
-  const ext = [pts[0]!, ...pts, pts[pts.length - 1]!];
-  let d = `M${pt(pts[0]!)}`;
-  for (let i = 1; i < ext.length - 2; i++) {
-    const [p0, p1, p2, p3] = [ext[i - 1]!, ext[i]!, ext[i + 1]!, ext[i + 2]!];
-    d += ` C${pt([p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6])} ${pt([p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6])} ${pt(p2)}`;
-  }
-  return d;
-};
-const bezier = (a: P, b: P, c: P, d: P, t: number): P => {
-  const u = 1 - t;
-  return [u * u * u * a[0] + 3 * u * u * t * b[0] + 3 * u * t * t * c[0] + t * t * t * d[0], u * u * u * a[1] + 3 * u * u * t * b[1] + 3 * u * t * t * c[1] + t * t * t * d[1]];
-};
-/** Point at fraction s of a polyline (linear) — used for brow centrelines. */
-const along = (pts: P[], s: number, smooth: boolean): P => {
-  const segs = pts.length - 1;
-  const x = clamp(s, 0, 1) * segs;
-  const i = Math.min(segs - 1, Math.floor(x));
-  const t = x - i;
-  const p1 = pts[i]!;
-  const p2 = pts[i + 1]!;
-  if (!smooth) return [p1[0] + (p2[0] - p1[0]) * t, p1[1] + (p2[1] - p1[1]) * t];
-  const p0 = pts[i - 1] ?? p1;
-  const p3 = pts[i + 2] ?? p2;
-  const t2 = t * t;
-  const t3 = t2 * t;
-  const f = (a: number, b: number, c: number, d: number) => 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
-  return [f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1])];
-};
-const ellipse = (cx: number, cy: number, rx: number, ry: number): string =>
-  `M${pt([cx - rx, cy])} A${r1(rx)} ${r1(ry)} 0 1 0 ${pt([cx + rx, cy])} A${r1(rx)} ${r1(ry)} 0 1 0 ${pt([cx - rx, cy])} Z`;
-const mirrorX = (d: string, cx = 100): string =>
-  // Mirror an absolute path we generated (M/C/L/Q/A with x y pairs; A has rx ry rot large sweep x y).
-  d.replace(/([MCLQ])([^MCLQAZ]*)/g, (_, cmd: string, args: string) => {
-    const n = args.trim().split(/[\s,]+/).filter(Boolean).map(Number);
-    const out: string[] = [];
-    for (let i = 0; i < n.length; i += 2) out.push(`${r1(2 * cx - n[i]!)} ${r1(n[i + 1]!)}`);
-    return `${cmd}${out.join(" ")}${args.endsWith(" ") ? " " : ""}`;
-  });
 
 // ── Front view ──────────────────────────────────────────────────────────────────────────────
-const CX = 100;
-const EYE_Y = 122;
+export const CX = 100;
+export const EYE_Y = 122;
 const SCALE = 1.85;
 /** Right-half profiles [halfWidth, y] in drawing units (eye line at y = 60), top centre → chin centre. */
 const FACE: Record<FaceShape, P[]> = {
@@ -161,12 +107,12 @@ const JAW: Record<JawShape, P[]> = {
   u_shaped: [[31, 84], [27, 99], [14, 106], [0, 107]],
 };
 
-interface Frame {
+export interface Frame {
   mapY(y: number): number;
   half: P[]; // transformed half profile [halfWidth, y]
   chinY: number;
 }
-const frame = (f: FaceParams["face"]): Frame => {
+export const faceFrame = (f: FaceParams["face"]): Frame => {
   const len = 1 + lv(f.length) * 0.05;
   const wid = 1 + lv(f.width) * 0.07;
   const mapY = (y: number) => EYE_Y + (y - EYE_Y) * len;
@@ -183,7 +129,7 @@ const frame = (f: FaceParams["face"]): Frame => {
   });
   return { mapY, half, chinY: half[half.length - 1]![1] };
 };
-const halfAt = (half: P[], y: number): number => {
+export const halfAt = (half: P[], y: number): number => {
   for (let i = 0; i < half.length - 1; i++) {
     const [w1, y1] = half[i]!;
     const [w2, y2] = half[i + 1]!;
@@ -478,7 +424,7 @@ const lipsLayer = (p: FaceParams, fr: Frame): Layer => {
 };
 
 export const frontLayers = (p: FaceParams): Layer[] => {
-  const fr = frame(p.face);
+  const fr = faceFrame(p.face);
   return [baseLayer(p, fr), faceLayer(p, fr), browsLayer(p, fr), eyesLayer(p), noseLayer(p, fr), lipsLayer(p, fr)];
 };
 
@@ -500,7 +446,7 @@ export const noseProfile = (n: FaceParams["nose"]) => {
   return { bridge, tip: n.tipAngle ?? s.tip, hump, short: s.short };
 };
 export const profileLayers = (p: FaceParams): Layer[] => {
-  const fr = frame(p.face);
+  const fr = faceFrame(p.face);
   const Y = fr.mapY;
   const n = p.nose;
   const np = noseProfile(n);
@@ -565,62 +511,4 @@ export const profileLayers = (p: FaceParams): Layer[] => {
       els: [{ t: "path", c: "s", d: `M${pt([tip[0] - 13, tip[1] - 3])} C${pt([tip[0] - 9, tip[1] - 9])} ${pt([tip[0] - 3, tip[1] - 4])} ${pt([tip[0] - 7, tip[1] + 2])}` }],
     },
   ];
-};
-
-// ── Static SVG serialisation (generator) ───────────────────────────────────────────────────
-/** Theme tokens; the live sketch uses the same values in globals.css (`.face-sketch`). */
-export const SKETCH_STYLE = `<style>
-svg{--ink:#34322e;--fill:#ecebe7;--soft:#86827a;--iris:#a9a59c;--white:#fbfaf8;--pupil:#2a2825;--hl:#ffffff;--brow:#57544e;--lip:#d3cec6;--nostril:#6f6b64}
-@media (prefers-color-scheme:dark){svg{--ink:#ebe8e2;--fill:#34332f;--soft:#a09c92;--iris:#77736b;--white:#4a4944;--pupil:#121211;--hl:#ebe8e2;--brow:#cfcbc3;--lip:#5a5752;--nostril:#aaa69c}}
-path,circle{vector-effect:non-scaling-stroke}
-.o{fill:var(--fill);stroke:var(--ink);stroke-width:2;stroke-linejoin:round}
-.f{fill:var(--fill)}
-.l{fill:none;stroke:var(--ink);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.s{fill:none;stroke:var(--soft);stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round}
-.w{fill:var(--white)}.i{fill:var(--iris)}.p{fill:var(--pupil)}.h{fill:var(--hl)}.b{fill:var(--brow)}.n{fill:var(--nostril)}
-.lp{fill:var(--lip);stroke:var(--soft);stroke-width:1.2;stroke-linejoin:round}
-</style>`;
-
-const elString = (e: El, ids: { n: number }): string => {
-  if (e.t === "circle") return `<circle class="${e.c}" cx="${e.cx}" cy="${e.cy}" r="${e.r}"${e.fill ? ` style="fill:${e.fill}"` : ""}/>`;
-  if (e.t === "path") return `<path class="${e.c}" d="${e.d}"${e.fill ? ` style="fill:${e.fill}"` : ""}${e.opacity !== undefined ? ` opacity="${e.opacity}"` : ""}/>`;
-  const id = `k${ids.n++}`;
-  return `<clipPath id="${id}"><path d="${e.d}"/></clipPath><g clip-path="url(#${id})">${e.children.map((c) => elString(c, ids)).join("")}</g>`;
-};
-export const layersString = (layers: Layer[], ids = { n: 0 }, box?: Box): string =>
-  layers.map((l) => l.els.filter((e) => !box || overlaps(e, box)).map((e) => elString(e, ids)).join("")).join("");
-/** Rough bounding box of an element (path points incl. control points) — used to drop what a crop never shows. */
-const overlaps = (e: El, [bx, by, bw, bh]: Box): boolean => {
-  if (e.t === "circle") return e.cx + e.r > bx && e.cx - e.r < bx + bw && e.cy + e.r > by && e.cy - e.r < by + bh;
-  const d = e.d;
-  let xs: number[] = [];
-  let ys: number[] = [];
-  if (d.includes("A")) {
-    // ellipse: M x y A rx ry …
-    const [mx, my, rx, ry] = d.replace(/[MA]/g, " ").trim().split(/\s+/).map(Number) as [number, number, number, number];
-    xs = [mx, mx + 2 * rx];
-    ys = [my - ry, my + ry];
-  } else {
-    const n = d.replace(/[A-Z]/g, " ").trim().split(/\s+/).filter(Boolean).map(Number);
-    for (let i = 0; i + 1 < n.length; i += 2) {
-      xs.push(n[i]!);
-      ys.push(n[i + 1]!);
-    }
-  }
-  const m = 2;
-  return Math.max(...xs) + m > bx && Math.min(...xs) - m < bx + bw && Math.max(...ys) + m > by && Math.min(...ys) - m < by + bh;
-};
-/** A 160×120 card: one view, or two views side by side (e.g. nose profile + front). */
-export const cardSvg = (views: Array<{ layers: Layer[]; box: Box }>, W = 160, H = 120): string => {
-  const ids = { n: 0 };
-  const body =
-    views.length === 1
-      ? `<svg x="0" y="0" width="${W}" height="${H}" viewBox="${boxAttr(views[0]!.box)}" preserveAspectRatio="xMidYMid slice">${layersString(views[0]!.layers, ids, views[0]!.box)}</svg>`
-      : views
-          .map((v, i) => {
-            const w = W / views.length;
-            return `<svg x="${r1(i * w)}" y="0" width="${r1(w)}" height="${H}" viewBox="${boxAttr(v.box)}" preserveAspectRatio="xMidYMid slice">${layersString(v.layers, ids, v.box)}</svg>`;
-          })
-          .join("") + views.slice(1).map((_, i) => `<path class="s" d="M${r1(((i + 1) * W) / views.length)} 8 V${H - 8}"/>`).join("");
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${SKETCH_STYLE}${body}</svg>\n`;
 };

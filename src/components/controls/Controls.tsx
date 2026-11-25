@@ -209,6 +209,8 @@ const depthOf = (attribute: OptionAttributeDefinition, o: OptionDefinition): num
  */
 export function SearchableListControl(p: OptionControlProps) {
   const [query, setQuery] = useState("");
+  // Sprint 2-D.3: options with a drawing show a small thumbnail (decorative — the label names the option).
+  const [failedThumbs, setFailedThumbs] = useState<ReadonlySet<string>>(new Set());
   const isMulti = p.attribute.type === "multi";
   const offered = offeredOptions(p);
   const groups = p.attribute.optionGroups ? [...p.attribute.optionGroups].sort((a, b) => a.order - b.order) : null;
@@ -244,6 +246,7 @@ export function SearchableListControl(p: OptionControlProps) {
     const en = englishTerm(o, p.locale);
     const checked = p.selectedIds.includes(o.id);
     const depth = flat ? 0 : depthOf(p.attribute, o);
+    const thumb = o.examples?.find((e) => e.status === "ready" && e.src);
     return (
       <li
         key={o.id}
@@ -261,6 +264,10 @@ export function SearchableListControl(p: OptionControlProps) {
             disabled={p.isRestricted(o) && !checked}
             onChange={() => (isMulti ? p.onToggle(o.id) : p.onSelect(o.id))}
           />
+          {thumb && !failedThumbs.has(o.id) && (
+            // eslint-disable-next-line @next/next/no-img-element -- static catalog asset (SVG line art)
+            <img className="list-thumb" src={thumb.src} alt="" width={64} height={48} loading="lazy" decoding="async" onError={() => setFailedThumbs((f) => new Set(f).add(o.id))} />
+          )}
           <span>{flat && o.parentId ? optionPath(p.attribute, o, p.locale) : resolveText(o.label, p.locale)}</span>
           {en && <span className="muted small" lang="en"> {en}</span>}
           {o.description && <span className="muted small"> — {resolveText(o.description, p.locale)}</span>}

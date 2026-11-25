@@ -12,8 +12,6 @@ const shot = async (page: Page, name: string, project: string) => {
 const output = (page: Page) => page.getByTestId("prompt-output");
 const field = (page: Page, id: string) => page.locator(`[data-attribute-id="${id}"]`);
 const nav = (page: Page) => page.getByRole("navigation", { name: "카테고리" });
-const pickChip = (page: Page, id: string, label: string) =>
-  field(page, id).locator("label.chip").filter({ has: page.getByText(label, { exact: true }) }).click();
 const go = async (page: Page, label: string) => {
   const toggle = page.locator(".nav-toggle");
   if ((await toggle.isVisible()) && (await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
@@ -41,8 +39,8 @@ test("body: subcategories, build, relative sliders, heads tall, exclusion, reset
   await go(page, "전체 신체");
   await slide(page, "person.body.height", 1);
   await expect(page.getByTestId("slider-value-person.body.height")).toHaveText("큼");
-  await pickChip(page, "person.body.build", "운동형");
-  await pickChip(page, "person.body.proportions", "자연스러운");
+  await field(page, "person.body.build").getByRole("radio", { name: /^운동형/ }).check(); // visual cards (Sprint 2-D.3)
+  await field(page, "person.body.proportions").getByRole("radio", { name: /^자연스러운/ }).check(); // visual cards (Sprint 2-D.3)
   await field(page, "person.body.muscle_mass").getByRole("slider").focus(); // focus alone stores nothing
   await shot(page, "general", project);
 
@@ -57,7 +55,7 @@ test("body: subcategories, build, relative sliders, heads tall, exclusion, reset
   await slide(page, "person.body.arm_length", 1);
   await go(page, "다리·발");
   await slide(page, "person.body.leg_length", 1);
-  await pickChip(page, "person.body.leg_alignment", "곧은 다리");
+  await field(page, "person.body.leg_alignment").getByRole("radio", { name: /^곧은 다리/ }).check(); // visual cards (Sprint 2-D.3)
   await field(page, "person.body.leg_alignment").getByRole("switch", { name: /프롬프트에 포함/ }).uncheck();
   await shot(page, "legs-excluded", project);
 
@@ -90,4 +88,24 @@ test("body: subcategories, build, relative sliders, heads tall, exclusion, reset
   await page.getByRole("button", { name: "카테고리 초기화 되돌리기" }).click();
   expect(await stored(page)).toEqual(before);
   expect(external).toEqual([]);
+});
+
+test("figure builder (Sprint 2-D.3): body, garment and hair settings drawn on one neutral mannequin; nothing extra is stored", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("tab", { name: /Detailed/ }).click();
+  await go(page, "전체 신체");
+  const figure = page.getByTestId("figure-builder").getByRole("img", { name: /^전신 스케치/ });
+  await expect(figure).toHaveAccessibleName("전신 스케치 — 설정 0개 반영");
+  expect((await figure.boundingBox())!.height).toBeGreaterThan(150); // rendered, not collapsed (desktop and mobile)
+  const before = await figure.innerHTML();
+  await field(page, "person.body.build").getByRole("radio", { name: /^근육질/ }).check();
+  expect(await figure.innerHTML()).not.toBe(before);
+  const preview = page.getByTestId("slider-preview-person.body.height");
+  const previewBefore = await preview.innerHTML();
+  await slide(page, "person.body.height", 2);
+  expect(await preview.innerHTML()).not.toBe(previewBefore);
+  await go(page, "하의");
+  await field(page, "person.clothing.bottoms.type").getByRole("radio", { name: /^와이드 청바지/ }).check();
+  await expect(page.getByTestId("figure-builder").getByRole("img", { name: /^전신 스케치/ })).toHaveAccessibleName("전신 스케치 — 설정 3개 반영");
+  expect(Object.keys(await stored(page)).sort()).toEqual(["person.body.build", "person.body.height", "person.clothing.bottoms.type"]);
 });

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { compilePrompt, getCoreRegistry, isOptionAttribute, setPromptExclusion, type SelectionValue } from "@/domain";
 import { FACE_BINDINGS, faceSketchState } from "@/components/face/faceSketchState";
 import { frontLayers, layersString, NEUTRAL, neutralParams, profileLayers, type FaceParams, type LayerId } from "@/visual/face-sketch";
+import { neutralHair } from "@/visual/hair-sketch";
 import { buildSpec, multi, single } from "../fixtures/specs";
 
 /** Sprint 2-D.2 — face sketch geometry and the read-only ImageSpec → sketch mapping. */
@@ -44,13 +45,15 @@ describe("face sketch geometry", () => {
     expect(bbox(set((p) => ((p.lips.upper = 5), (p.lips.lower = 5))), "lips").h).toBeGreaterThan(bbox(set((p) => ((p.lips.upper = 1), (p.lips.lower = 1))), "lips").h);
   });
 
-  it.each(Object.entries(FACE_BINDINGS).filter(([, b]) => b.kind === "degree").map(([id]) => id))("%s: every band (1–5) draws differently", (id) => {
+  // hair (Sprint 2-D.3) is covered with both the head and the figure view in figure-sketch.test.ts
+  const faceOnly = Object.entries(FACE_BINDINGS).filter(([id]) => !id.startsWith("person.hair."));
+  it.each(faceOnly.filter(([, b]) => b.kind === "degree").map(([id]) => id))("%s: every band (1–5) draws differently", (id) => {
     const drawings = [1, 2, 3, 4, 5].map((v) => sketchOf([[id, num(v)]]));
     expect(new Set(drawings).size).toBe(5);
   });
 
   // Chin: only the projection (protruding / recessed) is drawn — the other chin traits are reported as not drawn.
-  const optionAttrs = Object.entries(FACE_BINDINGS).filter(([id, b]) => b.kind === "option" && id !== "person.face.chin").map(([id]) => id);
+  const optionAttrs = faceOnly.filter(([id, b]) => b.kind === "option" && id !== "person.face.chin").map(([id]) => id);
   it.each(optionAttrs)("%s: every catalog option is drawn, and each option draws differently", (id) => {
     const a = core.getAttribute(id)!;
     if (!isOptionAttribute(a)) throw new Error("option attribute expected");
@@ -70,7 +73,7 @@ describe("ImageSpec → sketch (read-only)", () => {
     const before = JSON.stringify(spec);
     const s = faceSketchState(core, spec);
     expect(JSON.stringify(spec)).toBe(before);
-    expect(s.params).toEqual(set((p) => (p.eyes.size = 5)));
+    expect(s.params).toEqual({ ...set((p) => (p.eyes.size = 5)), hair: neutralHair() });
     expect(s.drawn).toEqual(["person.eyes.size"]);
     expect(compilePrompt(spec, core).prompt).toBe("Eye size: very large.");
   });

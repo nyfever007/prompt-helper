@@ -2,12 +2,15 @@
 
 import { resolveText, type CatalogRegistry, type ImageSpec } from "@/domain";
 import { fmt, type Messages } from "@/i18n/messages";
-import { FRONT_BOX, frontLayers, PROFILE_BOX, profileLayers, type LayerId } from "@/visual/face-sketch";
+import { PROFILE_BOX, profileLayers, type Box, type LayerId } from "@/visual/face-sketch";
+import { headLayers } from "@/visual/hair-sketch";
 import { attributeLabel } from "../format";
 import { FACE_CATEGORY_IDS, faceSketchState, type FaceCategoryId } from "./faceSketchState";
 import { SketchSvg } from "./FaceSketch";
 
-const FOCUS: Record<FaceCategoryId, LayerId> = { person_face: "face", person_eyes: "eyes", person_eyebrows: "brows", person_nose: "nose", person_lips: "lips" };
+const FOCUS: Record<FaceCategoryId, LayerId> = { person_face: "face", person_eyes: "eyes", person_eyebrows: "brows", person_nose: "nose", person_lips: "lips", person_hair: "hair" };
+/** Wide enough for long or voluminous hair (Sprint 2-D.3); the face keeps the same scale on every page. */
+const HEAD_BOX: Box = [-25, -6, 250, 262];
 
 /**
  * Face Builder (Sprint 2-D.2): the face and feature settings of the shared ImageSpec drawn as ONE sketch
@@ -57,7 +60,7 @@ export function FaceBuilder({
       </summary>
       <div className="face-builder__body">
         <div className="face-builder__art">
-          <SketchSvg layers={frontLayers(s.params)} box={FRONT_BOX} focus={FOCUS[categoryId]} label={fmt(t.face.front, { n: s.drawn.length })} className="face-builder__front" />
+          <SketchSvg layers={headLayers(s.params, s.params.hair)} box={HEAD_BOX} focus={FOCUS[categoryId]} label={fmt(t.face.front, { n: s.drawn.length })} className="face-builder__front" />
           <SketchSvg layers={profileLayers(s.params)} box={PROFILE_BOX} label={t.face.profile} className="face-builder__profile" />
         </div>
         <div className="face-builder__info">
