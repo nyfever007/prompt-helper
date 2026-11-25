@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { PrompterApp } from "@/components/PrompterApp";
@@ -348,5 +348,29 @@ describe("editing flow (Sprint 2-C.1 §5.4)", () => {
     await user.keyboard("{Escape}");
     expect(button).toHaveAttribute("aria-expanded", "false");
     expect(document.activeElement).toBe(button);
+  });
+});
+
+describe("color palette keyboard confirm (Sprint 2-C.4 fix — found in a real browser)", () => {
+  it("Space on the already-chosen color and Enter on a color both confirm and close, returning focus to the toggle", async () => {
+    const { user, go, store } = await open();
+    await go("색상 및 색온도");
+    const id = "lighting.key_color";
+    await user.click(toggle(id));
+    const radios = within(field(id)).getAllByRole("radio");
+    // arrow-key browsing already chose radios[1]; browsers fire no click for Space on a checked radio
+    await user.click(radios[1]!);
+    await user.click(toggle(id));
+    const checked = within(field(id)).getAllByRole("radio").find((r) => (r as HTMLInputElement).checked)!;
+    fireEvent.keyDown(checked, { key: " " });
+    expect(within(field(id)).queryAllByRole("radio")).toHaveLength(0);
+    expect(document.activeElement).toBe(toggle(id));
+    // Enter on another color chooses it and closes
+    await user.click(toggle(id));
+    const third = within(field(id)).getAllByRole("radio")[2]!;
+    fireEvent.keyDown(third, { key: "Enter" });
+    expect(within(field(id)).queryAllByRole("radio")).toHaveLength(0);
+    expect(document.activeElement).toBe(toggle(id));
+    expect(saved(store)[id].value.optionId).toBe(third.closest("[data-option-id]")!.getAttribute("data-option-id"));
   });
 });

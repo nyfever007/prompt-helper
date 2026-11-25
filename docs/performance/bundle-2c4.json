@@ -1,0 +1,38 @@
+{
+  "/": {
+    "html": {
+      "raw": 31609,
+      "gzip": 6964
+    },
+    "js": {
+      "files": 7,
+      "raw": 1157319,
+      "gzip": 351056,
+      "brotli": 294907
+    },
+    "css": {
+      "files": 1,
+      "raw": 22449,
+      "gzip": 5128,
+      "brotli": 4496
+    }
+  },
+  "/_not-found": {
+    "html": {
+      "raw": 7758,
+      "gzip": 2123
+    },
+    "js": {
+      "files": 6,
+      "raw": 569735,
+      "gzip": 174133,
+      "brotli": 150199
+    },
+    "css": {
+      "files": 1,
+      "raw": 22449,
+      "gzip": 5128,
+      "brotli": 4496
+    }
+  }
+}

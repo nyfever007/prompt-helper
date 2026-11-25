@@ -1,0 +1,24 @@
+{
+ "compileEmpty": {
+  "median": 0.06,
+  "p95": 0.084
+ },
+ "compileComplex205": {
+  "median": 0.824,
+  "p95": 1.043
+ },
+ "categoryTreeComplex": {
+  "median": 3.386,
+  "p95": 3.536
+ },
+ "searchBokeh": {
+  "median": 4.082,
+  "p95": 4.673
+ },
+ "importComplex": {
+  "median": 0.449,
+  "p95": 0.55
+ },
+ "build500": 36.3,
+ "compile500x2": 602.8
+}

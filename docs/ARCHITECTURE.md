@@ -422,3 +422,17 @@ modes/BasicComposer.tsx ── 피사체 미설정이고 값이 없으면 인물
 | 같은 의미의 의복 표현(등록 선택지·자유 입력)은 같은 결과, 성별과 무관 | `safety-policy-0.3`, `clothing-catalog` |
 | 출력 순서 불변(정책 고정 골든), TD-14 차이는 외모 방향 문장뿐 | `prompt-order` |
 | UI: 안내, 연령 설정으로 이동, 피사체 없이 시작, Basic 표시 | `component/safety-applicability`, `component/app`, E2E `safety` |
+
+## 19. Sprint 2-C.4: 성능·통합 검증
+
+새 기능 없이 검증 도구와 결함 수정만 추가했습니다.
+
+```text
+playwright.perf.config.ts + perf/product.perf.ts ── `pnpm perf` (pnpm verify와 별개)
+  페이지 안 측정: 동작 → DOM 반영(dom) → 2프레임(painted), 5회, 데스크톱 / Pixel 7 + CPU 4× (CDP)
+  결과: perf/results/*.json (gitignore) → 기준선 docs/performance/*.json, docs/PERFORMANCE.md
+scripts/measure-bundle.mjs ── `pnpm perf:bundle`: 프리렌더 HTML이 불러오는 JS/CSS의 raw·gzip·brotli
+tests/unit/theme-contrast.test.ts ── globals.css의 밝은/다크 토큰 텍스트 대비 ≥ 4.5:1
+e2e/integration.spec.ts ── 시나리오 A–G, 63개 카테고리 페이지 가로 스크롤 점검
+e2e/a11y-theme.spec.ts ── 키보드 전체 회귀, colorScheme: dark 화면·토큰 확인
+```
