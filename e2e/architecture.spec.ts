@@ -31,7 +31,7 @@ test("diagnostics: meaning conflict vs convention, related settings, prompt unch
   await page.getByRole("tab", { name: /Detailed/ }).click();
 
   await go(page, "코");
-  await pickChip(page, "person.nose.shape", "들린 코");
+  await field(page, "person.nose.shape").getByRole("radio", { name: /^들린 코/ }).check(); // visual cards (Sprint 2-D.2)
   const tip = field(page, "person.nose.tip_angle").getByRole("slider");
   await tip.focus();
   await tip.press("ArrowLeft"); // unset display 3 → 2 (an explicit user step)

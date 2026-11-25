@@ -432,3 +432,61 @@ select, textarea, input[type="number"], .dropdown, .text-input, .option-search i
   .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .card__body { padding: 8px; }
 }
+
+/* ── Sprint 2-D.2: face sketch (Face Builder, slider previews) and card zoom placement ───────── */
+/* Same tokens as the static card SVGs (src/visual/face-sketch.ts SKETCH_STYLE). */
+.face-sketch { --ink: #34322e; --fill: #ecebe7; --soft: #86827a; --iris: #a9a59c; --white: #fbfaf8; --pupil: #2a2825; --hl: #ffffff; --brow: #57544e; --lip: #d3cec6; --nostril: #6f6b64; display: block; }
+@media (prefers-color-scheme: dark) {
+  .face-sketch { --ink: #ebe8e2; --fill: #34332f; --soft: #a09c92; --iris: #77736b; --white: #4a4944; --pupil: #121211; --hl: #ebe8e2; --brow: #cfcbc3; --lip: #5a5752; --nostril: #aaa69c; }
+}
+.face-sketch path, .face-sketch circle { vector-effect: non-scaling-stroke; }
+.face-sketch .o { fill: var(--fill); stroke: var(--ink); stroke-width: 2; stroke-linejoin: round; }
+.face-sketch .f { fill: var(--fill); }
+.face-sketch .l { fill: none; stroke: var(--ink); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.face-sketch .s { fill: none; stroke: var(--soft); stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+.face-sketch .w { fill: var(--white); }
+.face-sketch .i { fill: var(--iris); }
+.face-sketch .p { fill: var(--pupil); }
+.face-sketch .h { fill: var(--hl); }
+.face-sketch .b { fill: var(--brow); }
+.face-sketch .n { fill: var(--nostril); }
+.face-sketch .lp { fill: var(--lip); stroke: var(--soft); stroke-width: 1.2; stroke-linejoin: round; }
+/* The area being edited stays at full strength; the other features step back a little. */
+.face-sketch[data-focus] g[data-layer]:not([data-layer="base"]):not([data-layer="face"]) { opacity: 0.5; transition: opacity 0.15s; }
+.face-sketch[data-focus="eyes"] g[data-layer="eyes"], .face-sketch[data-focus="brows"] g[data-layer="brows"],
+.face-sketch[data-focus="nose"] g[data-layer="nose"], .face-sketch[data-focus="lips"] g[data-layer="lips"] { opacity: 1; }
+
+.face-builder { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); margin: 10px 0 16px; }
+.face-builder > summary { padding: 10px 14px; cursor: pointer; }
+.face-builder__title { font-weight: 600; }
+.face-builder__body { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; padding: 0 14px 14px; align-items: start; }
+.face-builder__art { display: flex; gap: 6px; align-items: flex-end; background: var(--surface-2); border-radius: 8px; padding: 8px; }
+.face-builder__front { width: 176px; height: 220px; }
+.face-builder__profile { width: 92px; height: 121px; }
+.face-builder__info p { margin: 0; }
+.face-builder__areas { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.face-builder__area[aria-current="page"] { border-color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent); font-weight: 600; }
+.face-builder__status { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+
+.field__with-visual { display: grid; grid-template-columns: minmax(0, 1fr) 120px; gap: 12px; align-items: start; }
+.slider-preview { margin: 0; }
+.slider-preview svg { width: 120px; height: 90px; background: var(--surface-2); border-radius: 8px; }
+.slider-preview[data-unset="true"] svg { opacity: 0.6; }
+.slider-preview figcaption { font-size: 0.7rem; margin-top: 2px; max-width: 120px; line-height: 1.3; }
+
+.card__foot { display: flex; align-items: flex-start; gap: 2px; }
+.card__foot .card__body { flex: 1; min-width: 0; }
+.card__zoom { position: static; flex: none; width: 32px; height: 32px; margin: 6px 6px 0 0; padding: 0; display: grid; place-items: center; border-color: transparent; background: transparent; color: var(--text); }
+.card__zoom:hover:not(:disabled), .card__zoom:focus-visible { background: var(--surface-2); border-color: var(--border-strong); }
+
+@media (max-width: 860px) {
+  .face-builder__body { grid-template-columns: minmax(0, 1fr); }
+  .face-builder__art { justify-content: center; }
+  .face-builder__front { width: 148px; height: 185px; }
+  .face-builder__profile { width: 80px; height: 105px; }
+}
+@media (max-width: 480px) {
+  .field__with-visual { grid-template-columns: minmax(0, 1fr) 96px; gap: 8px; }
+  .slider-preview svg { width: 96px; height: 72px; }
+}
+.card__foot .card__check { position: static; flex: none; margin: 10px 0 0; }

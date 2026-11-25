@@ -68,6 +68,8 @@ export interface AttributeFieldProps {
   /** For rule actions that clear another attribute (always user-triggered). */
   onClearAttribute(attributeId: string): void;
   isAttributeSet(attributeId: string): boolean;
+  /** Optional visual next to the control (e.g. the live face-sketch preview of a relative slider). */
+  visual?: ReactNode;
 }
 
 /**
@@ -153,13 +155,25 @@ export function AttributeField(props: AttributeFieldProps) {
         </p>
       )}
 
-      <Control
-        {...props}
-        label={label}
-        selectedIds={selectedIds}
-        customEntries={custom}
-        onAddCustomRequest={customOps ? (name) => setAddRequest({ name, n: (addRequest?.n ?? 0) + 1 }) : undefined}
-      />
+      {(() => {
+        const control = (
+          <Control
+            {...props}
+            label={label}
+            selectedIds={selectedIds}
+            customEntries={custom}
+            onAddCustomRequest={customOps ? (name) => setAddRequest({ name, n: (addRequest?.n ?? 0) + 1 }) : undefined}
+          />
+        );
+        return props.visual ? (
+          <div className="field__with-visual">
+            <div className="field__control">{control}</div>
+            {props.visual}
+          </div>
+        ) : (
+          control
+        );
+      })()}
       <RestrictedNote options={restrictedOptions} locale={locale} t={t} />
 
       {customOps && isOptionAttribute(attribute) && (

@@ -30,7 +30,7 @@ describe("visual choice cards", () => {
     expect(imgs).toHaveLength(8);
     expect(imgs[0]).toHaveAttribute("loading", "lazy");
     expect(imgs.map((i) => i.getAttribute("src"))).toContain("/visual/person/face-shape/oval.svg");
-    expect(within(f).getByRole("img", { name: "계란형 얼굴형 선화" })).toBeInTheDocument();
+    expect(within(f).getByRole("img", { name: "얼굴형 선화: 계란형" })).toBeInTheDocument();
     expect(within(f).getByText("Oval")).toBeInTheDocument();
     await user.click(within(f).getByRole("radio", { name: /^계란형/ }));
     expect(prompt()).toBe("Face shape: oval.");
@@ -54,8 +54,8 @@ describe("visual choice cards", () => {
   it("an image that fails to load leaves a working text card", async () => {
     const { user } = await open();
     const f = field("person.face.shape");
-    fireEvent.error(within(f).getByRole("img", { name: "둥근형 얼굴형 선화" }));
-    expect(within(f).queryByRole("img", { name: "둥근형 얼굴형 선화" })).toBeNull();
+    fireEvent.error(within(f).getByRole("img", { name: "얼굴형 선화: 둥근형" }));
+    expect(within(f).queryByRole("img", { name: "얼굴형 선화: 둥근형" })).toBeNull();
     await user.click(within(f).getByRole("radio", { name: /^둥근형/ }));
     expect(prompt()).toBe("Face shape: round.");
   });
