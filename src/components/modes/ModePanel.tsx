@@ -3,6 +3,7 @@
 import { DEFAULT_RANDOM_STYLE, type CatalogRegistry, type RandomStyle } from "@/domain";
 import type { Messages } from "@/i18n/messages";
 import type { Mode } from "@/state/useUiPrefs";
+import type { UserPresets } from "@/state/useUserPresets";
 import type { Workspace } from "@/state/useWorkspace";
 import { DetailedEditor } from "../detailed/DetailedEditor";
 import type { DetailedNavigator } from "../navigation";
@@ -29,6 +30,8 @@ export function ModePanel({
   randomStyle = DEFAULT_RANDOM_STYLE,
   onRandomStyle,
   onGoTo,
+  userPresets,
+  onNotice,
 }: {
   mode: Mode;
   /** Registered by the Detailed editor so “go to attribute” works while it is shown. */
@@ -47,9 +50,23 @@ export function ModePanel({
   onRandomStyle?(style: RandomStyle): void;
   /** Precision: open an attribute's field for editing. */
   onGoTo?(attributeId: string): void;
+  /** Sprint 3.3: the user's preset library (My Presets in Recommended, “save as preset” in Precision). */
+  userPresets?: UserPresets;
+  onNotice?(text: string, kind: "success" | "info" | "error"): void;
 }) {
   if (mode === "recommended")
-    return <RecommendedMode registry={registry} workspace={workspace} locale={locale} t={t} onPresetApplied={onPresetApplied} onEdit={(m) => onModeChange?.(m)} />;
+    return (
+      <RecommendedMode
+        registry={registry}
+        workspace={workspace}
+        locale={locale}
+        t={t}
+        onPresetApplied={onPresetApplied}
+        onEdit={(m) => onModeChange?.(m)}
+        {...(userPresets ? { userPresets } : {})}
+        onNotice={(text, kind) => onNotice?.(text, kind)}
+      />
+    );
   if (mode === "random")
     return (
       <RandomComposer registry={registry} workspace={workspace} locale={locale} t={t} onEdit={(m) => onModeChange?.(m)} style={randomStyle} onStyle={(s) => onRandomStyle?.(s)} />
@@ -67,5 +84,15 @@ export function ModePanel({
         {...(initialAttributeId ? { initialAttributeId } : {})}
       />
     );
-  return <PrecisionPanel registry={registry} workspace={workspace} locale={locale} t={t} onGoTo={(id) => onGoTo?.(id)} />;
+  return (
+    <PrecisionPanel
+      registry={registry}
+      workspace={workspace}
+      locale={locale}
+      t={t}
+      onGoTo={(id) => onGoTo?.(id)}
+      {...(userPresets ? { userPresets } : {})}
+      onNotice={(text, kind) => onNotice?.(text, kind)}
+    />
+  );
 }

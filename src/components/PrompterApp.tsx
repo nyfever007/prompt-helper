@@ -15,7 +15,9 @@ import {
 } from "@/domain";
 import { fmt, getMessages, SUPPORTED_LOCALES, type Messages, type UiLocale } from "@/i18n/messages";
 import { MODES, useUiPrefs } from "@/state/useUiPrefs";
+import { useUserPresets } from "@/state/useUserPresets";
 import { useWorkspace } from "@/state/useWorkspace";
+import { PresetNamesContext } from "./presetNames";
 import { copyText } from "./clipboard";
 import { describeDiagnostic } from "./diagnostics";
 import { downloadText, timestamp } from "./download";
@@ -57,6 +59,7 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
   const store = useMemo(() => (storeProp !== undefined ? storeProp : browserStore()), [storeProp]);
   const workspace = useWorkspace(registry, store);
   const prefs = useUiPrefs(store);
+  const userPresets = useUserPresets(registry, store);
   const { mode, setMode, locale, setLocale } = prefs;
   const t = getMessages(locale);
   const ctx = { registry, locale, t };
@@ -155,7 +158,7 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
   }
   const undo = workspace.lastPresetUndo;
   if (undo) {
-    const name = presetLabel(registry, undo.presetId, locale, t.random.name);
+    const name = presetLabel(registry, undo.presetId, locale, t.random.name, userPresets.nameOf);
     const labels = (ids: string[]) => ids.map((id) => attributeLabel(registry, id, locale)).join(", ");
     derived.push({
       id: `preset-undo-${undo.id}`,
@@ -306,6 +309,7 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
         />
       )}
 
+      <PresetNamesContext.Provider value={userPresets.nameOf}>
       <main className="layout">
         <div id="mode-panel" role="tabpanel" aria-labelledby={`tab-${mode}`} className="layout__editor">
           <ModePanel
@@ -317,6 +321,8 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
             locale={locale}
             t={t}
             onPresetApplied={(name, count) => push({ kind: "success", text: fmt(t.presetDialog.applied, { name, n: count }), autoDismissMs: noticeTimeoutMs })}
+            userPresets={userPresets}
+            onNotice={(text, kind) => push({ kind, text, autoDismissMs: noticeTimeoutMs })}
             onModeChange={setMode}
             randomStyle={prefs.randomStyle}
             onRandomStyle={prefs.setRandomStyle}
@@ -366,6 +372,7 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
           </p>
         </aside>
       </main>
+      </PresetNamesContext.Provider>
       <footer className="app__footer muted">{t.footer}</footer>
 
       <div className="mobile-bar" role="toolbar" aria-label={t.mobile.toolbar}>

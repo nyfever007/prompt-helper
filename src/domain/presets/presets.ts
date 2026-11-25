@@ -54,6 +54,11 @@ export interface PresetTransaction {
   /** A change without `after` removed the value (random regeneration, Sprint 2-D.6); undo restores `before`. */
   changes: Array<{ attributeId: string; before?: AttributeSelection; after?: AttributeSelection }>;
   userEdited: string[];
+  /**
+   * Locks this application added (Sprint 3.3, a user preset's saved locks, applied on request), with the
+   * selection exactly as the application left it. Undo removes them again while still untouched.
+   */
+  appliedLocks?: Array<{ attributeId: string; selection: AttributeSelection }>;
 }
 
 const sameValue = (a: SelectionValue, b: SelectionValue): boolean => {
@@ -80,9 +85,17 @@ const writeAll = (spec: ImageSpec, registry: CatalogRegistry, entries: PresetPla
 export const planPreset = (spec: ImageSpec, registry: CatalogRegistry, presetId: string): Result<PresetPlan> => {
   const preset = registry.getPreset(presetId);
   if (!preset) return fail([error("preset.unknown", `Unknown preset "${presetId}"`)]);
+  return ok(planPresetDefinition(spec, registry, preset));
+};
+
+/**
+ * Plan any preset definition — a catalog (system) preset or a user preset (Sprint 3.3, converted with
+ * `userPresetToDefinition`). Patches for attributes this catalog does not know are skipped.
+ */
+export const planPresetDefinition = (spec: ImageSpec, registry: CatalogRegistry, preset: PresetDefinition): PresetPlan => {
   const origin: SelectionOrigin = { presetId: preset.id, presetVersion: preset.version };
   const order = new Map(registry.attributes().map((a, i) => [a.id, i]));
-  const patches = [...preset.patches].sort((a, b) => (order.get(a.attributeId) ?? 0) - (order.get(b.attributeId) ?? 0));
+  const patches = preset.patches.filter((p) => registry.getAttribute(p.attributeId)).sort((a, b) => (order.get(a.attributeId) ?? 0) - (order.get(b.attributeId) ?? 0));
 
   const draft: PresetPlanEntry[] = patches.map((p) => {
     const current = spec.selections[p.attributeId];
@@ -121,7 +134,7 @@ export const planPreset = (spec: ImageSpec, registry: CatalogRegistry, presetId:
   const conflictsAfter = validateSpecAgainstCatalog(appliedAll, registry).filter((d) => d.ruleId && !before.has(d.ruleId));
   const patched = new Set(patches.map((p) => p.attributeId));
 
-  return ok({
+  return {
     preset,
     origin,
     presetApplicable: evaluateAll(preset.appliesWhen, spec, registry),
@@ -131,7 +144,7 @@ export const planPreset = (spec: ImageSpec, registry: CatalogRegistry, presetId:
       .sort((a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0)),
     conflictsAfter,
     requiresOverwriteConfirmation: entries.some((e) => e.kind === "change"),
-  });
+  };
 };
 
 /**
@@ -188,8 +201,17 @@ export const undoPresetTransaction = (
   const selections = { ...spec.selections };
   const restored: string[] = [];
   const kept: string[] = [];
+  // locks this application added, still exactly as it left them, are undone with it
+  const own = new Map((tx.appliedLocks ?? []).filter((l) => spec.selections[l.attributeId] === l.selection).map((l) => [l.attributeId, l.selection] as const));
+  for (const [id, sel] of own) {
+    if (tx.changes.some((c) => c.attributeId === id)) continue;
+    const { locked: _drop, ...unlocked } = sel;
+    void _drop;
+    selections[id] = unlocked; // value the preset did not change: only the lock goes
+    restored.push(id);
+  }
   for (const c of tx.changes) {
-    if (tx.userEdited.includes(c.attributeId) || locked.has(c.attributeId) || spec.selections[c.attributeId] !== c.after) {
+    if (tx.userEdited.includes(c.attributeId) || (locked.has(c.attributeId) && !own.has(c.attributeId)) || spec.selections[c.attributeId] !== c.after) {
       kept.push(c.attributeId);
       continue;
     }

@@ -9,16 +9,26 @@ import {
   selectedCustomEntries,
   selectedOptionIds,
   valueOwner,
+  isUserPresetId,
   type AttributeDefinition,
+  type AttributeSelection,
   type CatalogRegistry,
   type SelectionValue,
   type ValueOwner,
 } from "@/domain";
 import { fmt, type Messages } from "@/i18n/messages";
+import type { UserPresets } from "@/state/useUserPresets";
 import type { Workspace } from "@/state/useWorkspace";
+import { SavePresetDialog } from "../presets/SavePresetDialog";
 import { describeValue } from "../format";
 
 type LockFilter = "all" | "locked" | "unlocked";
+/** Source shown and filtered: a value from one of the user's own presets is told apart from a system concept. */
+type SourceKey = ValueOwner | "mine";
+const sourceKey = (s: AttributeSelection): SourceKey => {
+  const owner = valueOwner(s);
+  return owner === "concept" && isUserPresetId(s.origin?.presetId) ? "mine" : owner;
+};
 
 /** Palette swatches and user-defined colors of a value (color attributes). */
 const swatchesOf = (a: AttributeDefinition, v: SelectionValue): string[] => [
@@ -38,17 +48,23 @@ export function PrecisionPanel({
   locale,
   t,
   onGoTo,
+  userPresets,
+  onNotice,
 }: {
   registry: CatalogRegistry;
   workspace: Workspace;
   locale: string;
   t: Messages;
   onGoTo(attributeId: string): void;
+  /** Sprint 3.3: save the shown attributes as a user preset. */
+  userPresets?: UserPresets;
+  onNotice?(text: string, kind: "success" | "info" | "error"): void;
 }) {
+  const [savingIds, setSavingIds] = useState<string[] | null>(null);
   const p = t.precision;
   const { spec } = workspace;
   const [query, setQuery] = useState("");
-  const [source, setSource] = useState<ValueOwner | "all">("all");
+  const [source, setSource] = useState<SourceKey | "all">("all");
   const [lock, setLock] = useState<LockFilter>("all");
   const [output, setOutput] = useState<OutputFilter>("all");
   const ids = useId();
@@ -70,7 +86,7 @@ export function PrecisionPanel({
             label,
             category,
             value,
-            owner: valueOwner(s),
+            owner: sourceKey(s),
             active: isAttributeActive(registry, a, spec),
             haystack: normalizeSearch([label, resolveText(a.label, "en"), a.id, value, describeValue(a, s.value, "en"), category].join(" ")),
           };
@@ -106,9 +122,9 @@ export function PrecisionPanel({
             </label>
             <label>
               <span>{p.filterSource}</span>
-              <select value={source} onChange={(e) => setSource(e.target.value as ValueOwner | "all")} data-testid="precision-source">
+              <select value={source} onChange={(e) => setSource(e.target.value as SourceKey | "all")} data-testid="precision-source">
                 <option value="all">{p.all}</option>
-                {(["user", "concept", "random"] as const).map((o) => (
+                {(["user", "concept", "mine", "random"] as const).map((o) => (
                   <option key={o} value={o}>
                     {p.sources[o]}
                   </option>
@@ -146,6 +162,11 @@ export function PrecisionPanel({
               {shownLocked.length > 0 && (
                 <button type="button" className="button button--small" onClick={() => workspace.lock(shownLocked, false)} data-testid="precision-unlock-shown">
                   🔓 {fmt(p.unlockShown, { n: shownLocked.length })}
+                </button>
+              )}
+              {userPresets && shown.length > 0 && (
+                <button type="button" className="button button--small" onClick={() => setSavingIds(shown.map((r) => r.a.id))} data-testid="precision-save-preset">
+                  {fmt(t.myPresets.saveShown, { n: shown.length })}
                 </button>
               )}
               {workspace.locks.length > 0 && (
@@ -242,6 +263,21 @@ export function PrecisionPanel({
             </table>
           )}
         </>
+      )}
+      {savingIds && userPresets && (
+        <SavePresetDialog
+          registry={registry}
+          spec={spec}
+          locale={locale}
+          t={t}
+          initialIds={savingIds}
+          onClose={() => setSavingIds(null)}
+          onSave={(input) => {
+            const saved = userPresets.save(spec, input);
+            setSavingIds(null);
+            if (saved) onNotice?.(fmt(t.myPresets.savedNotice, { name: saved.name, n: saved.patches.length }), "success");
+          }}
+        />
       )}
     </section>
   );

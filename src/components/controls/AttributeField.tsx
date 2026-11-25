@@ -35,6 +35,7 @@ import {
   type OptionControlProps,
 } from "./Controls";
 import { CustomEntries } from "./CustomEntries";
+import { usePresetNames } from "../presetNames";
 import { OptionPicker } from "./OptionPicker";
 import { QuantityControl } from "./QuantityControl";
 
@@ -101,7 +102,8 @@ export function AttributeField(props: AttributeFieldProps) {
   const classified = selectedOptions.filter((o) => o.classification && Object.keys(o.classification).length > 0);
   const restrictedOptions = isOptionAttribute(attribute) ? attribute.options.filter((o) => isOptionRestricted(o)) : [];
   const randomValue = isRandomSelection(selection);
-  const presetName = selection?.origin && !randomValue ? presetLabel(registry, selection.origin.presetId, locale, t.random.name) : null;
+  const presetNames = usePresetNames();
+  const presetName = selection?.origin && !randomValue ? presetLabel(registry, selection.origin.presetId, locale, t.random.name, presetNames) : null;
   const variantOptions = selectedOptions.filter((o) => o.prompt.variants?.length);
 
   // Option values with custom entries: every edit keeps the other part of the value.

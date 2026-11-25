@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
-import { planPreset, resolveText, writableEntries, type CatalogRegistry, type PresetApplyMode, type PresetPlan, type PresetPlanEntry } from "@/domain";
+import { useMemo, useState } from "react";
+import { planPreset, planPresetDefinition, resolveText, writableEntries, type CatalogRegistry, type PresetApplyMode, type PresetDefinition, type PresetPlan, type PresetPlanEntry } from "@/domain";
 import { fmt, type Messages } from "@/i18n/messages";
 import type { Workspace } from "@/state/useWorkspace";
 import { describeDiagnostic } from "../diagnostics";
@@ -22,20 +22,32 @@ export function PresetDialog({
   onClose,
   onApplied,
   protectUserValues = false,
+  preset,
+  savedLocks = [],
 }: {
-  presetId: string;
+  /** A catalog (system) preset by id… */
+  presetId?: string;
+  /** …or a preset definition (a user preset, Sprint 3.3). */
+  preset?: PresetDefinition;
+  /** A user preset's saved locks: the dialog offers to apply them too. */
+  savedLocks?: readonly string[];
   registry: CatalogRegistry;
   workspace: Workspace;
   locale: string;
   t: Messages;
   onClose(): void;
-  onApplied(plan: PresetPlan, mode: PresetApplyMode): void;
+  onApplied(plan: PresetPlan, mode: PresetApplyMode, lockIds?: readonly string[]): void;
   /** Recommended concepts (Sprint 2-D.5): keeping the user's own values is the default action. */
   protectUserValues?: boolean;
 }) {
-  const plan = useMemo(() => planPreset(workspace.spec, registry, presetId), [workspace.spec, registry, presetId]);
+  const plan = useMemo(
+    () => (preset ? { ok: true as const, value: planPresetDefinition(workspace.spec, registry, preset) } : planPreset(workspace.spec, registry, presetId ?? "")),
+    [workspace.spec, registry, presetId, preset],
+  );
+  const [withLocks, setWithLocks] = useState(false);
   if (!plan.ok) return null;
   const p = plan.value;
+  const applyWith = (mode: PresetApplyMode) => onApplied(p, mode, withLocks ? savedLocks : undefined);
   const name = resolveText(p.preset.label, locale);
   const by = (kind: PresetPlanEntry["kind"]) => p.entries.filter((e) => e.kind === kind);
   // Sprint 3.1: locked values are never written by any mode
@@ -125,29 +137,35 @@ export function PresetDialog({
             🔒 {fmt(t.lock.presetLockedNote, { n: lockedChanges.length })}
           </p>
         )}
+        {savedLocks.length > 0 && (
+          <label className="small preset-locks" data-testid="preset-apply-locks">
+            <input type="checkbox" checked={withLocks} onChange={(e) => setWithLocks(e.target.checked)} />{" "}
+            {fmt(t.myPresets.applyLocks, { n: savedLocks.length })}
+          </label>
+        )}
         <div className="toolbar modal__actions">
           {protectUserValues ? (
             <>
-              <button type="button" className="button button--primary" disabled={!p.presetApplicable || writableEntries(p, "keepUser", locked).length === 0} onClick={() => onApplied(p, "keepUser")}>
+              <button type="button" className="button button--primary" disabled={!p.presetApplicable || writableEntries(p, "keepUser", locked).length === 0} onClick={() => applyWith("keepUser")}>
                 {userOwned.length > 0 ? t.presetDialog.applyKeepUser : t.presetDialog.apply}
               </button>
               {userOwned.length > 0 && (
-                <button type="button" className="button" disabled={!p.presetApplicable} onClick={() => onApplied(p, "all")}>
+                <button type="button" className="button" disabled={!p.presetApplicable} onClick={() => applyWith("all")}>
                   {t.presetDialog.applyReplaceUser}
                 </button>
               )}
             </>
           ) : changes.length > 0 ? (
             <>
-              <button type="button" className="button button--primary" disabled={!p.presetApplicable} onClick={() => onApplied(p, "all")}>
+              <button type="button" className="button button--primary" disabled={!p.presetApplicable} onClick={() => applyWith("all")}>
                 {t.presetDialog.applyAll}
               </button>
-              <button type="button" className="button" disabled={!p.presetApplicable || by("new").length === 0} onClick={() => onApplied(p, "onlyEmpty")}>
+              <button type="button" className="button" disabled={!p.presetApplicable || by("new").length === 0} onClick={() => applyWith("onlyEmpty")}>
                 {t.presetDialog.applyOnlyEmpty}
               </button>
             </>
           ) : (
-            <button type="button" className="button button--primary" disabled={!p.presetApplicable || writable === 0} onClick={() => onApplied(p, "all")}>
+            <button type="button" className="button button--primary" disabled={!p.presetApplicable || writable === 0} onClick={() => applyWith("all")}>
               {t.presetDialog.apply}
             </button>
           )}
