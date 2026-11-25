@@ -402,3 +402,6 @@ textarea { width: 100%; resize: vertical; min-height: 80px; }
 .diag__basis--contradiction { background: var(--warn-soft); color: var(--warn); }
 .diag__basis--convention { background: var(--accent-soft); color: var(--accent); }
 .diag__related { display: block; margin-top: 2px; color: var(--muted); }
+/* Sprint 2-C.3: related settings are links to the setting (navigation only). */
+.diag__related-link { font-size: inherit; }
+.blocked .diag__related { display: block; margin-top: 4px; color: inherit; }

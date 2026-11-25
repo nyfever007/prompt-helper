@@ -25,7 +25,7 @@ export const coreAttr = (c: CatalogInput, id: string): MutableSingle => {
  */
 export const buildExtendedCatalog = (): CatalogInput => {
   const c = cloneCore();
-  c.version = "0.12.0";
+  c.version = "0.13.0";
 
   // Hierarchical subject sub-categories (Sprint 4 will expand these for real).
   coreAttr(c, "subject.kind").options.push(
@@ -119,8 +119,8 @@ export const buildExtendedCatalog = (): CatalogInput => {
   c.migrations = [
     ...(c.migrations ?? []),
     {
-      fromVersion: "0.11.0",
-      toVersion: "0.12.0",
+      fromVersion: "0.12.0",
+      toVersion: "0.13.0",
       changes: [
         { op: "renameOption", attributeId: "style.preset", from: "render_3d", to: "cgi_render", reason: { en: "Clearer id", ko: "더 명확한 ID" } },
         { op: "renameOption", attributeId: "mood.tone", from: "eerie", to: "uncanny", reason: { en: "Clearer id", ko: "더 명확한 ID" } },
@@ -162,7 +162,7 @@ export const buildPolicyCatalog = (): CatalogInput => {
     options: options.map(([oid, tags], i) => ({ id: oid, label: { en: oid }, prompt: { text: `choice ${i + 1}` }, ...(tags.length ? { policyTags: tags } : {}) })),
   });
   c.attributes.push(
-    single("x.age_group", 3000, [["adult", ["age.adult"]], ["child", ["age.minor"]]]),
+    single("x.age_group", 3000, [["adult", ["age.adult_confirmed"]], ["child", ["age.minor"]]]), // policy 0.3.0: a curated option may confirm an adult age
     single("x.appeal", 3010, [["confident", []], ["elegant", []], ["alluring", ["appeal.suggestive"]]]),
     single("x.coverage", 3020, [["full_coverage", []], ["minimal_coverage", ["coverage.minimal"]]]),
     single("x.fit", 3030, [["loose", []], ["tight_fit", ["fit.tight"]]]),

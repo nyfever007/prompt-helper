@@ -57,7 +57,7 @@ export const buildFixtureCatalog = (): CatalogInput => {
       description: { en: "Test-only attribute for policy restrictions.", ko: "정책 제한 검증용 테스트 속성입니다." },
       prompt: { template: "Age group: {value}." },
       options: [
-        { id: "adult", label: { en: "Adult", ko: "성인" }, prompt: { text: "adult" }, policyTags: ["age.adult"] },
+        { id: "adult", label: { en: "Adult", ko: "성인" }, prompt: { text: "adult" }, policyTags: ["age.adult_confirmed"] },
         { id: "minor", label: { en: "Minor", ko: "미성년" }, prompt: { text: "young" }, policyTags: ["age.minor"] },
       ],
     },

@@ -58,10 +58,15 @@ describe("appearance direction (directive §2)", () => {
     expect(prompt([PERSON, [AD, multi("beautiful", "elegant")], ["person.identity.age", yrs(28)]])).toBe("Main subject: a single person. Appearance direction: beautiful, elegant. Actual age: 28 years old.");
   });
 
-  it("applies only once the subject is a single person (hidden in Basic before that); values are kept otherwise", () => {
+  it("TD-14 (Sprint 2-C.3): same subject scope as the other person attributes — applies with no subject or a single person; an explicit non-person subject keeps the value but does not output it", () => {
     const a = core.getAttribute(AD)!;
-    expect(isAttributeActive(core, a, buildSpec(core, []))).toBe(false);
+    expect(a.appliesWhen).toEqual(core.getAttribute("person.face.shape")!.appliesWhen); // the common person scope
+    expect(isAttributeActive(core, a, buildSpec(core, []))).toBe(true); // 2-B.6: false (changed by approval)
     expect(isAttributeActive(core, a, buildSpec(core, [PERSON]))).toBe(true);
+    // no subject: output without adding any subject sentence, and nothing else is set
+    const unset = buildSpec(core, [[AD, multi("beautiful")]]);
+    expect(compilePrompt(unset, core).prompt).toBe("Appearance direction: beautiful.");
+    expect(Object.keys(unset.selections)).toEqual([AD]);
     for (const s of ["group", "animal", "landscape"]) expect(isAttributeActive(core, a, buildSpec(core, [["subject.kind", single(s)]])), s).toBe(false);
     const spec = buildSpec(core, [["subject.kind", single("landscape")], [AD, multi("beautiful")]]);
     expect(compilePrompt(spec, core).prompt).toBe("Main subject: a landscape.");
@@ -91,7 +96,13 @@ describe("appearance direction (directive §2)", () => {
   it("safety: “sexy” follows the existing minor protection; non-sexual beauty words never block; the age assessment is unchanged", () => {
     const sexy: [string, SelectionValue] = [AD, multi("sexy")];
     expect(out([PERSON, sexy, ["person.identity.age", yrs(30)]]).blocked).toBe(false);
-    expect(out([PERSON, sexy]).blocked).toBe(false); // no age signal: existing policy unchanged
+    // Policy 0.3.0 (TD-15, approved change): unknown age is not adult — withheld until an adult age is set (0.2.0: permitted).
+    const unknown = out([PERSON, sexy]);
+    expect([unknown.blocked, unknown.prompt]).toEqual([true, ""]);
+    expect(unknown.diagnostics.filter((d) => d.code.startsWith("safety.")).map((d) => d.code)).toEqual(["safety.appeal-age-unconfirmed"]);
+    expect(out([PERSON, sexy, ["person.identity.age_group", single("adult")]]).blocked).toBe(false);
+    expect(out([PERSON, sexy, ["person.identity.apparent_age", yrs(30)]]).blocked).toBe(false);
+    expect(out([sexy, ["person.identity.age", yrs(30)]]).blocked).toBe(false); // subject unset (TD-14) + adult
     expect(out([PERSON, sexy, ["person.identity.age_group", single("adolescent")]]).blocked).toBe(true);
     expect(out([PERSON, sexy, ["person.identity.apparent_age", yrs(15)]]).blocked).toBe(true);
     expect(out([PERSON, sexy, ["person.impression.maturity", single("youthful")]]).blocked).toBe(true);
@@ -100,6 +111,8 @@ describe("appearance direction (directive §2)", () => {
     expect(out([PERSON, [AD, { kind: "multi", optionIds: [], custom: [{ label: "seductive look" }] }], ["person.identity.age_group", single("adolescent")]]).blocked).toBe(true);
     for (const o of ["beautiful", "handsome", "pretty", "cute", "adorable", "stunning", "gorgeous", "charming"]) {
       expect(out([PERSON, [AD, multi(o)], ["person.identity.age_group", single("child")]]).blocked, o).toBe(false);
+      expect(out([PERSON, [AD, multi(o)]]).blocked, o).toBe(false); // general appearance needs no age (TD-15)
+      expect(out([[AD, multi(o)]]).blocked, o).toBe(false);
     }
     for (const o of DIRECTIONS.map(([id]) => id)) {
       expect(out([PERSON, [AD, multi(o)]]).age.ageClass, o).toBe("unknown");

@@ -30,6 +30,11 @@ export function BasicComposer({ registry, workspace, locale, t }: { registry: Ca
   );
 }
 
+const SUBJECT = "subject.kind";
+/** Scoped to a single person only (the common person scope: `anyOf subject.kind [person]`, passing while unset). */
+const personOnly = (a: AttributeDefinition) =>
+  (a.appliesWhen ?? []).some((c) => c.op === "anyOf" && c.attributeId === SUBJECT && c.optionIds.length > 0 && c.optionIds.every((id) => id === "person"));
+
 function GroupSection({
   group,
   attributes,
@@ -46,8 +51,13 @@ function GroupSection({
   t: Messages;
 }) {
   const { spec } = workspace;
+  // Basic is a guided flow: a person-only attribute (e.g. appearance direction) appears once the subject is
+  // a person — applicability itself is shared with Detailed (it also applies while no subject is chosen,
+  // Sprint 2-C.3 TD-14), this only keeps Basic from suggesting a person before one is chosen.
+  const subjectChosen = SUBJECT in spec.selections;
+  const waitsForSubject = (a: AttributeDefinition) => !subjectChosen && personOnly(a);
   // Hide inapplicable attributes unless the user already set them (never silently drop a value).
-  const shown = attributes.filter((a) => isAttributeActive(registry, a, spec) || a.id in spec.selections);
+  const shown = attributes.filter((a) => (isAttributeActive(registry, a, spec) && !waitsForSubject(a)) || a.id in spec.selections);
   const primary = shown.filter((a) => a.prominence !== "secondary");
   const secondary = shown.filter((a) => a.prominence === "secondary");
   const secondarySet = secondary.filter((a) => a.id in spec.selections).length;

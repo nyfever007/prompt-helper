@@ -1,21 +1,19 @@
-import type { Condition } from "../../schema";
-import { fd, shape, type Attr, type O } from "./builders";
+import { fd, forPerson, shape, type Attr, type O } from "./builders";
 
 /**
  * Sprint 2-B.6 (1) — Person › Appearance direction (`person.appearance.direction`).
  * Specification: docs/catalogs/person/expression.md §2.
  *
  * The overall look the user wants, chosen FIRST: a Basic-tier attribute shown right
- * after the subject once the subject is a single person, and the same attribute in
+ * after the subject once the subject is a single person (or a value exists), and the same attribute in
  * Detailed › 인상 및 매력 (one ImageSpec value). Interpretive; nothing is set
  * automatically, never limited by gender, and the age assessment is unchanged.
- * “Sexy” keeps the existing sexual-appeal signal (blocked with minor/ambiguous age).
+ * “Sexy” keeps the sexual-appeal signal: allowed only for a confirmed adult age (policy 0.3.0 —
+ * minor/ambiguous blocked, unknown age withheld until an adult age is set). Other options are not signals.
  * Where an option states the same meaning as an impression value, the existing
  * `covers` de-duplication outputs it once (the stored values are never changed).
  */
 
-/** Strict: only when the subject is explicitly a single person (Basic shows it right after choosing one). */
-const personChosen: Condition[] = [{ op: "anyOf", attributeId: "subject.kind", optionIds: ["person"] }];
 
 const OPTIONS: O[] = [
   ["beautiful", "아름다운", "Beautiful", "beautiful", ["미인", "beauty"]],
@@ -50,7 +48,10 @@ const direction = shape(
   ),
   "Appearance direction: {value}.",
   OPTIONS,
-  { multi: true, control: "searchable", scope: personChosen },
+  // Sprint 2-C.3 (TD-14): the same subject scope as every other person attribute — applies to a single
+  // person and while no subject is chosen; an explicit non-person subject keeps the value but does not
+  // output it. (Basic still shows it once a person is chosen or a value exists: BasicComposer.)
+  { multi: true, control: "searchable", scope: forPerson },
 );
 
 /** Same meaning as an impression value → output once (existing `covers` rule; values are kept). */

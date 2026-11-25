@@ -309,6 +309,11 @@ export const compilePrompt = (
     if (s.signal === "minor") tags.push({ attributeId: s.attributeId, optionId: "$age", tag: "age.minor" });
     if (s.signal === "ambiguous") tags.push({ attributeId: s.attributeId, optionId: "$age", tag: "age.ambiguous_young" });
   }
+  // Policy 0.3.0 (TD-15): only the structured assessment can confirm an adult — never words, never a default.
+  if (age.ageClass === "adult") {
+    const source = age.signals.find((s) => s.signal === "adult")!;
+    tags.push({ attributeId: source.attributeId, optionId: "$age", tag: "age.adult_confirmed" });
+  }
   texts.push({ attributeId: "$prompt", text: `${rendered.prompt}\n${rendered.negativePrompt}` });
   const safety = evaluateSafety({ tags, texts }, policy);
 
@@ -319,6 +324,10 @@ export const compilePrompt = (
     const terms = [...new Set(finding.signals.flatMap((s) => s.sources.map((src) => (src.kind === "text" ? src.term : src.tag))))];
     const hiddenSources = involves.filter((id) => hidden.has(id)).map((id) => `${id}:${hidden.get(id)}`);
     const make = finding.severity === "block" ? error : warning;
+    // Where the user resolves it (UI hint): the catalog's age settings for age-dependent rules.
+    const resolution = policy.rules.find((r) => r.id === finding.ruleId)?.resolution;
+    const model = registry.ageModel;
+    const related = resolution === "age" && model ? [model.ageGroupAttributeId, model.apparentAgeAttributeId, model.actualAgeAttributeId] : [];
     diagnostics.push(
       make(`safety.${finding.ruleId}`, `Safety policy "${finding.ruleId}" (${finding.category}) matched: ${terms.join(", ")}`, {
         involves,
@@ -328,6 +337,7 @@ export const compilePrompt = (
           category: finding.category,
           terms: terms.join(", "),
           ...(hiddenSources.length ? { hiddenSources: hiddenSources.join(",") } : {}),
+          ...(related.length ? { relatedAttributes: related.join(",") } : {}),
         },
       }),
     );

@@ -15,6 +15,7 @@ import { fmt, type Messages } from "@/i18n/messages";
 import type { Workspace } from "@/state/useWorkspace";
 import { WorkspaceField } from "../controls/WorkspaceField";
 import { ModalDialog } from "../ModalDialog";
+import type { DetailedNavigator } from "../navigation";
 import { attributeLabel } from "../format";
 import { CategoryNav } from "./CategoryNav";
 import { PresetDialog } from "./PresetDialog";
@@ -32,19 +33,27 @@ export function DetailedEditor({
   locale,
   t,
   onPresetApplied,
+  navigatorRef,
+  initialAttributeId,
 }: {
   registry: CatalogRegistry;
   workspace: Workspace;
   locale: string;
   t: Messages;
   onPresetApplied(name: string, count: number): void;
+  navigatorRef?: DetailedNavigator;
+  initialAttributeId?: string;
 }) {
   const tree = useMemo(() => buildCategoryTree(registry, workspace.spec, workspace.compilation.diagnostics), [registry, workspace.spec, workspace.compilation.diagnostics]);
   const flat = useMemo(() => flattenCategoryTree(tree), [tree]);
-  const [selectedId, setSelectedId] = useState(() => flat.find((n) => n.approved && n.attributes.length > 0)?.category.id ?? flat[0]?.category.id ?? "");
+  const [selectedId, setSelectedId] = useState(() => {
+    const target = initialAttributeId ? registry.getAttribute(initialAttributeId)?.categoryId : undefined;
+    if (target && flat.some((n) => n.category.id === target)) return target;
+    return flat.find((n) => n.approved && n.attributes.length > 0)?.category.id ?? flat[0]?.category.id ?? "";
+  });
   const [navOpen, setNavOpen] = useState(false);
   const [dialogPresetId, setDialogPresetId] = useState<string | null>(null);
-  const pendingFocus = useRef<string | null>(null);
+  const pendingFocus = useRef<string | null>(initialAttributeId ?? null);
   const node = flat.find((n) => n.category.id === selectedId) ?? flat[0];
 
   // After navigating from search, bring the matched attribute into view.
@@ -74,6 +83,15 @@ export function DetailedEditor({
       el?.focus();
     }
   };
+
+  // “Go to attribute” (notices pointing to related settings) uses the same navigation as search.
+  useEffect(() => {
+    if (!navigatorRef) return;
+    navigatorRef.current = select;
+    return () => {
+      navigatorRef.current = null;
+    };
+  });
 
   const tx = workspace.presetTransaction;
   const txName = tx ? resolveText(registry.getPreset(tx.presetId)?.label, locale) || tx.presetId : "";

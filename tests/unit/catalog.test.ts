@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { INTIMATE_INNERWEAR } from "@/domain/catalog/catalogs/person/clothing";
 import { placeUnlistedByOrder } from "@/testing/promptOrder";
 import {
   CatalogRegistry,
@@ -69,10 +70,10 @@ const FACIAL_IDS = [
   ...["shape", "mouth_width", "upper_thickness", "lower_thickness", "ratio", "cupids_bow", "corners", "natural_color"].map((x) => `person.lips.${x}`),
 ];
 
-describe("8. core catalog 0.11.0", () => {
+describe("8. core catalog 0.12.0", () => {
   it("is valid, versioned and declares its format", () => {
     expect(core.id).toBe("prompter.core");
-    expect(core.version).toBe("0.11.0");
+    expect(core.version).toBe("0.12.0");
     expect(coreCatalog.formatVersion).toBe("0.5.0");
   });
 
@@ -176,8 +177,14 @@ describe("8. core catalog 0.11.0", () => {
   // “underwear” / “bra” as appeal wording. The policy is not relaxed and the phrases are not
   // reworded around it: combined with minor/ambiguous-age wording they must keep blocking.
   // Sprint 2-B.6: the appearance direction “sexy” is sexual-appeal wording by design — same existing protection.
-  const MINOR_PROTECTED = new Set([...["thermal", "sports_bra", "everyday_bra", "full_coverage"].map((o) => `person.clothing.innerwear.type/${o}`), "person.appearance.direction/sexy"]);
-  it("every option phrase in the catalog alone triggers no safety signal (innerwear and appearance “sexy”: exactly the existing minor-protection block)", () => {
+  // Policy 0.3.0 (Sprint 2-C.3): intimate innerwear → `minor-intimate-apparel` (all 8, consistently; 0.2.0: 4 of them as
+  // sexual wording); appearance “sexy” → `minor-sexualization`, and alone (no age) → withheld until an adult age is set.
+  const MINOR_PROTECTED: Record<string, string> = {
+    ...Object.fromEntries(INTIMATE_INNERWEAR.map((o) => [`person.clothing.innerwear.type/${o}`, "minor-intimate-apparel"])),
+    "person.appearance.direction/sexy": "minor-sexualization",
+  };
+  const AGE_UNCONFIRMED = new Set(["person.appearance.direction/sexy"]);
+  it("every option phrase in the catalog alone triggers no safety signal (innerwear: minor protection; appearance “sexy”: needs an adult age)", () => {
     const flagged: string[] = [];
     for (const a of core.attributes()) {
       if (!isOptionAttribute(a)) continue;
@@ -185,24 +192,31 @@ describe("8. core catalog 0.11.0", () => {
         const r = evaluateSafety({ tags: [], texts: [{ attributeId: a.id, text: `${a.prompt.template.replace("{value}", o.prompt.text)} girl child` }] });
         // "girl child" adds age signals; any finding would mean the phrase itself carries a sexual/nudity signal
         const key = `${a.id}/${o.id}`;
-        if (MINOR_PROTECTED.has(key)) {
+        if (key in MINOR_PROTECTED) {
           flagged.push(key);
-          expect(r.findings.map((f) => f.ruleId), key).toEqual(["minor-sexualization"]);
+          expect(r.findings.map((f) => f.ruleId), key).toEqual([MINOR_PROTECTED[key]]);
         } else expect(r.findings, key).toEqual([]);
-        // On its own (no age wording) no option phrase raises any finding
-        expect(evaluateSafety({ tags: [], texts: [{ attributeId: a.id, text: a.prompt.template.replace("{value}", o.prompt.text) }] }).findings, key).toEqual([]);
+        // On its own (no age wording) no option phrase raises any finding — except sexual appeal, which waits for an adult age
+        const alone = evaluateSafety({ tags: [], texts: [{ attributeId: a.id, text: a.prompt.template.replace("{value}", o.prompt.text) }] }).findings.map((f) => f.ruleId);
+        expect(alone, key).toEqual(AGE_UNCONFIRMED.has(key) ? ["appeal-age-unconfirmed"] : []);
       }
     }
-    expect(flagged.sort()).toEqual([...MINOR_PROTECTED].sort());
+    expect(flagged.sort()).toEqual(Object.keys(MINOR_PROTECTED).sort());
   });
 
-  it("compiling every single core option never blocks and never mixes languages", () => {
+  it("compiling every single core option never blocks (except appearance “sexy” without an adult age — policy 0.3.0) and never mixes languages", () => {
     for (const a of core.attributes()) {
       if (!isOptionAttribute(a)) continue;
       for (const o of a.options) {
         const spec = buildSpec(core, [[a.id, a.type === "single" ? single(o.id) : multi(o.id)]]);
         const c = compilePrompt(spec, core);
-        expect(c.blocked, `${a.id}/${o.id}`).toBe(false);
+        const key = `${a.id}/${o.id}`;
+        expect(c.blocked, key).toBe(AGE_UNCONFIRMED.has(key));
+        if (AGE_UNCONFIRMED.has(key)) {
+          expect(c.diagnostics.filter((d) => d.code.startsWith("safety.")).map((d) => d.code), key).toEqual(["safety.appeal-age-unconfirmed"]);
+          const adult = buildSpec(core, [[a.id, multi(o.id)], ["person.identity.age", { kind: "number", value: 30, unit: "years" }]]);
+          expect(compilePrompt(adult, core).blocked, `${key} adult`).toBe(false);
+        }
         expect(c.diagnostics.map((d) => d.code)).not.toContain("prompt.mixed_language");
       }
     }

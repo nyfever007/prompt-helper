@@ -352,7 +352,7 @@ const innerwear: Attr[] = [
     ...g("support", t([["sports_bra", "스포츠 브라", "Sports bra"], ["everyday_bra", "일상용 브라", "Everyday bra"], ["shapewear", "보정 이너웨어", "Shapewear"]])),
     ...g("bottoms", t([["briefs", "브리프", "Briefs"], ["boxer_briefs", "드로즈", "Boxer briefs", "boxer briefs", ["복서 브리프"]], ["boxer_shorts", "트렁크", "Boxer shorts", "boxer shorts"], ["full_coverage", "풀커버리지 하의", "Full-coverage underwear", "full-coverage underwear"]])),
   ], [["tops", "Undershirts & layers", "언더셔츠·레이어"], ["support", "Support", "브라·보정"], ["bottoms", "Briefs & shorts", "하의 이너"]],
-  fd("Neutral garment classification for fashion design. The existing safety policy (incl. minor protection) applies unchanged.", "패션 디자인을 위한 중립적인 의복 분류입니다. 기존 안전 정책(미성년자 보호 포함)이 그대로 적용됩니다.")),
+  fd("Neutral garment classification for fashion design. Not treated as sexual appeal; minor protection applies (policy 0.3.0).", "패션 디자인을 위한 중립적인 의복 분류입니다. 성적 매력 표현으로 취급하지 않으며, 미성년자 보호 정책이 적용됩니다(안전 정책 0.3.0).")),
   colors(INNER, 443, "primary"),
   material(INNER, 444),
   pattern(INNER, 445),
@@ -408,6 +408,18 @@ const hosiery: Attr[] = [
     ["아주 얇음", "Very thin", "very thin"], ["얇음", "Thin", "thin"], ["보통", "Medium", "medium thickness"], ["두꺼움", "Thick", "thick"], ["아주 두꺼움", "Very thick", "very thick"],
   ], notNoneType(HOSE)),
 ];
+
+/**
+ * Sprint 2-C.3 (TD-12): intimate apparel carries the structured classification `garment.intimate`
+ * (policy 0.3.0) — a garment category, NOT sexual appeal. Same tag for every intimate garment, so
+ * “briefs” and “underwear” get the same policy result. Undershirt, base layer and camisole are
+ * layering tops (not tagged, as before). Phrases are unchanged.
+ */
+export const INTIMATE_INNERWEAR = ["thermal", "sports_bra", "everyday_bra", "shapewear", "briefs", "boxer_briefs", "boxer_shorts", "full_coverage"] as const;
+{
+  const type = innerwear[0] as Extract<Attr, { type: "single" }>;
+  for (const o of type.options) if ((INTIMATE_INNERWEAR as readonly string[]).includes(o.id)) o.policyTags = ["garment.intimate"];
+}
 
 export const clothingAttributes: Attr[] = [...general, ...tops, ...bottoms, ...onePiece, ...outerwear, ...innerwear, ...footwear, ...hosiery];
 

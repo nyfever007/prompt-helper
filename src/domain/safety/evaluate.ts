@@ -99,7 +99,7 @@ const scanText = (text: string, policy: SafetyPolicy): TextScan => {
   if (hit) return hit;
   const normalized = normalizeForSafety(text);
   const scan: TextScan = policy.signals.map((signal) =>
-    !normalized || !unionFor(signal).test(normalized) ? [] : signal.lexicon.flatMap((entry) => matchEntry(entry, normalized)),
+    !normalized || signal.lexicon.length === 0 || !unionFor(signal).test(normalized) ? [] : signal.lexicon.flatMap((entry) => matchEntry(entry, normalized)),
   );
   if (cacheable) {
     if (!cache) scanCache.set(policy, (cache = new Map()));
@@ -137,7 +137,8 @@ export const evaluateSafety = (input: SafetyInput, policy: SafetyPolicy = baseli
 
   const findings: SafetyFinding[] = [];
   for (const rule of policy.rules) {
-    const satisfied = rule.allOf.every((group) => group.some((id) => (sourcesBySignal.get(id)?.length ?? 0) > 0));
+    const present = (id: string) => (sourcesBySignal.get(id)?.length ?? 0) > 0;
+    const satisfied = rule.allOf.every((group) => group.some(present)) && !(rule.noneOf ?? []).some(present);
     if (!satisfied) continue;
     const signalIds = [...new Set(rule.allOf.flat())].filter((id) => (sourcesBySignal.get(id)?.length ?? 0) > 0);
     findings.push({

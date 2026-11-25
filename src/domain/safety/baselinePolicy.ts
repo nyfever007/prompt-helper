@@ -1,16 +1,22 @@
 import type { LexiconEntry, SafetyPolicy } from "./types";
 
 /**
- * prompter.baseline — LOCAL, KEYWORD-BASED baseline content policy (v0.2.0).
+ * prompter.baseline — LOCAL, KEYWORD-BASED baseline content policy (v0.3.0).
  *
- * Scope (approved for Sprint 1):
+ * Scope (approved for Sprint 1, extended by the Sprint 2-C.3 directive):
  *   1. Sexualization of minors (incl. ambiguous-age words) → block
- *   2. Explicit sexual content and nudity → block
+ *   2. Explicit sexual content and nudity → block (unchanged)
+ *   3. (0.3.0, TD-15) Sexual-appeal wording without a CONFIRMED ADULT age → output withheld
+ *      until an adult age is set (minor / ambiguous age → rule 1). General appearance words
+ *      (beautiful, handsome, pretty, cute, adorable …) are never signals.
+ *   4. (0.3.0, TD-12) Intimate apparel is a garment CLASSIFICATION (`garment.intimate`), not sexual
+ *      appeal: on its own it is neutral for adults and for unknown age. With a minor /
+ *      ambiguous-age signal it stays blocked — the same for every intimate garment (underwear,
+ *      bra, briefs, boxers, shapewear …), which 0.2.0 handled inconsistently.
  *
  * Deliberately NOT signals: body proportions, garment fit, coverage, swimwear,
  * cleavage-free fashion terms, "shirtless", "curvy", "athletic", etc. Adult
- * visual appeal ("sexy", "sensual", "lingerie") is permitted on its own; it
- * only matters in combination with minor / ambiguous-age signals.
+ * visual appeal ("sexy", "sensual", "lingerie") is permitted for a confirmed adult.
  *
  * LIMITATIONS (see docs/DECISIONS.md ADR-019): this is not semantic
  * moderation. It misses paraphrases, slang, misspellings, other languages and
@@ -26,7 +32,10 @@ export const baselinePolicy: SafetyPolicy = {
   // 0.2.0 (Sprint 2-B.1): same signals, lexicon and rules; the INPUT now also covers values
   // excluded from the prompt or inapplicable, custom names/expressions, all selected options'
   // tags and structured age signals (age.minor / age.ambiguous_young). Nothing was relaxed.
-  version: "0.2.0",
+  // 0.3.0 (Sprint 2-C.3, ADR-065): `age.adult_confirmed` (structured only) and `garment.intimate`
+  // signals; garment classification words moved out of `appeal.sexualized`; rules
+  // `appeal-age-unconfirmed` and `minor-intimate-apparel`. No prohibition was relaxed.
+  version: "0.3.0",
   signals: [
     {
       id: "age.minor",
@@ -67,19 +76,42 @@ export const baselinePolicy: SafetyPolicy = {
       ],
     },
     {
+      // Structured only (no words): the age assessment classified the person as an adult
+      // (age group, apparent age, or actual age of a human). Free text never confirms adulthood.
+      id: "age.adult_confirmed",
+      label: { en: "confirmed adult age", ko: "성인 연령 확인" },
+      tags: ["age.adult_confirmed"],
+      lexicon: [],
+    },
+    {
+      // Garment CLASSIFICATION, not sexual appeal (TD-12). Registered innerwear options carry the tag.
+      id: "garment.intimate",
+      label: { en: "intimate apparel", ko: "속옷류 의복" },
+      tags: ["garment.intimate"],
+      lexicon: [
+        ...en("underwear", "undergarment", "undergarments", "underpants", "panties", "knickers", "bras", "boxer shorts", "boxer briefs", "shapewear", "lingerie"),
+        { term: "bra", lang: "en" },
+        { term: "briefs", lang: "en", except: ["legal briefs", "news briefs", "press briefs", "policy briefs"] },
+        ...ko("속옷", "팬티", "브래지어", "내의", "내복", "란제리", "사각팬티", "삼각팬티"),
+      ],
+    },
+    {
       id: "appeal.sexualized",
       label: { en: "sexual appeal", ko: "성적 매력·암시 표현" },
       tags: ["appeal.suggestive", "appeal.sexualized"],
       lexicon: [
         ...en(
           "sexy", "sexier", "sexiest", "seductive", "seductively", "seduce", "seducing", "sensual", "sensually",
-          "erotic", "erotica", "provocative", "provocatively", "lingerie", "underwear", "panties", "bra", "lewd",
+          // 0.3.0: "underwear", "panties", "bra" moved to `garment.intimate` (classification, TD-12).
+          // "lingerie" stays here too: the word itself denotes sexualized presentation.
+          "erotic", "erotica", "provocative", "provocatively", "lingerie", "lewd",
           "suggestive", "sultry", "steamy", "boudoir", "pin-up", "pinup", "fetish", "kinky", "cleavage", "busty",
           "bedroom eyes", "come-hither",
         ),
         ...ko(
-          "섹시", "야한", "야하게", "야릇", "관능", "선정적", "선정성", "유혹", "에로", "란제리", "속옷", "팬티",
-          "브래지어", "가슴골", "도발적", "요염", "음탕", "퇴폐", "페티시",
+          // 0.3.0: "속옷", "팬티", "브래지어" moved to `garment.intimate` (TD-12); "란제리" stays (as "lingerie").
+          "섹시", "야한", "야하게", "야릇", "관능", "선정적", "선정성", "유혹", "에로", "란제리",
+          "가슴골", "도발적", "요염", "음탕", "퇴폐", "페티시",
         ),
       ],
     },
@@ -151,6 +183,42 @@ export const baselinePolicy: SafetyPolicy = {
       guidance: {
         en: "Sexualized depictions of minors are never allowed. If every person is an adult, say so explicitly (e.g. “adult woman”, “adult man”) instead of words like “girl”/“boy”. If a minor is present, remove the sexual or nudity wording.",
         ko: "미성년자를 성적으로 묘사하는 내용은 허용되지 않습니다. 등장인물이 모두 성인이라면 ‘소녀/girl’ 대신 ‘성인 여성/adult woman’처럼 명확히 표현하세요. 미성년자가 포함된 장면이라면 성적·노출 표현을 제거하세요.",
+      },
+    },
+    {
+      // 0.3.0 (TD-12): child protection that no longer depends on the garment word being called
+      // “sexual”. Every intimate garment is treated the same (0.2.0: underwear/bra blocked, briefs passed).
+      id: "minor-intimate-apparel",
+      category: "sexual_minors",
+      severity: "block",
+      allOf: [["age.minor", "age.ambiguous_young"], ["garment.intimate"]],
+      // Reported once: with sexual / nudity wording, `minor-sexualization` already covers it.
+      noneOf: ["appeal.sexualized", "content.explicit_sexual", "exposure.nudity"],
+      message: {
+        en: "Intimate apparel (underwear, bras, briefs …) is combined with a minor or possibly-minor person.",
+        ko: "미성년자이거나 미성년자로 보일 수 있는 인물에게 속옷류 의복이 함께 설정되었습니다.",
+      },
+      guidance: {
+        en: "Images of minors in intimate apparel are not supported. If the person is an adult, set an adult age in Person › Identity › Age and avoid words like “girl”/“boy”; otherwise choose other clothing.",
+        ko: "미성년자의 속옷류 묘사는 지원하지 않습니다. 성인이라면 ‘인물 기본 정보 › 연령’에서 성인 연령을 설정하고 ‘소녀/girl’ 같은 표현을 피하세요. 미성년자라면 다른 의상을 선택하세요.",
+      },
+    },
+    {
+      // 0.3.0 (TD-15): unknown age is not adult. Sexual-appeal wording waits for a confirmed adult age.
+      id: "appeal-age-unconfirmed",
+      category: "sexual_age_unconfirmed",
+      severity: "block",
+      allOf: [["appeal.sexualized"]],
+      // Adult → allowed (other prohibitions still apply). Minor / ambiguous → `minor-sexualization`.
+      noneOf: ["age.adult_confirmed", "age.minor", "age.ambiguous_young"],
+      resolution: "age",
+      message: {
+        en: "This expression needs a clearly set adult age for the person. The prompt is withheld until then.",
+        ko: "이 표현을 사용하려면 인물의 성인 연령 정보를 명확하게 설정해야 합니다. 설정 전까지 프롬프트 출력을 보류합니다.",
+      },
+      guidance: {
+        en: "Set the person's age in Person › Identity › Age (age group, apparent age, or actual age). Nothing is set automatically; unknown age is not treated as adult. General appearance words such as “beautiful” or “cute” need no age.",
+        ko: "‘인물 기본 정보 › 연령’에서 연령대·외형적 연령·실제 연령 중 하나를 성인으로 설정하세요. 연령은 자동으로 설정되지 않으며, 연령 미상은 성인으로 간주하지 않습니다. ‘아름다운’, ‘귀여운’ 같은 일반적인 외모 표현에는 연령 설정이 필요 없습니다.",
       },
     },
     {

@@ -9,7 +9,32 @@
 - 컴파일러(`COMPILER_VERSION`): 0.1.0 / generic-en adapter: 0.1.0
 - 로컬 저장 envelope(`STORAGE_FORMAT_VERSION`): 1
 
-## [0.11.0] — 2026-11-25 — Sprint 2-C.2: Architecture, state management & diagnostics (승인됨)
+## [0.12.0] — 2026-11-25 — Sprint 2-C.3: Safety & applicability consistency (승인됨)
+
+버전 변화: 안전 정책 `prompter.baseline` 0.2.0 → **0.3.0**(승인된 정책 변경), core 카탈로그 0.11.0 → **0.12.0**(ID·값·문구 변경 없음, 마이그레이션 `changes: []`). ImageSpec 0.3.0, 카탈로그 형식 0.5.0, 컴파일러 0.5.0은 그대로.
+
+### Changed (정책 — 의도적 변경, `docs/SAFETY_POLICY.md` §5)
+- TD-15: 성적 매력 표현은 구조화 연령 판단이 성인일 때만 출력합니다. 연령 불명이면 출력을 보류하고, 미성년·모호 연령이면 차단합니다(기존). 일반적인 외모 표현은 연령과 관계없이 허용합니다.
+- TD-12: 속옷류는 성적 매력 표현이 아니라 의복 분류입니다(`garment.intimate`). 미성년·모호 연령 + 속옷류는 모든 의복에 같은 규칙으로 차단해, 브리프·드로즈·트렁크·보정 이너웨어도 새로 차단됩니다. 차단 → 허용 변경은 0건입니다.
+- TD-14: 외모 방향의 적용 조건을 공통 인물 범위로 바꿔, 피사체가 미설정이어도 적용·출력됩니다. Basic은 인물을 고르거나 값이 있을 때 표시합니다.
+
+### Added
+- 안전 신호 `age.adult_confirmed`(구조화 판단 전용)·`garment.intimate`, 규칙 `appeal-age-unconfirmed`·`minor-intimate-apparel`, 규칙 필드 `noneOf`·`resolution`
+- 이너웨어 선택지 8개에 `garment.intimate` 태그(`INTIMATE_INNERWEAR`)
+- “관련 설정” 버튼(`RelatedSettings`, `GoToAttribute`): Detailed의 해당 속성으로 이동하며, Basic에서는 Detailed로 전환합니다. 값은 바꾸지 않습니다.
+- 테스트:
+  - `safety-policy-0.3`(25): 1,010개 비교 매트릭스(변경 170 / 불변 840), 연령 매트릭스, 우회 경로, JSON
+  - `component/safety-applicability`(4), E2E `safety`(데스크톱·모바일 각 2)
+  - 비교 기준: `tests/fixtures/safety-matrix-0.2.0.json`(변경 전 코드로 기록), `tests/fixtures/baselinePolicy-0.2.0.ts`(정책 0.2.0 사본)
+- 문서: `docs/SAFETY_POLICY.md`(신규), ADR-065·066, `docs/SPRINT_2C3_REPORT.md`, 스크린샷 `docs/screenshots/sprint-2c3/`
+
+### Changed (테스트 — 의도적 정책 변경에 맞춤, 근거 명시)
+- `safety`: 성인이 자유 입력에만 있는 성적 매력 문장 7개는 “출력 보류 + 구조화 성인이면 허용”으로 바꿨고, 미성년 + 속옷류 5개는 차단 목록에 추가했습니다.
+- `catalog`·`clothing-catalog`·`appearance-pose-catalog`·`expression-makeup-catalog`·`component/app`: 새 결과를 정확한 규칙 ID로 단언합니다.
+- `prompt-order` 골든: 출력 순서만 검증하도록 정책 0.2.0 사본과 2-C.3 이전 외모 방향 범위로 고정하고, TD-14 차이는 별도로 단언합니다.
+- 테스트 카탈로그의 성인 연령대 태그 `age.adult` → `age.adult_confirmed`(정책 0.3.0의 성인 확인)
+
+## [0.11.0] — 2026-11-25 — Sprint 2-C.2: Architecture, state management & diagnostics (승인·병합, PR #11)
 
 버전 변화: 카탈로그 형식 0.4.0 → **0.5.0**(추가만), core 카탈로그 0.10.0 → **0.11.0**(ID 변경 없음, 마이그레이션 `changes: []`), 컴파일러 0.4.0 → **0.5.0**(같은 카탈로그 순서면 같은 출력). ImageSpec 0.3.0과 안전 정책 0.2.0은 그대로이며, 프롬프트 출력도 같습니다.
 

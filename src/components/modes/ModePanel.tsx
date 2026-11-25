@@ -5,6 +5,7 @@ import type { Messages } from "@/i18n/messages";
 import type { Mode } from "@/state/useUiPrefs";
 import type { Workspace } from "@/state/useWorkspace";
 import { DetailedEditor } from "../detailed/DetailedEditor";
+import type { DetailedNavigator } from "../navigation";
 import { BasicComposer } from "./BasicComposer";
 import { SpecSummary } from "./SpecSummary";
 
@@ -20,8 +21,14 @@ export function ModePanel({
   locale,
   t,
   onPresetApplied,
+  navigatorRef,
+  initialAttributeId,
 }: {
   mode: Mode;
+  /** Registered by the Detailed editor so “go to attribute” works while it is shown. */
+  navigatorRef?: DetailedNavigator;
+  /** Attribute to open when the Detailed editor mounts (after a “go to attribute” from Basic). */
+  initialAttributeId?: string | null;
   registry: CatalogRegistry;
   workspace: Workspace;
   locale: string;
@@ -29,7 +36,18 @@ export function ModePanel({
   onPresetApplied(name: string, count: number): void;
 }) {
   if (mode === "basic") return <BasicComposer registry={registry} workspace={workspace} locale={locale} t={t} />;
-  if (mode === "detailed") return <DetailedEditor registry={registry} workspace={workspace} locale={locale} t={t} onPresetApplied={onPresetApplied} />;
+  if (mode === "detailed")
+    return (
+      <DetailedEditor
+        registry={registry}
+        workspace={workspace}
+        locale={locale}
+        t={t}
+        onPresetApplied={onPresetApplied}
+        {...(navigatorRef ? { navigatorRef } : {})}
+        {...(initialAttributeId ? { initialAttributeId } : {})}
+      />
+    );
   const title = t.planned.precisionTitle;
   const body = t.planned.precisionBody;
   return (

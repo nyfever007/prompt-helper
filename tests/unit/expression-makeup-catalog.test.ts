@@ -187,11 +187,14 @@ describe("impression & appeal (directive §3)", () => {
     }
   });
 
-  it("“youthful-looking” keeps the existing ambiguous-age protection; appeal wording alone never blocks", () => {
+  it("“youthful-looking” keeps the existing ambiguous-age protection; a “mature” impression never confirms an adult age", () => {
     const youthful = buildSpec(core, [["intent.description", text("a sexy pose")], [I("maturity"), single("youthful")]]);
     expect(compilePrompt(youthful, core).blocked).toBe(true);
     expect(compilePrompt(setPromptExclusion(youthful, I("maturity"), true), core).blocked).toBe(true); // excluded values are still checked
-    expect(out([["intent.description", text("a sexy pose")], [I("maturity"), single("mature")]]).blocked).toBe(false);
+    // Policy 0.3.0 (TD-15): a mature impression is not an age — sexual appeal waits for an adult age (0.2.0: permitted).
+    const mature = out([["intent.description", text("a sexy pose")], [I("maturity"), single("mature")]]);
+    expect(mature.diagnostics.filter((d) => d.code.startsWith("safety.")).map((d) => d.code)).toEqual(["safety.appeal-age-unconfirmed"]);
+    expect(out([["intent.description", text("a sexy pose")], [I("maturity"), single("mature")], ["person.identity.age", { kind: "number", value: 40, unit: "years" }]]).blocked).toBe(false);
     // Non-sexual appeal / cuteness for any age is allowed
     expect(out([["person.identity.age_group", single("child")], [I("attractiveness"), single("exceptional")], [I("cuteness"), num(5)], [I("overall"), multi("innocent")]]).blocked).toBe(false);
   });

@@ -18,7 +18,7 @@
 | **Sprint 2-B.6 — Appearance direction, pose, camera & lighting** | 외모 방향(Basic + Detailed), 자세 22, 카메라 15 + 기존 3, 조명 11 + 기존 7(선택지 추가), core 카탈로그 0.9.0 — 인물 상세 속성 누적 300 | ✅ **승인 — Sprint 2-B 카탈로그 구현 완료** ([보고서](SPRINT_2B6_REPORT.md)) |
 | **Sprint 2-C.1 — UI, UX & accessibility** | 색상 선택 접기(TD-13), 카메라 하위 분류 5·조명 하위 분류 6(림 라이트 색상은 림 라이트와 같은 분류), 공통 편집 화면(헤더 포함·제외, 이전/다음 페이지, 모바일 고정 카테고리 바), 카테고리 트리 키보드 탐색(TD-01), 모달·팝오버 포커스(TD-02), core 카탈로그 0.10.0, 로드맵 갱신 | ✅ **승인 (Sprint 2-C.1 최종 승인)** ([보고서](SPRINT_2C1_REPORT.md)) |
 | **Sprint 2-C.2 — Architecture, state & diagnostics** | 출력 순서를 UI 순서와 분리(`promptOrder`, TD-08), 카테고리 초기화 이력(최근 5개·기록별 복원, TD-09), 의미 충돌·관례 차이 진단과 슬라이더 조건(규칙 +24, TD-10), 카탈로그 형식 0.5.0·core 0.11.0·컴파일러 0.5.0 — 출력 동일 | ✅ **승인 (Sprint 2-C.2 최종 승인)** ([보고서](SPRINT_2C2_REPORT.md)) |
-| Sprint 2-C.3 — Safety consistency | TD-12·TD-14·TD-15 (안전 정책 변경은 별도 승인) | ⏳ 예정 |
+| **Sprint 2-C.3 — Safety & applicability consistency** | 안전 정책 0.3.0(연령 미확인 성적 매력 표현 출력 보류 TD-15, 속옷류 의복 분류와 미성년자 보호 일관성 TD-12), 외모 방향 적용 조건 통일(TD-14), 연령 설정으로 이동하는 안내, core 카탈로그 0.12.0 | ✅ **승인 (Sprint 2-C.3 최종 승인)** ([보고서](SPRINT_2C3_REPORT.md), [안전 정책](SAFETY_POLICY.md)) |
 | Sprint 2-C.4 — Performance & integration validation | TD-11(부분 해결) 재측정·통합 검증, 실제 스크린 리더(VoiceOver·NVDA)·다크 모드 검증(TD-16) | ⏳ 예정 |
 | Sprint 2-D.1 — 시각적 선택 공통 컴포넌트·에셋 표준 | 선택지 시각 표현 공통 컴포넌트, 에셋 표준(TD-03 연결) | ⏳ 예정 ([설계 원칙](VISUAL_EDITOR_PRINCIPLES.md)) |
 | Sprint 2-D.2 — 얼굴·이목구비 시각적 선택 | 얼굴형·눈·눈썹·코·입술 시각 선택, 얼굴 조합 프리뷰 | ⏳ 예정 |
