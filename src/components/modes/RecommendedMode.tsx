@@ -76,7 +76,7 @@ export function RecommendedMode({
           protectUserValues
           onClose={() => setDialogId(null)}
           onApplied={(plan, mode) => {
-            const count = writableEntries(plan, mode).length;
+            const count = writableEntries(plan, mode, new Set(workspace.locks)).length;
             workspace.applyPreset(plan, mode);
             setDialogId(null);
             onPresetApplied(resolveText(plan.preset.label, locale), count);

@@ -3,7 +3,7 @@
 사용자가 상상한 이미지를 구조화된 명세(**ImageSpec**)로 정밀하게 정의하고, 이를 이미지 생성 모델용 프롬프트로 변환하는 **Visual Prompt Design Tool**입니다.
 
 - 제품 마스터 계획: [PROMPTER_MASTER_PLAN.md](PROMPTER_MASTER_PLAN.md) (원본 보존, 수정 금지)
-- 현재 단계: **Sprint 2-D.7 (Random Quality & Prompt Optimization) 완료** — 랜덤 방식 Natural(기본)·Creative·Chaos, 프롬프트 출력 방식 Compact·Balanced·Full, 길이·토큰·텍스트 입력 비용 표시(설계: [docs/VISUAL_EDITOR_PRINCIPLES.md](docs/VISUAL_EDITOR_PRINCIPLES.md) §10–§16, 예시: [docs/examples/random-prompts.md](docs/examples/random-prompts.md)). Sprint 2-C는 공식 완료([최종 보고서](docs/SPRINT_2C4_REPORT.md)). 로드맵 [docs/ROADMAP.md](docs/ROADMAP.md), 성능 기준선 [docs/PERFORMANCE.md](docs/PERFORMANCE.md), 안전 정책 [docs/SAFETY_POLICY.md](docs/SAFETY_POLICY.md), 기술 부채 [docs/TECH_DEBT.md](docs/TECH_DEBT.md). Sprint 3은 새 지침을 받은 뒤 시작합니다.
+- 현재 단계: **Sprint 3.1 (Precision Controls) 완료** — 속성 잠금(개별·카테고리·전체 해제)과 Precision 탭(설정된 속성 목록, 검색·필터, 잠금·프롬프트 포함, 속성으로 이동). 이전 단계 2-D.7: 랜덤 방식 Natural·Creative·Chaos, 출력 방식 Compact·Balanced·Full, 길이·토큰·비용 표시(설계: [docs/VISUAL_EDITOR_PRINCIPLES.md](docs/VISUAL_EDITOR_PRINCIPLES.md) §10–§17, 예시: [docs/examples/random-prompts.md](docs/examples/random-prompts.md)). Sprint 2-C는 공식 완료([최종 보고서](docs/SPRINT_2C4_REPORT.md)). 로드맵 [docs/ROADMAP.md](docs/ROADMAP.md), 성능 기준선 [docs/PERFORMANCE.md](docs/PERFORMANCE.md), 안전 정책 [docs/SAFETY_POLICY.md](docs/SAFETY_POLICY.md), 기술 부채 [docs/TECH_DEBT.md](docs/TECH_DEBT.md). Sprint 3.2는 새 지침을 받은 뒤 시작합니다.
 - 이 빌드는 이미지 생성 API나 유료 LLM API를 **호출하지 않습니다**. API 키도 필요 없습니다.
 
 ## 요구 사항

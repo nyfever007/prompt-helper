@@ -9,6 +9,19 @@
 - 컴파일러(`COMPILER_VERSION`): 0.1.0 / generic-en adapter: 0.1.0
 - 로컬 저장 envelope(`STORAGE_FORMAT_VERSION`): 1
 
+## [Sprint 3.1] — 2026-11-25 — Precision Controls
+
+버전 변화 없음: core 카탈로그 0.17.0, 카탈로그 형식·컴파일러·ImageSpec(0.3.0)·workspace 저장 형식·안전 정책 그대로. 잠금은 새 로컬 키 `prompter:v1:locks`에 저장(JSON 내보내기에는 포함하지 않음, ADR-070 변경안).
+
+### Added
+- 속성 잠금: 모든 필드의 잠금 버튼, Detailed 카테고리 일괄 잠금·해제, Precision의 표시된 항목 잠금·해제, 전체 잠금 해제, 잠긴 개수(도구 모음·카테고리·Precision). 잠긴 값은 랜덤 재생성·추천/프리셋 적용(모든 방식)·카테고리/전체 초기화·되돌리기에서 유지되고, 직접 수정·지우기는 잠금 해제 후에만 가능. 랜덤 값도 고치지 않고 잠글 수 있음. 프롬프트 제외와 독립.
+- Precision 탭: 설정된 속성 목록(카테고리·값·출처·잠금·프롬프트 포함), 검색과 출처·잠금·프롬프트 필터, 속성으로 이동. 휴대폰에서는 카드 형태.
+- 프리셋 확인 대화상자의 “잠김 — 유지” 표시, 카테고리 초기화 대화상자의 잠긴 값 유지 안내, Random 탭의 잠긴 값 안내, 프롬프트 출처 목록의 잠김 표시. 출력 방식(Compact·Balanced)은 잠긴 값을 직접 설정한 값처럼 유지.
+- 테스트: `unit/locks`(14), `component/precision`(5), e2e `precision`(데스크톱·모바일, ARIA 스냅샷).
+
+### Changed
+- Precision 탭의 “예정” 표시와 안내 화면을 실제 기능으로 교체(읽기 전용 요약 `SpecSummary` 제거). 이를 확인하던 기존 테스트 4건은 새 Precision 목록을 확인하도록 변경.
+
 ## [Sprint 2-D.7] — 2026-11-25 — Random Quality & Prompt Optimization
 
 버전 변화 없음: core 카탈로그 0.17.0, 카탈로그 형식·컴파일러(Full 출력 동일)·ImageSpec·저장 형식·안전 정책 그대로. 의존성 추가: `gpt-tokenizer` 4.0.4(MIT, 로컬 토큰 계산, 지연 로딩).

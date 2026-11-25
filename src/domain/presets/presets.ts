@@ -4,6 +4,7 @@ import type { CatalogRegistry } from "../catalog/registry";
 import type { PresetDefinition } from "../catalog/schema";
 import { error, fail, ok, type Diagnostic, type Result } from "../shared/diagnostics";
 import { applySelection } from "../spec/operations";
+import { NO_LOCKS, type Locks } from "../spec/locks";
 import type { AttributeSelection, ImageSpec, SelectionOrigin } from "../spec/schema";
 import { customKey, selectedOptionIds, type SelectionValue } from "../spec/values";
 import { validateSpecAgainstCatalog } from "../validation/specValidator";
@@ -139,17 +140,20 @@ export const planPreset = (spec: ImageSpec, registry: CatalogRegistry, presetId:
  * writes only attributes that are currently unset. Inapplicable, restricted
  * and unchanged entries are never written; unrelated attributes are never touched.
  */
-/** The entries a mode writes (the UI's "applied" count uses the same rule). */
-export const writableEntries = (plan: PresetPlan, mode: PresetApplyMode): PresetPlanEntry[] =>
-  plan.entries.filter((e) => e.kind === "new" || (e.kind === "change" && (mode === "all" || (mode === "keepUser" && e.current?.source === "preset"))));
+/** The entries a mode writes (the UI's "applied" count uses the same rule). Locked attributes are never written (Sprint 3.1). */
+export const writableEntries = (plan: PresetPlan, mode: PresetApplyMode, locked: Locks = NO_LOCKS): PresetPlanEntry[] =>
+  plan.entries.filter(
+    (e) => !locked.has(e.attributeId) && (e.kind === "new" || (e.kind === "change" && (mode === "all" || (mode === "keepUser" && e.current?.source === "preset")))),
+  );
 
 export const applyPresetPlan = (
   spec: ImageSpec,
   registry: CatalogRegistry,
   plan: PresetPlan,
   mode: PresetApplyMode,
+  locked: Locks = NO_LOCKS,
 ): { spec: ImageSpec; transaction: PresetTransaction } => {
-  const writable = writableEntries(plan, mode);
+  const writable = writableEntries(plan, mode, locked);
   let next = spec;
   const changes: PresetTransaction["changes"] = [];
   for (const e of writable) {
@@ -174,17 +178,18 @@ export const markUserEdited = (tx: PresetTransaction, attributeId: string): Pres
 /**
  * Undo the last preset application: restore ONLY attributes the preset changed
  * that the user has not edited since (and that still hold exactly what the
- * preset wrote). Everything else — user edits, unrelated attributes — stays.
+ * preset wrote). Everything else — user edits, unrelated attributes, locked values (Sprint 3.1) — stays.
  */
 export const undoPresetTransaction = (
   spec: ImageSpec,
   tx: PresetTransaction,
+  locked: Locks = NO_LOCKS,
 ): { spec: ImageSpec; restored: string[]; kept: string[] } => {
   const selections = { ...spec.selections };
   const restored: string[] = [];
   const kept: string[] = [];
   for (const c of tx.changes) {
-    if (tx.userEdited.includes(c.attributeId) || spec.selections[c.attributeId] !== c.after) {
+    if (tx.userEdited.includes(c.attributeId) || locked.has(c.attributeId) || spec.selections[c.attributeId] !== c.after) {
       kept.push(c.attributeId);
       continue;
     }

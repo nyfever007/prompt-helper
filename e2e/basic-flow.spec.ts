@@ -49,7 +49,8 @@ test("Basic flow: compose, copy, switch modes, reload, export, reset, import", a
   await expect(output(page)).toHaveText(EXPECTED);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/${testInfo.project.name}-detailed.png`, fullPage: true, scale: "css" });
   await page.getByRole("tab", { name: /Precision/ }).click();
-  await expect(page.getByText("Precision 모드는 후속 개발 예정입니다 (Sprint 3)")).toBeVisible();
+  // Sprint 3.1: Precision lists the same spec
+  await expect(page.locator('[data-attribute-row="style.preset"]')).toContainText("수채화");
   await page.getByRole("tab", { name: /Basic/ }).click();
   await expect(page.getByRole("radio", { name: "수채화" })).toBeChecked();
 
@@ -118,7 +119,8 @@ test("English UI toggle keeps the spec and prompt", async ({ page }) => {
   await chip(page, "픽셀 아트").click();
   await page.getByRole("combobox", { name: "언어" }).selectOption("en");
   await expect(page.getByRole("radio", { name: "Pixel art" })).toBeChecked();
-  await expect(page.getByRole("tab", { name: /Precision/ })).toContainText("Planned");
+  // Sprint 3.1: Precision is available — no tab is marked as planned
+  await expect(page.getByRole("tab", { name: /Precision/ })).not.toContainText("Planned");
   await expect(page.getByRole("tab", { name: /Detailed/ })).not.toContainText("Planned");
   await expect(output(page)).toHaveText("Visual style: pixel art.");
 });

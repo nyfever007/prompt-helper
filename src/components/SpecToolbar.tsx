@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import { exportSpecJson, importSpecJson, type CatalogRegistry, type ImageSpec, type SpecAnalysis } from "@/domain";
-import type { Messages } from "@/i18n/messages";
+import { fmt, type Messages } from "@/i18n/messages";
 import { downloadText, timestamp } from "./download";
 
 export function SpecToolbar({
@@ -13,6 +13,8 @@ export function SpecToolbar({
   onImportAnalyzed,
   onReset,
   onRestoreResetSnapshot,
+  lockCount = 0,
+  onUnlockAll,
 }: {
   registry: CatalogRegistry;
   spec: ImageSpec;
@@ -21,6 +23,9 @@ export function SpecToolbar({
   onImportAnalyzed(analysis: SpecAnalysis, originalText: string, fileName: string): void;
   onReset(): void;
   onRestoreResetSnapshot(): void;
+  /** Sprint 3.1: locked attributes (kept by a full reset). */
+  lockCount?: number;
+  onUnlockAll?(): void;
 }) {
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -35,7 +40,7 @@ export function SpecToolbar({
   };
 
   const onResetClick = () => {
-    if (window.confirm(t.toolbar.resetConfirm)) onReset();
+    if (window.confirm(t.toolbar.resetConfirm + (lockCount ? fmt(t.lock.resetAllKeeps, { n: lockCount }) : ""))) onReset();
   };
 
   const onUndoClick = () => {
@@ -62,6 +67,16 @@ export function SpecToolbar({
       <button type="button" className="button button--danger" onClick={onResetClick}>
         {t.toolbar.reset}
       </button>
+      {lockCount > 0 && (
+        <span className="toolbar__locks" data-testid="lock-status">
+          <span className="badge badge--locked">🔒 {fmt(t.lock.toolbarCount, { n: lockCount })}</span>
+          {onUnlockAll && (
+            <button type="button" className="button button--small" onClick={onUnlockAll} data-testid="unlock-all">
+              {t.lock.unlockAll}
+            </button>
+          )}
+        </span>
+      )}
       {hasResetSnapshot && (
         <button type="button" className="button" onClick={onUndoClick}>
           {t.toolbar.undoReset}

@@ -9,6 +9,9 @@ import {
   createEmptySpec,
   findInactiveSelections,
   inactiveKey,
+  keepLocked,
+  pruneLocks,
+  setLocks,
   markUserEdited,
   resetCategory,
   restoreCategoryReset,
@@ -38,11 +41,14 @@ export type WorkspaceAction =
   | { type: "clear"; attributeId: string }
   | { type: "reset" }
   | { type: "restoreResetSnapshot" }
-  | { type: "replace"; spec: ImageSpec }
+  | { type: "replace"; spec: ImageSpec; locks?: readonly string[] }
   | { type: "applyPreset"; plan: PresetPlan; mode: PresetApplyMode }
   | { type: "undoPreset" }
   /** Sprint 2-D.6: one Random Composer run (deterministic for the seed). */
   | { type: "applyRandom"; seed: number; style?: RandomStyle }
+  /** Sprint 3.1: lock or unlock attributes (only set attributes can be locked). */
+  | { type: "lock"; attributeIds: string[]; locked: boolean }
+  | { type: "unlockAll" }
   | { type: "setExcluded"; attributeId: string; excluded: boolean }
   | { type: "resetCategory"; categoryId: string; at?: string }
   /** Restore one recorded category reset (default: the most recent). */
@@ -111,6 +117,8 @@ export interface WorkspaceState {
   lastCategoryRestore: CategoryRestoreResult | null;
   /** Session-only summary of the last Random Composer run (its undo is `presetTransaction`). */
   lastRandom?: LastRandom | null;
+  /** Locked attribute ids, sorted; always a subset of the set attributes (Sprint 3.1). Persisted beside the spec. */
+  locks: string[];
 }
 
 export const initialWorkspaceState = (registry: CatalogRegistry): WorkspaceState => ({
@@ -121,6 +129,7 @@ export const initialWorkspaceState = (registry: CatalogRegistry): WorkspaceState
   lastPresetUndo: null,
   categoryResets: [],
   lastCategoryRestore: null,
+  locks: [],
 });
 
 const diffInactive = (registry: CatalogRegistry, before: ImageSpec, after: ImageSpec, prevId: number): Transition | null => {
@@ -134,6 +143,8 @@ const diffInactive = (registry: CatalogRegistry, before: ImageSpec, after: Image
   if (newlyInactive.length === 0 && reactivated.length === 0) return null;
   return { id: prevId + 1, newlyInactive, reactivated };
 };
+
+const sameList = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
 
 /** Attribute ids whose stored selection differs between two specs (added, removed or replaced). */
 const changedAttributeIds = (before: ImageSpec, after: ImageSpec): string[] => {
@@ -164,8 +175,11 @@ const trackEdits = (records: CategoryResetRecord[], changed: readonly string[]):
 export const createWorkspaceReducer = (registry: CatalogRegistry) => {
   const step = createStep(registry);
   return (state: WorkspaceState, action: WorkspaceAction): WorkspaceState => {
-    const next = step(state, action);
-    if (next === state || next.spec === state.spec) return next;
+    const stepped = step(state, action);
+    if (stepped === state || stepped.spec === state.spec) return stepped;
+    // Locks always refer to set attributes (defensive: no action removes a locked value).
+    const locks = pruneLocks(stepped.locks, stepped.spec);
+    const next = sameList(locks, stepped.locks) ? stepped : { ...stepped, locks };
     // Any later change of an attribute that a recorded reset removed protects the current value (TD-09).
     // The new record of a `resetCategory` is excluded: its own removals are not edits.
     const changed = changedAttributeIds(state.spec, next.spec);
@@ -181,9 +195,18 @@ const createStep =
   (registry: CatalogRegistry) =>
   (state: WorkspaceState, action: WorkspaceAction): WorkspaceState => {
     const prevId = state.transition?.id ?? 0;
+    const locked: ReadonlySet<string> = new Set(state.locks);
     switch (action.type) {
+      case "lock": {
+        const locks = setLocks(state.locks, state.spec, action.attributeIds, action.locked);
+        return sameList(locks, state.locks) ? state : { ...state, locks };
+      }
+      case "unlockAll":
+        return state.locks.length ? { ...state, locks: [] } : state;
       case "set":
       case "clear": {
+        // A locked value is changed or cleared only after its lock is released (Sprint 3.1).
+        if (locked.has(action.attributeId)) return state;
         let next: ImageSpec;
         if (action.type === "set") {
           const result = applySelection(state.spec, registry, action.attributeId, action.value, "user");
@@ -213,7 +236,7 @@ const createStep =
         };
       }
       case "resetCategory": {
-        const { spec, removed } = resetCategory(state.spec, registry, action.categoryId);
+        const { spec, removed } = resetCategory(state.spec, registry, action.categoryId, locked);
         if (spec === state.spec) return state;
         let tx = state.presetTransaction;
         // Cleared preset values count as user edits: a later preset undo never re-writes them.
@@ -252,7 +275,7 @@ const createStep =
         };
       }
       case "applyPreset": {
-        const { spec, transaction } = applyPresetPlan(state.spec, registry, action.plan, action.mode);
+        const { spec, transaction } = applyPresetPlan(state.spec, registry, action.plan, action.mode, locked);
         if (transaction.changes.length === 0) return state;
         return {
           ...state,
@@ -263,7 +286,7 @@ const createStep =
         };
       }
       case "applyRandom": {
-        const composition = composeRandom(state.spec, registry, action.seed, action.style);
+        const composition = composeRandom(state.spec, registry, action.seed, action.style, locked);
         const { spec, transaction } = applyRandomComposition(state.spec, registry, composition);
         if (transaction.changes.length === 0) return state;
         return {
@@ -283,7 +306,7 @@ const createStep =
       }
       case "undoPreset": {
         if (!state.presetTransaction) return state;
-        const result = undoPresetTransaction(state.spec, state.presetTransaction);
+        const result = undoPresetTransaction(state.spec, state.presetTransaction, locked);
         return {
           ...state,
           spec: result.spec,
@@ -298,9 +321,12 @@ const createStep =
         };
       }
       case "reset": {
-        const isEmpty = Object.keys(state.spec.selections).length === 0;
+        // Locked values are pinned: a full reset keeps them (and their locks).
+        const kept = keepLocked(state.spec, locked);
+        const isEmpty = Object.keys(state.spec.selections).length === Object.keys(kept).length;
         return {
-          spec: createEmptySpec(registry),
+          spec: { ...createEmptySpec(registry), selections: kept },
+          locks: state.locks,
           // Resetting an already-empty spec must not destroy an existing snapshot.
           resetSnapshot: isEmpty ? state.resetSnapshot : state.spec,
           transition: null,
@@ -314,9 +340,18 @@ const createStep =
       }
       case "restoreResetSnapshot":
         if (!state.resetSnapshot) return state;
-        return { ...state, spec: state.resetSnapshot, resetSnapshot: null, transition: null, presetTransaction: null, categoryResets: [] };
+        return {
+          ...state,
+          spec: state.resetSnapshot,
+          resetSnapshot: null,
+          transition: null,
+          presetTransaction: null,
+          categoryResets: [],
+          locks: pruneLocks(state.locks, state.resetSnapshot),
+        };
       case "replace":
-        // A whole new spec (import, recovery): earlier resets no longer describe it.
-        return { ...state, spec: action.spec, transition: null, presetTransaction: null, categoryResets: [] };
+        // A whole new spec (import, recovery): earlier resets no longer describe it. Locks belong to the
+        // previous design and are dropped, unless given (restoring the saved workspace with its locks).
+        return { ...state, spec: action.spec, transition: null, presetTransaction: null, categoryResets: [], locks: pruneLocks(action.locks ?? [], action.spec) };
     }
   };

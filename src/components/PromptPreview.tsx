@@ -27,6 +27,7 @@ export function PromptPreview({
   detailIsAuto,
   onDetail,
   tokenPrefs,
+  isLocked = () => false,
 }: {
   /** The compilation as seen at the selected detail level. */
   compilation: PromptView;
@@ -40,6 +41,8 @@ export function PromptPreview({
   detailIsAuto: boolean;
   onDetail(detail: PromptDetail): void;
   tokenPrefs: TokenPrefs;
+  /** Sprint 3.1: marks locked attributes in the sentence sources. */
+  isLocked?(attributeId: string): boolean;
 }) {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
   const output = getPromptOutput(compilation);
@@ -185,7 +188,14 @@ export function PromptPreview({
           <ol>
             {compilation.fragments.map((f) => (
               <li key={f.attributeId}>
-                <span className="muted">{attributeLabel(registry, f.attributeId, locale)}</span> → <span lang="en">{f.text}</span>
+                <span className="muted">{attributeLabel(registry, f.attributeId, locale)}</span>
+                {isLocked(f.attributeId) && (
+                  <span className="badge badge--locked" data-testid={`source-locked-${f.attributeId}`}>
+                    {" "}
+                    🔒 {t.lock.previewLocked}
+                  </span>
+                )}{" "}
+                → <span lang="en">{f.text}</span>
               </li>
             ))}
             {(compilation.covered ?? []).map((c) => (

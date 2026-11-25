@@ -46,6 +46,9 @@ export function WorkspaceField({ attribute: a, registry, workspace, locale, t }:
       onClear={() => workspace.clear(a.id)}
       onClearAttribute={(id) => workspace.clear(id)}
       isAttributeSet={(id) => id in spec.selections}
+      locked={workspace.isLocked(a.id)}
+      onToggleLock={(locked) => workspace.lock([a.id], locked)}
+      isAttributeLocked={workspace.isLocked}
       {...(SLIDER_PREVIEWS[a.id] ? { visual: <SliderPreview registry={registry} spec={spec} attributeId={a.id} locale={locale} t={t} /> } : {})}
     />
   );

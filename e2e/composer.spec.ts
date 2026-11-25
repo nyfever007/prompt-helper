@@ -199,14 +199,14 @@ test("partially damaged saved data: recovery requires confirmation and keeps the
   expect(await page.evaluate((k) => localStorage.getItem(`${k}:corrupt-backup`), WORKSPACE_KEY)).toBe(damaged);
 });
 
-test("Detailed is the editor; Precision remains clearly marked as a future milestone", async ({ page }, info) => {
+test("Detailed is the editor; Precision lists the same spec (Sprint 3.1)", async ({ page }, info) => {
   await page.goto("/");
   await pick(page, "subject.kind", "건축물");
   await page.getByRole("tab", { name: /Detailed/ }).click();
   await expect(field(page, "subject.kind").getByRole("radio", { name: "건축물" })).toBeChecked();
   await page.getByRole("tab", { name: /Precision/ }).click();
-  await expect(page.getByText("Precision 모드는 후속 개발 예정입니다 (Sprint 3)")).toBeVisible();
-  await shot(page, "precision-placeholder", info.project.name);
+  await expect(page.locator('[data-attribute-row="subject.kind"]')).toContainText("건축물");
+  await shot(page, "precision", info.project.name);
   await page.getByRole("tab", { name: /Basic/ }).click();
   await expect(output(page)).toHaveText("Main subject: an architectural structure.");
 });

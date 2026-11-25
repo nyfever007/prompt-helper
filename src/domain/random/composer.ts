@@ -6,6 +6,7 @@ import { compilePrompt } from "../compiler/compiler";
 import { attributeImportance, RANDOM_PRESET_ID } from "../compiler/detail";
 import type { PresetTransaction } from "../presets/presets";
 import { applySelection } from "../spec/operations";
+import { NO_LOCKS, type Locks } from "../spec/locks";
 import type { AttributeSelection, ImageSpec, SelectionOrigin } from "../spec/schema";
 import { selectedOptionIds, type SelectionValue } from "../spec/values";
 import { DEFAULT_RANDOM_STYLE, ODD, OPTIONAL, PROFILES, RARE, RELATIONS, type Relation, type RandomStyle, type StyleProfile } from "./styles";
@@ -72,7 +73,7 @@ export interface RandomComposition {
   safetyDropped: string[];
 }
 
-const owned = (s: AttributeSelection | undefined) => s !== undefined && (!isRandomSelection(s) || Boolean(s.excludedFromPrompt));
+const isOwned = (s: AttributeSelection | undefined) => s !== undefined && (!isRandomSelection(s) || Boolean(s.excludedFromPrompt));
 
 const pickOptions = (a: AttributeDefinition & { options: OptionDefinition[] }, spec: ImageSpec, registry: CatalogRegistry, rand: () => number): string[] | null => {
   const never = NEVER[a.id] ?? [];
@@ -234,13 +235,23 @@ class Styled {
   }
 }
 
-/** What a random run would write. Never changes the spec. `style` defaults to Natural. */
-export const composeRandom = (spec: ImageSpec, registry: CatalogRegistry, seed: number, style: RandomStyle = DEFAULT_RANDOM_STYLE): RandomComposition => {
+/**
+ * What a random run would write. Never changes the spec. `style` defaults to Natural. Locked attributes
+ * (Sprint 3.1) are owned like the user's own values — a locked random value is kept, not regenerated.
+ */
+export const composeRandom = (
+  spec: ImageSpec,
+  registry: CatalogRegistry,
+  seed: number,
+  style: RandomStyle = DEFAULT_RANDOM_STYLE,
+  locked: Locks = NO_LOCKS,
+): RandomComposition => {
+  const owned = (id: string) => isOwned(spec.selections[id]) || locked.has(id);
   const rand = rng(seed);
   const styled = style === "chaos" ? null : new Styled(registry, PROFILES[style], UNUSUAL_BUDGET[style], rand);
-  const stale = Object.keys(spec.selections).filter((id) => !owned(spec.selections[id]));
+  const stale = Object.keys(spec.selections).filter((id) => !owned(id));
   // the working spec: everything the user (or a concept) owns, without earlier random values
-  const base: ImageSpec = { ...spec, selections: Object.fromEntries(Object.entries(spec.selections).filter(([, s]) => owned(s))) };
+  const base: ImageSpec = { ...spec, selections: Object.fromEntries(Object.entries(spec.selections).filter(([id]) => owned(id))) };
   let work = base;
   const patches = new Map<string, SelectionValue>();
   const put = (id: string, value: SelectionValue) => {
