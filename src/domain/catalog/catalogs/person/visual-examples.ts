@@ -19,6 +19,8 @@ export interface VisualAssetDir {
   options?: readonly string[];
 }
 const N = (en: string, ko: string) => ({ en, ko });
+/** Public path of a drawing: a folder with a `/` lives under public/visual (e.g. shared/framing), others under person/. */
+export const assetSrc = (dir: string, optionId: string): string => `/visual/${dir.includes("/") ? dir : `person/${dir}`}/${optionId}.svg`;
 // Representative drawn subsets (must match src/visual/hair-sketch.ts HAIR_STYLES and figure-sketch.ts TOP/BOTTOM/DRESS_TYPES — unit-tested).
 export const DRAWN_HAIR_STYLES = [
   "buzz_cut", "crew_cut", "pixie_cut", "spiky", "classic_bob", "blunt_bob", "layered_bob", "asymmetrical_bob", "inverted_bob", "long_bob", "layered_cut", "shag", "wolf_cut",
@@ -85,6 +87,51 @@ export const VISUAL_ASSET_DIRS: Record<string, VisualAssetDir> = {
   "person.clothing.one_piece.waist_design": { dir: "waist-design", noun: N("waist design", "허리 디자인") },
   "person.clothing.one_piece.hem_length": { dir: "dress-hem", noun: N("dress length", "원피스 기장") },
   "person.clothing.one_piece.skirt_silhouette": { dir: "skirt-silhouette", noun: N("skirt silhouette", "스커트 실루엣") },
+  // Sprint 2-D.4: pose (neutral jointed mannequin), camera (one reference scene), lighting (head-sphere bust)
+  "person.pose.posture": { dir: "pose-posture", noun: N("posture", "기본 자세") },
+  "person.pose.body_orientation": { dir: "pose-orientation", noun: N("body orientation", "신체 방향") },
+  "person.pose.torso_rotation": { dir: "pose-torso-rotation", noun: N("torso rotation", "몸통 회전") },
+  "person.pose.torso_lean": { dir: "pose-lean", noun: N("torso lean", "몸통 기울기") },
+  "person.pose.weight_shift": { dir: "pose-weight", noun: N("weight shift", "체중 이동") },
+  "person.pose.head_direction": { dir: "pose-head-direction", noun: N("head direction", "머리 방향") },
+  "person.pose.head_tilt": { dir: "pose-head-tilt", noun: N("head tilt", "머리 기울기") },
+  "person.pose.chin": { dir: "pose-chin", noun: N("chin direction", "턱 방향") },
+  "person.pose.gaze_direction": { dir: "pose-gaze", noun: N("gaze direction", "시선 방향") },
+  "person.pose.arms": { dir: "pose-arms", noun: N("arm position", "팔 자세") },
+  "person.pose.elbows": { dir: "pose-elbows", noun: N("elbows", "팔꿈치 자세") },
+  "person.pose.hand_position": { dir: "pose-hands", noun: N("hand position", "손 위치") },
+  "person.pose.legs": { dir: "pose-legs", noun: N("leg position", "다리 자세") },
+  "person.pose.knees": { dir: "pose-knees", noun: N("knees", "무릎 자세") },
+  "person.pose.feet": { dir: "pose-feet", noun: N("feet direction", "발 방향") },
+  "person.pose.action": { dir: "pose-action", noun: N("action", "동작") },
+  "composition.framing": { dir: "shared/framing", noun: N("framing", "구도") },
+  "composition.view_direction": { dir: "shared/view-direction", noun: N("view direction", "보는 방향") },
+  "camera.angle": { dir: "shared/camera-angle", noun: N("camera angle", "카메라 각도") },
+  "camera.roll": { dir: "shared/camera-roll", noun: N("camera roll", "카메라 롤") },
+  "composition.layout": { dir: "shared/composition-layout", noun: N("composition", "구도 배치") },
+  "composition.subject_position": { dir: "shared/subject-position", noun: N("subject position", "피사체 위치") },
+  "camera.lens_type": { dir: "shared/lens-type", noun: N("lens", "렌즈") },
+  "camera.focal_length": { dir: "shared/focal-length", noun: N("focal length", "초점 거리") },
+  "camera.projection": { dir: "shared/projection", noun: N("projection", "투영 방식") },
+  "camera.perspective": { dir: "shared/perspective", noun: N("perspective", "원근감") },
+  "camera.aperture": { dir: "shared/aperture", noun: N("aperture", "조리개") },
+  "camera.focus_target": { dir: "shared/focus-target", noun: N("focus target", "초점 대상") },
+  "camera.bokeh": { dir: "shared/bokeh", noun: N("bokeh", "보케") },
+  "camera.motion_blur": { dir: "shared/motion-blur", noun: N("motion blur", "모션 블러") },
+  "lighting.preset": { dir: "shared/light-preset", noun: N("lighting", "조명") },
+  "lighting.source": { dir: "shared/light-source", noun: N("light source", "광원") },
+  "lighting.direction": { dir: "shared/light-direction", noun: N("light direction", "빛의 방향") },
+  "lighting.softness": { dir: "shared/light-softness", noun: N("light quality", "빛의 질감") },
+  "lighting.intensity": { dir: "shared/light-intensity", noun: N("brightness", "밝기") },
+  "lighting.color_temperature": { dir: "shared/color-temperature", noun: N("colour temperature", "색온도") },
+  "lighting.contrast": { dir: "shared/light-contrast", noun: N("contrast", "명암 대비") },
+  "lighting.fill": { dir: "shared/light-fill", noun: N("fill light", "보조광") },
+  "lighting.rim": { dir: "shared/light-rim", noun: N("rim light", "림 라이트") },
+  "lighting.ambient": { dir: "shared/light-ambient", noun: N("ambient light", "환경광") },
+  "lighting.shadow_strength": { dir: "shared/shadow-strength", noun: N("shadow strength", "그림자 강도") },
+  "lighting.reflected": { dir: "shared/light-reflected", noun: N("reflected light", "반사광") },
+  "lighting.volumetric": { dir: "shared/volumetric", noun: N("volumetric light", "볼류메트릭 조명") },
+  "lighting.source_visibility": { dir: "shared/source-visibility", noun: N("light source visibility", "광원 가시성") },
 };
 
 export const VISUAL_PROVENANCE = {
@@ -106,7 +153,7 @@ export const withVisualExamples = (attributes: Attr[]): Attr[] =>
           {
             id: `${o.id}-line-art`,
             status: "ready" as const,
-            src: `/visual/person/${asset.dir}/${o.id}.svg`,
+            src: assetSrc(asset.dir, o.id),
             alt: { en: `Line drawing, ${asset.noun.en}: ${o.label.en.toLowerCase()}`, ko: `${asset.noun.ko} 선화: ${o.label.ko}` },
             provenance: VISUAL_PROVENANCE,
           },

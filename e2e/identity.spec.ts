@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
-import { ensurePreviewOpen, guardNetwork } from "./helpers";
+import { ensurePreviewOpen, guardNetwork, pickOption } from "./helpers";
 
 /**
  * Sprint 2-B.1 — Person › Identity on the PRODUCT catalog (/), desktop and mobile.
@@ -17,8 +17,7 @@ const output = (page: Page) => page.getByTestId("prompt-output");
 const field = (page: Page, id: string) => page.locator(`[data-attribute-id="${id}"]`);
 const nav = (page: Page) => page.getByRole("navigation", { name: "카테고리" });
 /** Chips hide their input visually (pointer-events: none): click the chip label, as users do. */
-const pickChip = (page: Page, id: string, label: string) =>
-  field(page, id).locator("label.chip").filter({ has: page.getByText(label, { exact: true }) }).click();
+const pickChip = (page: Page, id: string, label: string) => pickOption(page, id, label); // chips or visual cards
 const go = async (page: Page, label: string) => {
   const toggle = page.locator(".nav-toggle");
   if ((await toggle.isVisible()) && (await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();

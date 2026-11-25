@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
-import { closePreview, ensurePreviewOpen, guardNetwork } from "./helpers";
+import { closePreview, ensurePreviewOpen, guardNetwork, pickOption } from "./helpers";
 
 const SHOTS = process.env.E2E_SCREENSHOT_DIR;
 const shot = async (page: Page, name: string, project: string) => {
@@ -9,8 +9,7 @@ const shot = async (page: Page, name: string, project: string) => {
 };
 const output = (page: Page) => page.getByTestId("prompt-output");
 const field = (page: Page, id: string) => page.locator(`[data-attribute-id="${id}"]`);
-const pick = (page: Page, id: string, label: string) =>
-  field(page, id).locator("label.chip").filter({ has: page.getByText(label, { exact: true }) }).click();
+const pick = (page: Page, id: string, label: string) => pickOption(page, id, label); // chips or visual cards
 const nav = (page: Page) => page.getByRole("navigation", { name: "카테고리" });
 /** Open a category; on narrow screens the navigation is behind a toggle. */
 const go = async (page: Page, label: string) => {

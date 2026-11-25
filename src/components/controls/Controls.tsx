@@ -131,16 +131,21 @@ export function CardsControl(p: OptionControlProps) {
               )}
               <div className="card__foot">
                 <label className="card__body">
+                  {/* Sprint 2-D.4: the accessible name is the option label (as in chips); term and description describe it */}
                   <input
                     type={isMulti ? "checkbox" : "radio"}
                     name={isMulti ? undefined : p.attribute.id}
                     checked={checked}
                     disabled={restricted && !checked}
+                    aria-label={name}
+                    aria-describedby={en || o.description ? `${p.attribute.id}-${o.id}-desc` : undefined}
                     onChange={() => (isMulti ? p.onToggle(o.id) : p.onSelect(o.id))}
                   />
                   <span className="card__label">{name}</span>
-                  {en && <span className="card__term" lang="en">{en}</span>}
-                  {o.description && <span className="card__desc">{resolveText(o.description, p.locale)}</span>}
+                  <span id={`${p.attribute.id}-${o.id}-desc`} className="card__extra">
+                    {en && <span className="card__term" lang="en">{en}</span>}
+                    {o.description && <span className="card__desc">{resolveText(o.description, p.locale)}</span>}
+                  </span>
                 </label>
                 {/* Sprint 2-D.2: the ✓ badge and the zoom button sit beside the label, never over the drawing. */}
                 {checked && (example || placeholder) && (

@@ -17,6 +17,7 @@ import {
   type TopSpec,
 } from "@/visual/figure-sketch";
 import { HAIR_STYLES, hairIsEmpty, type HairStyle } from "@/visual/hair-sketch";
+import { ACTIONS, neutralPose, type PoseParams } from "@/visual/pose-sketch";
 import { color, degree, runBindings, single, type Binding, type SketchState } from "../sketch/bindings";
 import { faceSketchState } from "../face/faceSketchState";
 
@@ -31,11 +32,16 @@ export interface FigureParams {
   body: BodyParams;
   outfit: Outfit & { topNone: boolean; bottomNone: boolean };
   hair: FigureHair;
+  /** Sprint 2-D.4: pose (drawn on the jointed mannequin in the pose view). */
+  pose: PoseParams;
 }
+const ROOTS = ["person_body", "person_wardrobe", "person_pose"];
 export const isFigureCategory = (registry: CatalogRegistry, categoryId: string): boolean => {
   const path = registry.categoryPath(categoryId);
-  return (path.includes("person_body") || path.includes("person_wardrobe")) && categoryId !== "person_body" && categoryId !== "person_wardrobe";
+  return ROOTS.some((r) => path.includes(r)) && !ROOTS.includes(categoryId);
 };
+/** Pose pages show the posed (jointed) mannequin; body and wardrobe pages the dressed figure. */
+export const isPoseCategory = (registry: CatalogRegistry, categoryId: string): boolean => registry.categoryPath(categoryId).includes("person_pose");
 
 const FITS = ["tight", "slim", "regular", "relaxed", "loose", "oversized"] as const;
 const NECKLINES = ["crew", "v_neck", "scoop", "square", "boat", "high", "turtleneck", "mock", "halter", "sweetheart", "cowl", "off_shoulder", "asymmetric"] as const;
@@ -119,12 +125,37 @@ export const FIGURE_BINDINGS: Record<string, Binding<FigureParams>> = {
   "person.clothing.one_piece.hem_length": single(["mini", "above_knee", "knee", "midi", "ankle", "floor"] as const, (p, v) => (dress(p).hem = v)),
   "person.clothing.one_piece.skirt_silhouette": single(["a_line", "straight", "pencil", "flared", "full", "mermaid", "tiered"] as const, (p, v) => (dress(p).skirt = v)),
   "person.clothing.one_piece.primary_color": color((p, c) => (dress(p).color = c)),
+  // pose (Sprint 2-D.4); balance, tension, gestures, speed, phase and support stay text
+  "person.pose.posture": single(["standing", "sitting", "lying_down", "reclining", "kneeling", "crouching", "squatting"] as const, (p, v) => (p.pose.posture = v)),
+  "person.pose.body_orientation": single(["front", "left", "right", "rear", "three_quarter"] as const, (p, v) => (p.pose.orientation = v)),
+  "person.pose.torso_rotation": single(["left", "neutral", "right"] as const, (p, v) => (p.pose.torsoRotation = v)),
+  "person.pose.torso_lean": single(["forward", "upright", "backward", "sideways"] as const, (p, v) => (p.pose.lean = v)),
+  "person.pose.weight_shift": single(["even", "left_leg", "right_leg"] as const, (p, v) => (p.pose.weight = v)),
+  "person.pose.head_direction": single(["forward", "left", "right", "up", "down"] as const, (p, v) => (p.pose.headDirection = v)),
+  "person.pose.head_tilt": single(["left", "upright", "right"] as const, (p, v) => (p.pose.headTilt = v)),
+  "person.pose.chin": single(["lowered", "neutral", "raised"] as const, (p, v) => (p.pose.chin = v)),
+  "person.pose.gaze_direction": single(["camera", "left", "right", "up", "down", "distance", "away"] as const, (p, v) => (p.pose.gaze = v)),
+  "person.pose.arms": single(["relaxed", "crossed", "raised", "outstretched", "behind_back"] as const, (p, v) => (p.pose.arms = v)),
+  "person.pose.elbows": single(["straight", "slightly_bent", "bent"] as const, (p, v) => (p.pose.elbows = v)),
+  "person.pose.hand_position": single(["at_sides", "on_hips", "in_pockets", "near_face", "behind_head", "behind_back", "on_lap"] as const, (p, v) => (p.pose.hands = v)),
+  "person.pose.legs": single(["together", "apart", "crossed", "one_bent", "one_raised"] as const, (p, v) => (p.pose.legs = v)),
+  "person.pose.knees": single(["straight", "slightly_bent", "bent"] as const, (p, v) => (p.pose.knees = v)),
+  "person.pose.feet": single(["forward", "inward", "outward"] as const, (p, v) => (p.pose.feet = v)),
+  "person.pose.action": {
+    kind: "option",
+    // one action is drawn (the first chosen); further actions are reported as not drawn
+    set: (p, ids) => {
+      const first = ids.find((x) => (ACTIONS as readonly string[]).includes(x));
+      if (first) p.pose.action = first as PoseParams["action"];
+      return ids.filter((x) => x !== first);
+    },
+  },
 };
 
 export type FigureSketchState = SketchState<FigureParams>;
 
 export const figureSketchState = (registry: CatalogRegistry, spec: ImageSpec, force?: string): FigureSketchState => {
-  const params: FigureParams = { body: neutralBody(), outfit: { top: null, bottom: null, dress: null, fit: null, topNone: false, bottomNone: false }, hair: noHair() };
+  const params: FigureParams = { body: neutralBody(), outfit: { top: null, bottom: null, dress: null, fit: null, topNone: false, bottomNone: false }, hair: noHair(), pose: neutralPose() };
   const s = runBindings(registry, spec, (c) => isFigureCategory(registry, c), FIGURE_BINDINGS, params, force);
   // A one-piece is worn instead of a separate top and bottom: those settings are then not drawn.
   if (params.outfit.dress) {

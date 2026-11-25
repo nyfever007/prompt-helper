@@ -3,9 +3,12 @@
 import { resolveText, type CatalogRegistry, type ImageSpec } from "@/domain";
 import { fmt, type Messages } from "@/i18n/messages";
 import { FIG_BOX, figureLayers } from "@/visual/figure-sketch";
+import { poseLayers } from "@/visual/pose-sketch";
 import { attributeLabel } from "../format";
 import { SketchSvg } from "../face/FaceSketch";
-import { figureSketchState, isFigureCategory } from "./figureSketchState";
+import { figureSketchState, isFigureCategory, isPoseCategory } from "./figureSketchState";
+
+const POSE_VIEW = [0, 0, 200, 260] as const;
 
 /**
  * Figure Builder (Sprint 2-D.3): body proportions, the chosen garments (palette colours) and the hair length
@@ -49,7 +52,10 @@ export function FigureBuilder({
         ))}
       </li>
     );
-  const { body, outfit, hair } = s.params;
+  const { body, outfit, hair, pose } = s.params;
+  const poseView = isPoseCategory(registry, categoryId);
+  // pose view: the jointed mannequin (body proportions, pose, garment colours); clothing shapes are omitted
+  const colors = { top: outfit.dress?.color ?? outfit.top?.color ?? null, bottom: outfit.bottom?.color ?? outfit.dress?.color ?? null };
   return (
     <details className="face-builder figure-builder" open={open} onToggle={(e) => onToggle(e.currentTarget.open)} data-testid="figure-builder">
       <summary>
@@ -58,7 +64,11 @@ export function FigureBuilder({
       </summary>
       <div className="face-builder__body">
         <div className="face-builder__art">
-          <SketchSvg layers={figureLayers(body, outfit, hair)} box={FIG_BOX} label={fmt(t.figure.front, { n: s.drawn.length })} className="figure-builder__figure" />
+          {poseView ? (
+            <SketchSvg layers={poseLayers(body, pose, { yaw: 20, pitch: 6, colors, box: POSE_VIEW })} box={POSE_VIEW} label={fmt(t.figure.pose, { n: s.drawn.length })} className="figure-builder__pose" />
+          ) : (
+            <SketchSvg layers={figureLayers(body, outfit, hair)} box={FIG_BOX} label={fmt(t.figure.front, { n: s.drawn.length })} className="figure-builder__figure" />
+          )}
         </div>
         <div className="face-builder__info">
           <p className="small">{t.figure.intro}</p>
@@ -70,7 +80,7 @@ export function FigureBuilder({
             ))}
           </nav>
           <ul className="face-builder__status small">
-            <li className="muted">{t.figure.neutral}</li>
+            <li className="muted">{poseView ? t.figure.poseNeutral : t.figure.neutral}</li>
             {list(s.excluded, "figure-builder-excluded", t.face.excluded)}
             {list(s.inactive, "figure-builder-inactive", t.face.inactive)}
             {list(s.notDrawn, "figure-builder-not-drawn", t.face.notDrawn)}

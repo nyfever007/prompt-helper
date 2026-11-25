@@ -435,9 +435,9 @@ select, textarea, input[type="number"], .dropdown, .text-input, .option-search i
 
 /* ── Sprint 2-D.2: face sketch (Face Builder, slider previews) and card zoom placement ───────── */
 /* Same tokens as the static card SVGs (src/visual/face-sketch.ts SKETCH_STYLE). */
-.face-sketch { --ink: #34322e; --fill: #ecebe7; --soft: #86827a; --iris: #a9a59c; --white: #fbfaf8; --pupil: #2a2825; --hl: #ffffff; --brow: #57544e; --lip: #d3cec6; --nostril: #6f6b64; --hair: #9b968c; --strand: #5f5b54; --cloth: #d9d5cd; --ghost: #c4c0b8; display: block; }
+.face-sketch { --ink: #34322e; --fill: #ecebe7; --soft: #86827a; --iris: #a9a59c; --white: #fbfaf8; --pupil: #2a2825; --hl: #ffffff; --brow: #57544e; --lip: #d3cec6; --nostril: #6f6b64; --hair: #9b968c; --strand: #5f5b54; --cloth: #d9d5cd; --ghost: #c4c0b8; --sky: #e9edf0; --ground: #e4dfd3; --tree: #c9d1c1; --flower: #d7a6a0; --mark: #3b5bdb; display: block; }
 @media (prefers-color-scheme: dark) {
-  .face-sketch { --ink: #ebe8e2; --fill: #34332f; --soft: #a09c92; --iris: #77736b; --white: #4a4944; --pupil: #121211; --hl: #ebe8e2; --brow: #cfcbc3; --lip: #5a5752; --nostril: #aaa69c; --hair: #66625b; --strand: #a9a59b; --cloth: #4a4843; --ghost: #5d5a54; }
+  .face-sketch { --ink: #ebe8e2; --fill: #34332f; --soft: #a09c92; --iris: #77736b; --white: #4a4944; --pupil: #121211; --hl: #ebe8e2; --brow: #cfcbc3; --lip: #5a5752; --nostril: #aaa69c; --hair: #66625b; --strand: #a9a59b; --cloth: #4a4843; --ghost: #5d5a54; --sky: #2a2e33; --ground: #34322c; --tree: #3d4538; --flower: #8a5d58; --mark: #7c95ff; }
 }
 .face-sketch path, .face-sketch circle { vector-effect: non-scaling-stroke; }
 .face-sketch .o { fill: var(--fill); stroke: var(--ink); stroke-width: 2; stroke-linejoin: round; }
@@ -461,6 +461,23 @@ select, textarea, input[type="number"], .dropdown, .text-input, .option-search i
 .face-sketch .gs { fill: none; stroke: var(--soft); stroke-width: 1; stroke-linecap: round; stroke-dasharray: 3 2; }
 .face-sketch .gh { fill: none; stroke: var(--ghost); stroke-width: 1.1; stroke-linejoin: round; }
 .face-sketch .k { fill: var(--fill); stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round; }
+/* Sprint 2-D.4: pose mannequin, camera scene, lighting (same classes as the static cards) */
+.face-sketch .jt { fill: var(--soft); }
+.face-sketch .shd { fill: var(--ghost); opacity: 0.55; }
+.face-sketch .pr { fill: var(--white); stroke: var(--soft); stroke-width: 1.2; stroke-linejoin: round; }
+.face-sketch .sky { fill: var(--sky); }
+.face-sketch .gr { fill: var(--ground); stroke: var(--soft); stroke-width: 1; }
+.face-sketch .tr { fill: var(--tree); stroke: var(--ink); stroke-width: 1.2; }
+.face-sketch .fl { fill: var(--flower); stroke: var(--ink); stroke-width: 1; }
+.face-sketch .bk { fill: var(--hl); fill-opacity: 0.55; stroke: var(--soft); stroke-width: 0.8; }
+.face-sketch .fm { fill: none; stroke: var(--mark); stroke-width: 2; stroke-linecap: round; }
+.face-sketch .gd { fill: none; stroke: var(--mark); stroke-width: 1; stroke-dasharray: 4 3; opacity: 0.8; }
+.face-sketch .fb { fill: none; stroke: var(--ink); stroke-width: 1.5; }
+.face-sketch .lb { fill: var(--ink); opacity: 0.82; }
+.face-sketch .lx { stroke: none; }
+.face-sketch .lb2 { stroke: #2e2c28; stroke-width: 1.4; }
+.face-sketch .lg { fill: none; stroke: #000; stroke-opacity: 0.22; stroke-width: 1; }
+.face-sketch .ls { stroke: #2e2c28; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
 /* The area being edited stays at full strength; the other features step back a little. */
 .face-sketch[data-focus] g[data-layer]:not([data-layer="base"]):not([data-layer="face"]):not([data-layer="hair"]):not([data-layer="hairBack"]) { opacity: 0.5; transition: opacity 0.15s; }
 .face-sketch[data-focus="eyes"] g[data-layer="eyes"], .face-sketch[data-focus="brows"] g[data-layer="brows"],
@@ -508,3 +525,13 @@ select, textarea, input[type="number"], .dropdown, .text-input, .option-search i
 @media (max-width: 860px) {
   .figure-builder__figure { width: 120px; height: 240px; }
 }
+
+/* ── Sprint 2-D.4: pose view, camera and lighting previews ───────── */
+.figure-builder__pose { width: 176px; height: 229px; }
+.scene-preview__camera { width: 260px; height: auto; max-height: 260px; }
+.scene-preview__light { width: 240px; height: 180px; }
+@media (max-width: 860px) {
+  .scene-preview__camera, .scene-preview__light { width: 100%; max-width: 320px; }
+  .figure-builder__pose { width: 150px; height: 195px; }
+}
+.card__extra { display: flex; flex-direction: column; gap: 2px; }

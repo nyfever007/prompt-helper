@@ -18,8 +18,12 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { CROPS, cardSvg, frontLayers, neutralParams, profileLayers } from "../src/visual/face-sketch.ts";
 import { HAIR_STYLES, HEAD_CROPS, headLayers, neutralHair } from "../src/visual/hair-sketch.ts";
 import { BOTTOM_TYPES, DRESS_TYPES, emptyBottom, emptyDress, emptyTop, FIG_CROPS, figureLayers, neutralBody, noHair, TOP_TYPES } from "../src/visual/figure-sketch.ts";
+import { ACTIONS, neutralPose, poseLayers } from "../src/visual/pose-sketch.ts";
+import { cameraLayers, neutralCamera } from "../src/visual/camera-sketch.ts";
+import { LIGHT_BOX, lightLayers, neutralLight } from "../src/visual/light-sketch.ts";
 
 const OUT = "public/visual/person";
+const outDir = (dir) => (dir.includes("/") ? `public/visual/${dir}` : `${OUT}/${dir}`);
 const with_ = (patch) => {
   const p = neutralParams();
   patch(p);
@@ -33,6 +37,11 @@ const garment = (o, box) => fig({}, o, box, { ghost: true });
 const top = (t) => outfit({ top: { ...emptyTop(), ...t } });
 const dress = (d) => outfit({ dress: { ...emptyDress(), ...d } });
 const ids = (record) => Object.keys(record);
+const POSE_BOX = [0, 0, 266.7, 200];
+/** One pose card: the neutral mannequin with one pose setting, from a view that shows that setting. */
+const pose = (patch, { yaw = 0, pitch = 6, zoom } = {}) => ({ layers: poseLayers(neutralBody(), { ...neutralPose(), ...patch }, { yaw, pitch, box: POSE_BOX, ...(zoom ? { zoom } : {}) }), box: POSE_BOX });
+const cam = (patch) => ({ layers: cameraLayers({ ...neutralCamera(), ...patch }, 160, 120), box: [0, 0, 160, 120] });
+const light = (patch) => ({ layers: lightLayers({ ...neutralLight(), ...patch }), box: LIGHT_BOX });
 const side = (p, box) => ({ layers: profileLayers(p), box });
 
 /** dir → [option ids, (id) => views]. Option ids are the catalog's (checked by tests/unit/visual-examples.test.ts). */
@@ -90,15 +99,62 @@ const CARDS = {
   "skirt-silhouette": [["a_line", "straight", "pencil", "flared", "full", "mermaid", "tiered"], (id) => [garment(dress({ skirt: id }), FIG_CROPS.figure)]],
   "waist-design": [["natural", "empire", "drop", "belted", "cinched", "undefined"], (id) => [garment(dress({ waist: id }), FIG_CROPS.figure)]],
   "dress-hem": [["mini", "above_knee", "knee", "midi", "ankle", "floor"], (id) => [garment(dress({ hem: id }), FIG_CROPS.figure)]],
+  // ── Sprint 2-D.4: pose (neutral jointed mannequin) ──
+  "pose-posture": [["standing", "sitting", "lying_down", "reclining", "kneeling", "crouching", "squatting"], (id) => [pose({ posture: id }, { yaw: 50 })]],
+  "pose-orientation": [["front", "left", "right", "rear", "three_quarter"], (id) => [pose({ orientation: id })]],
+  "pose-torso-rotation": [["left", "neutral", "right"], (id) => [pose({ torsoRotation: id }, { pitch: 32 })]],
+  "pose-lean": [["forward", "upright", "backward", "sideways"], (id) => [pose({ lean: id }, { yaw: 45 })]],
+  "pose-weight": [["even", "left_leg", "right_leg"], (id) => [pose({ weight: id })]],
+  "pose-head-direction": [["forward", "left", "right", "up", "down"], (id) => [pose({ headDirection: id }, { pitch: 0, zoom: "head" })]],
+  "pose-head-tilt": [["left", "upright", "right"], (id) => [pose({ headTilt: id }, { pitch: 0, zoom: "head" })]],
+  "pose-chin": [["lowered", "neutral", "raised"], (id) => [pose({ chin: id }, { yaw: 50, pitch: 0, zoom: "head" })]],
+  "pose-gaze": [["camera", "left", "right", "up", "down", "distance", "away"], (id) => [pose({ gaze: id }, { pitch: 0, zoom: "head" })]],
+  "pose-arms": [["relaxed", "crossed", "raised", "outstretched", "behind_back"], (id) => [pose({ arms: id }, { yaw: 30 })]],
+  "pose-elbows": [["straight", "slightly_bent", "bent"], (id) => [pose({ elbows: id }, { yaw: 50 })]],
+  "pose-hands": [["at_sides", "on_hips", "in_pockets", "near_face", "behind_head", "behind_back", "on_lap"], (id) => [pose({ hands: id, ...(id === "on_lap" ? { posture: "sitting" } : {}) }, { yaw: 25 })]],
+  "pose-legs": [["together", "apart", "crossed", "one_bent", "one_raised"], (id) => [pose({ legs: id }, { yaw: 25 })]],
+  "pose-knees": [["straight", "slightly_bent", "bent"], (id) => [pose({ knees: id }, { yaw: 60 })]],
+  "pose-feet": [["forward", "inward", "outward"], (id) => [pose({ feet: id }, { pitch: 38 })]],
+  "pose-action": [[...ACTIONS], (id) => [pose({ action: id }, { yaw: 45 })]],
+  // ── camera (one reference scene) ──
+  "shared/framing": [["extreme_close_up", "face_close_up", "head_and_shoulders", "upper_body", "knees_up", "full_body", "group_shot", "full_view", "wide_shot", "extreme_wide", "panoramic"], (id) => [cam({ framing: id })]],
+  "shared/view-direction": [["front", "three_quarter", "side", "back"], (id) => [cam({ viewDirection: id })]],
+  "shared/camera-angle": [["eye_level", "high_angle", "low_angle", "birds_eye", "worms_eye"], (id) => [cam({ angle: id })]],
+  "shared/camera-roll": [["level", "tilted_left", "tilted_right", "dutch"], (id) => [cam({ roll: id })]],
+  "shared/composition-layout": [["centered", "rule_of_thirds", "symmetrical", "asymmetrical", "golden_ratio", "diagonal", "leading_lines"], (id) => [cam({ layout: [id], framing: "wide_shot" })]],
+  "shared/subject-position": [["center", "left", "right", "upper", "lower"], (id) => [cam({ position: [id], framing: "wide_shot" })]],
+  "shared/lens-type": [["ultra_wide", "wide", "standard", "telephoto", "macro", "fisheye"], (id) => [cam({ lens: id })]],
+  "shared/focal-length": [["mm_14", "mm_20", "mm_24", "mm_28", "mm_35", "mm_50", "mm_70", "mm_85", "mm_105", "mm_135", "mm_200"], (id) => [cam({ focal: id })]],
+  "shared/projection": [["perspective", "orthographic"], (id) => [cam({ projection: id, angle: "high_angle" })]],
+  "shared/perspective": [["compressed", "natural", "exaggerated"], (id) => [cam({ perspective: id })]],
+  "shared/aperture": [["f_1_4", "f_1_8", "f_2", "f_2_8", "f_4", "f_5_6", "f_8", "f_11", "f_16", "f_22"], (id) => [cam({ aperture: id })]],
+  "shared/focus-target": [["eyes", "face", "subject", "foreground", "background"], (id) => [cam({ focusTarget: id, aperture: "f_2" })]],
+  "shared/bokeh": [["circular", "oval", "swirling", "polygonal"], (id) => [cam({ bokeh: id, aperture: "f_1_4" })]],
+  "shared/motion-blur": [["none", "subtle", "moderate", "strong"], (id) => [cam({ motionBlur: id })]],
+  // ── lighting (head-sphere bust) ──
+  "shared/light-preset": [["natural_daylight", "golden_hour", "midday_sun", "overcast", "blue_hour", "moonlight", "studio_softbox", "low_key", "high_key", "backlit_rim", "neon", "candlelight"], (id) => [light({ preset: id })]],
+  "shared/light-source": [["sun", "daylight_sky", "moon", "studio", "practical", "neon", "fire", "softbox", "led", "ambient_artificial"], (id) => [light({ source: id })]],
+  "shared/light-direction": [["front", "side", "three_quarter", "back", "top", "bottom", "ambient"], (id) => [light({ direction: id })]],
+  "shared/light-softness": [["very_soft", "soft", "medium", "hard", "very_hard"], (id) => [light({ softness: id })]],
+  "shared/light-intensity": [["very_dim", "dim", "moderate", "bright", "very_bright"], (id) => [light({ intensity: id })]],
+  "shared/color-temperature": [["very_cool", "cool", "neutral", "warm", "very_warm", "mixed_color"], (id) => [light({ temperature: id })]],
+  "shared/light-contrast": [["very_low", "low", "medium", "high", "very_high"], (id) => [light({ contrast: id })]],
+  "shared/light-fill": [["none", "subtle", "moderate", "strong"], (id) => [light({ fill: id })]],
+  "shared/light-rim": [["none", "subtle", "moderate", "strong"], (id) => [light({ rim: id })]],
+  "shared/light-ambient": [["none", "subtle", "moderate", "strong"], (id) => [light({ ambient: id })]],
+  "shared/shadow-strength": [["none", "light", "moderate", "strong", "deep"], (id) => [light({ shadowStrength: id })]],
+  "shared/light-reflected": [["none", "subtle", "moderate", "strong"], (id) => [light({ reflected: id })]],
+  "shared/volumetric": [["none", "subtle", "moderate", "strong"], (id) => [light({ volumetric: id })]],
+  "shared/source-visibility": [["visible", "off_screen"], (id) => [light({ visibility: id })]],
 };
 
 let n = 0;
 for (const [dir, [ids, views]] of Object.entries(CARDS)) {
-  rmSync(`${OUT}/${dir}`, { recursive: true, force: true });
-  mkdirSync(`${OUT}/${dir}`, { recursive: true });
+  rmSync(outDir(dir), { recursive: true, force: true });
+  mkdirSync(outDir(dir), { recursive: true });
   for (const id of ids) {
-    writeFileSync(`${OUT}/${dir}/${id}.svg`, cardSvg(views(id)));
+    writeFileSync(`${outDir(dir)}/${id}.svg`, cardSvg(views(id)));
     n++;
   }
 }
-console.log(`wrote ${n} SVGs to ${OUT}`);
+console.log(`wrote ${n} SVGs to public/visual`);

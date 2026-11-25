@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { pickColor, ensurePreviewOpen, guardNetwork } from "./helpers";
+import { pickColor, ensurePreviewOpen, guardNetwork, pickOption } from "./helpers";
 
 /**
  * Sprint 2-B.2 — Person › Face, Eyes, Eyebrows, Nose, Lips on the PRODUCT catalog (/), desktop and mobile.
@@ -12,8 +12,7 @@ const shot = async (page: Page, name: string, project: string) => {
 const output = (page: Page) => page.getByTestId("prompt-output");
 const field = (page: Page, id: string) => page.locator(`[data-attribute-id="${id}"]`);
 const nav = (page: Page) => page.getByRole("navigation", { name: "카테고리" });
-const pickChip = (page: Page, id: string, label: string) =>
-  field(page, id).locator("label.chip").filter({ has: page.getByText(label, { exact: true }) }).click();
+const pickChip = (page: Page, id: string, label: string) => pickOption(page, id, label); // chips or visual cards
 const go = async (page: Page, label: string) => {
   const toggle = page.locator(".nav-toggle");
   if ((await toggle.isVisible()) && (await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
