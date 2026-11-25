@@ -3,7 +3,7 @@
 사용자가 상상한 이미지를 구조화된 명세(**ImageSpec**)로 정밀하게 정의하고, 이를 이미지 생성 모델용 프롬프트로 변환하는 **Visual Prompt Design Tool**입니다.
 
 - 제품 마스터 계획: [PROMPTER_MASTER_PLAN.md](PROMPTER_MASTER_PLAN.md) (원본 보존, 수정 금지)
-- 현재 단계: **Sprint 2-C.3 (Safety & applicability consistency) — 승인·완료**. 결과는 [docs/SPRINT_2C3_REPORT.md](docs/SPRINT_2C3_REPORT.md), 안전 정책은 [docs/SAFETY_POLICY.md](docs/SAFETY_POLICY.md)(0.3.0). 이전 단계 [Sprint 2-C.2](docs/SPRINT_2C2_REPORT.md)·[2-C.1](docs/SPRINT_2C1_REPORT.md)(승인·병합), 로드맵 [docs/ROADMAP.md](docs/ROADMAP.md), 시각적 편집 설계 원칙 [docs/VISUAL_EDITOR_PRINCIPLES.md](docs/VISUAL_EDITOR_PRINCIPLES.md), 카탈로그 설계 [docs/catalogs/](docs/catalogs/), 기술 부채 [docs/TECH_DEBT.md](docs/TECH_DEBT.md). Sprint 2-C.4와 Sprint 2-D는 자동으로 시작하지 않습니다.
+- 현재 단계: **Sprint 2-C (Integration & Usability) 공식 완료** — 2-C.1 UI·접근성, 2-C.2 구조·상태·진단, 2-C.3 안전·적용 일관성, 2-C.4 성능·통합 검증. 최종 보고서는 [docs/SPRINT_2C4_REPORT.md](docs/SPRINT_2C4_REPORT.md), 성능 기준선은 [docs/PERFORMANCE.md](docs/PERFORMANCE.md)(`pnpm perf`, `pnpm perf:bundle`), 안전 정책은 [docs/SAFETY_POLICY.md](docs/SAFETY_POLICY.md)(0.3.0)를 참고하세요. 단계별 보고서: [2-C.3](docs/SPRINT_2C3_REPORT.md)·[2-C.2](docs/SPRINT_2C2_REPORT.md)·[2-C.1](docs/SPRINT_2C1_REPORT.md). 로드맵과 제품 공개 전 호환성 검증 목록은 [docs/ROADMAP.md](docs/ROADMAP.md), 시각적 편집 설계 원칙과 2-D 진입 준비는 [docs/VISUAL_EDITOR_PRINCIPLES.md](docs/VISUAL_EDITOR_PRINCIPLES.md), 기술 부채는 [docs/TECH_DEBT.md](docs/TECH_DEBT.md)에 있습니다. **다음 단계 Sprint 2-D(Visual Editor & Recommendation)는 새 개발 지침을 받은 뒤 시작합니다.**
 - 이 빌드는 이미지 생성 API나 유료 LLM API를 **호출하지 않습니다**. API 키도 필요 없습니다.
 
 ## 요구 사항
@@ -98,6 +98,8 @@ scripts/         빌드 검증 스크립트 (테스트 카탈로그 격리)
 - [docs/SPRINT_2C2_REPORT.md](docs/SPRINT_2C2_REPORT.md): Sprint 2-C.2 (Architecture, state management & diagnostics) 구현 및 검증 결과
 - [docs/SPRINT_2C3_REPORT.md](docs/SPRINT_2C3_REPORT.md): Sprint 2-C.3 (Safety & applicability consistency) 구현 및 검증 결과
 - [docs/SAFETY_POLICY.md](docs/SAFETY_POLICY.md): 안전 정책 `prompter.baseline`(현재 0.3.0)
+- [docs/SPRINT_2C4_REPORT.md](docs/SPRINT_2C4_REPORT.md): Sprint 2-C.4 (Performance & integration validation) 검증 결과
+- [docs/PERFORMANCE.md](docs/PERFORMANCE.md): 제품 성능 기준선(Sprint 2-D 시각 에셋 추가 전)
 - [docs/VISUAL_EDITOR_PRINCIPLES.md](docs/VISUAL_EDITOR_PRINCIPLES.md): Sprint 2-D 시각적 편집·추천 설계 원칙
 - [docs/SPRINT_2B1_SPEC_REVIEW.md](docs/SPRINT_2B1_SPEC_REVIEW.md): Sprint 2-B.1 사양 결정 기록(D0–D14, N1–N5, Q1–Q3, 국가·지역 목록, 전체 컴파일 문장)
 - [docs/catalogs/CATALOG_DESIGN_STANDARD.md](docs/catalogs/CATALOG_DESIGN_STANDARD.md): 모든 카탈로그 공통 설계 규격

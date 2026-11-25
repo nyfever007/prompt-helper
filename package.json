@@ -18,7 +18,9 @@
     "test:e2e": "playwright test",
     "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm verify:isolation",
     "verify": "pnpm check && pnpm test:e2e",
-    "verify:isolation": "node scripts/verify-prod-isolation.mjs"
+    "verify:isolation": "node scripts/verify-prod-isolation.mjs",
+    "perf": "playwright test --config playwright.perf.config.ts",
+    "perf:bundle": "node scripts/measure-bundle.mjs"
   },
   "dependencies": {
     "next": "16.4.6",

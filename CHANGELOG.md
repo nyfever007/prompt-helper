@@ -9,7 +9,35 @@
 - 컴파일러(`COMPILER_VERSION`): 0.1.0 / generic-en adapter: 0.1.0
 - 로컬 저장 envelope(`STORAGE_FORMAT_VERSION`): 1
 
-## [0.12.0] — 2026-11-25 — Sprint 2-C.3: Safety & applicability consistency (승인됨)
+## [Sprint 2-C.4] — 2026-11-25 — Performance & integration validation (승인됨 — **Sprint 2-C 공식 완료**: 2-C.1·2-C.2·2-C.3·2-C.4 완료)
+
+버전 변화 없음: core 카탈로그 0.12.0, 카탈로그 형식 0.5.0, 컴파일러 0.5.0, ImageSpec 0.3.0, 안전 정책 0.3.0. 속성·ID·저장 형식·프롬프트 출력·진단 규칙은 그대로입니다.
+
+### Fixed
+- 색상 팔레트(단일 선택) 키보드: 실제 브라우저에서 화살표로 고른 뒤 Space가 동작하지 않던 문제
+  - 원인: 이미 선택된 라디오에서는 Space가 click을 발생시키지 않습니다. jsdom에서는 재현되지 않았습니다.
+  - 수정: 현재 색에서 Space 또는 Enter를 누르면 선택을 확정하고 팔레트를 닫은 뒤 포커스를 토글로 돌려줍니다.
+- 밝은 테마 성공 색(`--ok`)이 연한 배경에서 대비 3.85:1(WCAG AA 미달)이었습니다 → 4.7:1(#237a35)로 고쳤습니다.
+- 다크 테마 색상 견본 테두리가 고정된 어두운 색이라 어두운 견본(블랙 등)이 배경에 묻혔습니다 → 테마별 `--swatch-ring`을 씁니다.
+- 머리말 부제가 모든 모드에서 “— Basic Composer”로 표시되던 문제(Sprint 1 문구) → “하나의 이미지 명세를 Basic·Detailed에서 편집”으로 바꿨습니다.
+
+### Added
+- 성능 측정:
+  - `pnpm perf`: 실제 Chromium, 제품 빌드, 데스크톱·모바일 CPU 4×, 측정마다 5회. `playwright.perf.config.ts`, `perf/product.perf.ts`, 복잡한 명세 `perf/fixtures/complex-workspace.json`
+  - `pnpm perf:bundle`(`scripts/measure-bundle.mjs`)
+  - 기준선 `docs/PERFORMANCE.md`, `docs/performance/*.json`
+- 테스트:
+  - `theme-contrast`(30): 두 테마 텍스트 대비 WCAG AA
+  - E2E `integration`: 시나리오 A–G와 63개 카테고리 페이지 가로 스크롤 점검, 데스크톱·모바일 각 8
+  - E2E `a11y-theme`: 키보드 전체 회귀, 프리셋 대화상자, 다크 모드, 데스크톱·모바일 각 3
+  - 팔레트 키보드 확정 컴포넌트 테스트 1개
+- 문서:
+  - `docs/SPRINT_2C4_REPORT.md`, `docs/PERFORMANCE.md`
+  - VISUAL_EDITOR_PRINCIPLES §9(2-D 진입 준비, 시각 에셋 테마·접근성 조건)
+  - TD-11 최종 판단, TD-16 부분 해결, TD-18 신규
+  - 스크린샷 `docs/screenshots/sprint-2c4/`
+
+## [0.12.0] — 2026-11-25 — Sprint 2-C.3: Safety & applicability consistency (승인·병합, PR #12)
 
 버전 변화: 안전 정책 `prompter.baseline` 0.2.0 → **0.3.0**(승인된 정책 변경), core 카탈로그 0.11.0 → **0.12.0**(ID·값·문구 변경 없음, 마이그레이션 `changes: []`). ImageSpec 0.3.0, 카탈로그 형식 0.5.0, 컴파일러 0.5.0은 그대로.
 

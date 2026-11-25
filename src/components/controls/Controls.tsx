@@ -433,6 +433,16 @@ export function ColorControl(p: OptionControlProps) {
           aria-label={fmt(p.t.controls.colorPalette, { label: p.label })}
           onKeyDown={(e) => {
             if (NAV_KEYS.has(e.key)) browsing.current = true;
+            // Single select (Sprint 2-C.4 fix): arrow keys already choose a color, and browsers fire no click for
+            // Space on an already-checked radio (Enter does nothing on radios) — so Space on the current color or
+            // Enter confirms the choice and closes, returning focus to the toggle.
+            const target = e.target as HTMLInputElement;
+            if (!isMulti && target.type === "radio" && (e.key === "Enter" || (e.key === " " && target.checked))) {
+              e.preventDefault();
+              const id = target.closest("[data-option-id]")?.getAttribute("data-option-id");
+              if (!target.checked && id && !target.disabled) p.onSelect(id);
+              close(true);
+            }
           }}
           onKeyUp={(e) => {
             if (NAV_KEYS.has(e.key)) browsing.current = false;

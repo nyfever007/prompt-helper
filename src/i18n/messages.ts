@@ -6,7 +6,7 @@
  */
 const en = {
   appTitle: "Prompter",
-  appTagline: "Visual prompt design — Basic Composer",
+  appTagline: "Visual prompt design — one image spec, edited in Basic or Detailed",
   language: "Language",
   modes: { basic: "Basic", detailed: "Detailed", precision: "Precision" },
   modeHint: "All modes edit the same image specification.",
@@ -273,7 +273,7 @@ export type Messages = Widen<typeof en>;
 
 const ko: Messages = {
   appTitle: "Prompter",
-  appTagline: "비주얼 프롬프트 디자인 — Basic Composer",
+  appTagline: "비주얼 프롬프트 디자인 — 하나의 이미지 명세를 Basic·Detailed에서 편집",
   language: "언어",
   modes: { basic: "Basic", detailed: "Detailed", precision: "Precision" },
   modeHint: "모든 모드는 동일한 이미지 명세(ImageSpec)를 편집합니다.",

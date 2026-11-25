@@ -1,0 +1,339 @@
+{
+  "project": "desktop",
+  "repeat": 5,
+  "cpuThrottle": 1,
+  "env": {
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/159.0.8154.6 Safari/537.36",
+    "hardwareConcurrency": 11,
+    "viewport": "1280×720",
+    "dpr": 1
+  },
+  "results": {
+    "load.empty.ttfb": {
+      "median": 1.9,
+      "max": 3.8,
+      "samples": [
+        3.8,
+        2,
+        1.7,
+        1.9,
+        1.5
+      ]
+    },
+    "load.empty.dcl": {
+      "median": 5.6,
+      "max": 41.2,
+      "samples": [
+        41.2,
+        5.8,
+        5.6,
+        5.5,
+        5.4
+      ]
+    },
+    "load.empty.load": {
+      "median": 87.9,
+      "max": 98.1,
+      "samples": [
+        98.1,
+        91.5,
+        87.9,
+        87.3,
+        87.7
+      ]
+    },
+    "load.empty.ready": {
+      "median": 96.1,
+      "max": 105.6,
+      "samples": [
+        105.6,
+        100.1,
+        96.1,
+        95.3,
+        96
+      ]
+    },
+    "load.empty.lcp": {
+      "median": 40,
+      "max": 52,
+      "samples": [
+        48,
+        40,
+        40,
+        40,
+        52
+      ]
+    },
+    "load.complex205.ready": {
+      "median": 139.4,
+      "max": 141.1,
+      "samples": [
+        139.2,
+        140.2,
+        141.1,
+        139.1,
+        139.4
+      ]
+    },
+    "render.detailed (Basic → Detailed)": {
+      "median": 48.8,
+      "max": 49.5,
+      "samples": [
+        48,
+        48.8,
+        49.3,
+        49.5,
+        48.1
+      ],
+      "dom": {
+        "median": 15.5,
+        "max": 16.5
+      }
+    },
+    "render.basic (Detailed → Basic)": {
+      "median": 48.9,
+      "max": 49.9,
+      "samples": [
+        49.9,
+        48,
+        48.6,
+        49.2,
+        48.9
+      ],
+      "dom": {
+        "median": 16.1,
+        "max": 16.4
+      }
+    },
+    "category switch (6 pages)": {
+      "median": 48.8,
+      "max": 50.8,
+      "samples": [
+        23.1,
+        48.9,
+        49.1,
+        49,
+        48.8,
+        48.8,
+        47.8,
+        49.8,
+        48.9,
+        47.9,
+        49.5,
+        47.4,
+        47.7,
+        49.8,
+        48.9,
+        48.8,
+        47.9,
+        49.3,
+        48.5,
+        48.8,
+        48,
+        49.8,
+        48.6,
+        48.8,
+        47,
+        46.7,
+        50.8,
+        48.8,
+        48.8,
+        48.2
+      ],
+      "dom": {
+        "median": 14.9,
+        "max": 16.5
+      }
+    },
+    "attribute select → prompt (empty spec)": {
+      "median": 32.2,
+      "max": 33.2,
+      "samples": [
+        29.2,
+        32.2,
+        33,
+        32.5,
+        31.6,
+        33.2,
+        32.2,
+        32,
+        33,
+        31.4
+      ],
+      "dom": {
+        "median": 7.6,
+        "max": 16.8
+      }
+    },
+    "relative slider → prompt": {
+      "median": 32.2,
+      "max": 33.3,
+      "samples": [
+        31.2,
+        33.3,
+        31.9,
+        32.2,
+        31.3,
+        32.2,
+        32.8,
+        32.4,
+        30.4,
+        32.9
+      ],
+      "dom": {
+        "median": 6.5,
+        "max": 7.7
+      }
+    },
+    "color palette open (55 colors)": {
+      "median": 46.9,
+      "max": 47.9,
+      "samples": [
+        47.9,
+        46.8,
+        47.1,
+        46.9,
+        46.8
+      ],
+      "dom": {
+        "median": 14.5,
+        "max": 15.9
+      }
+    },
+    "catalog search (348 attributes + options)": {
+      "median": 31.3,
+      "max": 32.1,
+      "samples": [
+        29.1,
+        30.5,
+        31.6,
+        31.3,
+        32.1
+      ],
+      "dom": {
+        "median": 8.8,
+        "max": 9.4
+      }
+    },
+    "category reset (confirm)": {
+      "median": 48,
+      "max": 48.6,
+      "samples": [
+        47.6,
+        48.3,
+        46.7,
+        48.6,
+        48
+      ],
+      "dom": {
+        "median": 16.1,
+        "max": 16.8
+      }
+    },
+    "category restore": {
+      "median": 49.1,
+      "max": 50.2,
+      "samples": [
+        50.2,
+        49.2,
+        48.9,
+        47.8,
+        49.1
+      ],
+      "dom": {
+        "median": 15.9,
+        "max": 16.6
+      }
+    },
+    "attribute select → prompt (complex spec, 205 values)": {
+      "median": 32.4,
+      "max": 34.1,
+      "samples": [
+        26.7,
+        32.4,
+        31.1,
+        33.4,
+        30.7,
+        34.1,
+        32.6,
+        32.2,
+        31.1,
+        33.7
+      ],
+      "dom": {
+        "median": 5.9,
+        "max": 7.6
+      }
+    },
+    "category switch (complex spec)": {
+      "median": 48.8,
+      "max": 50.8,
+      "samples": [
+        47.9,
+        50,
+        48.6,
+        48.2,
+        47.1,
+        50.7,
+        46.7,
+        50.8,
+        49,
+        48.8,
+        48.6,
+        48.8,
+        48.8,
+        47.1,
+        50.7
+      ],
+      "dom": {
+        "median": 15.4,
+        "max": 23.2
+      }
+    },
+    "preset dialog open (plan)": {
+      "median": 48.8,
+      "max": 50.6,
+      "samples": [
+        49.3,
+        50.6,
+        48.4,
+        47.1,
+        48.8
+      ],
+      "dom": {
+        "median": 15.8,
+        "max": 18.1
+      }
+    },
+    "preset apply": {
+      "median": 49.1,
+      "max": 49.6,
+      "samples": [
+        48.8,
+        49.1,
+        49.6,
+        49.6,
+        46.6
+      ],
+      "dom": {
+        "median": 15.5,
+        "max": 42.6
+      }
+    },
+    "preset undo": {
+      "median": 48.7,
+      "max": 49.6,
+      "samples": [
+        48.5,
+        48.7,
+        48.5,
+        49.6,
+        49.2
+      ],
+      "dom": {
+        "median": 16.1,
+        "max": 17.2
+      }
+    }
+  }
+}
