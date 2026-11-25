@@ -14,7 +14,7 @@ import { cameraSketchState, cameraSubject, lightSketchState } from "../scene/sce
 import { faceSketchState } from "./faceSketchState";
 
 /** Inline SVG of sketch layers. Colours come from `.face-sketch` tokens (light/dark) in globals.css. */
-export function SketchSvg({ layers, box, label, focus, className }: { layers: Layer[]; box: Box; label: string; focus?: LayerId | undefined; className?: string }) {
+export function SketchSvg({ layers, box, label, focus, className, decorative }: { layers: Layer[]; box: Box; label: string; focus?: LayerId | undefined; className?: string; decorative?: boolean }) {
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   let n = 0;
   const style = (e: { fill?: string; stroke?: string; sw?: number }) =>
@@ -66,7 +66,13 @@ export function SketchSvg({ layers, box, label, focus, className }: { layers: La
     );
   };
   return (
-    <svg className={`face-sketch ${className ?? ""}`} viewBox={boxAttr(box)} role="img" aria-label={label} data-focus={focus} preserveAspectRatio="xMidYMid meet">
+    <svg
+      className={`face-sketch ${className ?? ""}`}
+      viewBox={boxAttr(box)}
+      {...(decorative ? { "aria-hidden": true } : { role: "img", "aria-label": label })}
+      data-focus={focus}
+      preserveAspectRatio="xMidYMid meet"
+    >
       {layers.map((l) => (
         <g key={l.id} data-layer={l.id}>
           {l.els.map((e, i) => el(e, `${l.id}-${i}`))}

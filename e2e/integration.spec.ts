@@ -227,7 +227,7 @@ test("E — complex saved spec survives reload, JSON export/import; Sprint 0/1/2
     await page.locator('input[type="file"]').setInputFiles(`tests/fixtures/${f}`);
     await expect(page.getByText("명세를 가져왔습니다.").first(), f).toBeVisible();
     expect((await promptText(page)).length, f).toBeGreaterThan(20);
-    expect(await page.evaluate(() => JSON.parse(localStorage.getItem("prompter:v1:workspace") ?? "{}").spec?.catalog?.version), f).toBe("0.16.0");
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem("prompter:v1:workspace") ?? "{}").spec?.catalog?.version), f).toBe("0.17.0");
   }
 });
 

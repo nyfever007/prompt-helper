@@ -295,6 +295,7 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
             locale={locale}
             t={t}
             onPresetApplied={(name, count) => push({ kind: "success", text: fmt(t.presetDialog.applied, { name, n: count }), autoDismissMs: noticeTimeoutMs })}
+            onModeChange={setMode}
           />
         </div>
         <aside

@@ -1,4 +1,5 @@
 import {
+  type PresetApplyMode,
   applyPresetPlan,
   applySelection,
   clearSelection,
@@ -25,7 +26,7 @@ export type WorkspaceAction =
   | { type: "reset" }
   | { type: "restoreResetSnapshot" }
   | { type: "replace"; spec: ImageSpec }
-  | { type: "applyPreset"; plan: PresetPlan; mode: "all" | "onlyEmpty" }
+  | { type: "applyPreset"; plan: PresetPlan; mode: PresetApplyMode }
   | { type: "undoPreset" }
   | { type: "setExcluded"; attributeId: string; excluded: boolean }
   | { type: "resetCategory"; categoryId: string; at?: string }

@@ -9,6 +9,21 @@
 - 컴파일러(`COMPILER_VERSION`): 0.1.0 / generic-en adapter: 0.1.0
 - 로컬 저장 envelope(`STORAGE_FORMAT_VERSION`): 1
 
+## [0.17.0] — 2026-11-25 — Sprint 2-D.5: Recommended Mode
+
+버전 변화: core 카탈로그 0.16.0 → **0.17.0**(추천 콘셉트 프리셋 12개 추가, 속성·ID·값·출력 변경 없음, 마이그레이션 `changes: []`). 형식·컴파일러·ImageSpec·저장 형식·안전 정책은 그대로.
+
+### Added
+- 추천 탭(Recommended): 콘셉트 12개 — 자연스러운 일상, 패션 화보, 영화 속 주인공, 판타지 캐릭터, 미래 도시, 로맨스 웹툰, 비즈니스 프로필, 빈티지 감성, 몽환적인 이미지, 여행 및 아웃도어, 스포츠 및 액션, 예술적 인물화.
+- 콘셉트 카드: 이름(한·영), 설명, 대표 스케치(기존 카메라·조명 스케치로 그린 추천 구도·화면비와 조명), 주요 추천 속성, “변경 내용 확인 후 적용”.
+- 적용 방식 `keepUser`(직접 설정한 값 유지, 이전 콘셉트 값은 교체)와 확인 대화상자의 “기본으로 유지” 표시, “직접 설정한 값도 바꾸기” 선택.
+- 마지막 콘셉트 표시줄: 되돌리기, Basic·Detailed에서 편집.
+- 테스트: `unit/recommended`(14), `component/recommended`(2), e2e `recommended`(데스크톱·모바일).
+
+### Changed
+- 모드 탭 4개(Recommended·Basic·Detailed·Precision). 기본 모드는 Basic 그대로.
+- 로드맵: 2-D.6 Random Composer(요구사항 승인), 2-D.7 통합 및 사용성 개선(기존 2-D.6 항목, TD-16 이동).
+
 ## [0.16.0] — 2026-11-25 — Sprint 2-D.4: Pose, camera & lighting visual editor
 
 버전 변화: core 카탈로그 0.15.0 → **0.16.0**(ID·값·저장 형식·출력 변경 없음, 마이그레이션 `changes: []`). 형식·컴파일러·ImageSpec·안전 정책은 그대로.

@@ -25,8 +25,9 @@
 | **Sprint 2-D.2 — 얼굴·이목구비 시각적 선택** | 턱선·쌍꺼풀·동공·코(모양·콧대·코끝)·입술(모양·비율·큐피드 보우) 카드, 상대 슬라이더 실시간 프리뷰, Face Builder(정면+옆모습, ImageSpec 읽기 전용), core 0.14.0 | ✅ 완료 ([설계 원칙 §11](VISUAL_EDITOR_PRINCIPLES.md)) |
 | **Sprint 2-D.3 — 헤어·신체·의상 시각적 선택** | 헤어(대표 스타일 37·길이·형태·앞머리·가르마, Face Builder 연계), 신체(중립 마네킹 카드·비율 슬라이더 프리뷰), 의상(도식화 카드·종류 목록 썸네일), Figure Builder, core 0.15.0 | ✅ 완료 ([설계 원칙 §12](VISUAL_EDITOR_PRINCIPLES.md)) |
 | **Sprint 2-D.4 — 포즈·카메라·조명 시각적 선택** | 관절 마네킹 포즈 카드 16종·Figure Builder 자세 보기, 기준 장면 카메라 카드 14종·카메라 미리보기(화면비 반영), 머리 구체 조명 카드 14종·조명 미리보기, core 0.16.0 | ✅ 완료 ([설계 원칙 §13](VISUAL_EDITOR_PRINCIPLES.md)) |
-| Sprint 2-D.5 — 추천 모드·추천 프리셋 | AI 없는 직접 설계 추천 프리셋(기존 프리셋 계획·확인·되돌리기 재사용, 내용은 별도 승인) | ⏳ 예정 |
-| Sprint 2-D.6 — 시각적 편집 통합·사용성 검증 | Visual·Recommended 화면 구조 확정, 통합·사용성 검증 | ⏳ 예정 |
+| **Sprint 2-D.5 — Recommended Mode** | 추천 콘셉트 12개(기존 프리셋 계획·확인·적용·되돌리기 재사용, 직접 설정한 값 기본 유지 `keepUser`), 추천 탭·콘셉트 카드(설명·스케치·주요 속성), core 0.17.0 | ✅ 완료 ([설계 원칙 §14](VISUAL_EDITOR_PRINCIPLES.md)) |
+| Sprint 2-D.6 — Random Composer | 아무것도 선택하지 않아도 랜덤 생성. 직접 설정한 값 유지, 선택하지 않은 **모든 적용 가능한 속성**을 랜덤 생성(인물 외형·의상·액세서리·자세·카메라·렌즈·조명·환경·스타일·분위기·화면비 등 전체 카탈로그, 속성 개수 제한 없음). 랜덤 값과 직접 설정한 값 구분, 재생성 시 직접 설정·고정한 값 유지, 예상 밖의 창의적 조합 허용. 기존 적용 가능성·안전 정책 준수, 기존 ImageSpec 재사용, 값 범위는 카탈로그와 유효한 값 형식, AI·유료 API 없음 | ⏳ 예정 (승인된 요구사항, 구현은 다음 지시서) |
+| Sprint 2-D.7 — 통합 및 사용성 개선 | 기존 2-D.6 항목: Visual·Recommended 화면 구조 확정, 통합·사용성 검증(실제 스크린 리더 TD-16 포함) | ⏳ 예정 |
 | Sprint 3 — Precision editor | 위치와 개수 지정, 부위별 속성, 중요도, 유지/제외 조건, 참조 이미지 역할(메타데이터) | ⏳ 예정 |
 | Sprint 4 — Style taxonomy & non-person | 직교 스타일 축, 카탈로그 확장, 풍경·건축·제품·게임 에셋 | ⏳ 예정 |
 | Sprint 5 — Image API & live validation | OpenAI provider adapter(서버 측), 비용 가드, 실행 이력, 결과 비교 | ⏳ 예정 |
@@ -38,7 +39,7 @@ Sprint 2-C.4 기준 **미검증**입니다. Sprint 완료를 막는 조건은 �
 
 | 항목 | 현재 상태 |
 |---|---|
-| 실제 스크린 리더(macOS VoiceOver, Windows NVDA) | 미검증 — TD-16, Sprint 2-D.6에 배정 |
+| 실제 스크린 리더(macOS VoiceOver, Windows NVDA) | 미검증 — TD-16, Sprint 2-D.7에 배정(2-D.5에서 이동) |
 | Firefox | 미검증 — E2E는 Chromium만 사용 |
 | Safari(macOS·iOS) | 미검증 |
 | 휴대폰 실기기 | 미검증 — Pixel 7 에뮬레이션 + CPU 4배 제한으로만 측정 |

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { planPreset, resolveText, type CatalogRegistry, type PresetPlan, type PresetPlanEntry } from "@/domain";
+import { planPreset, resolveText, writableEntries, type CatalogRegistry, type PresetApplyMode, type PresetPlan, type PresetPlanEntry } from "@/domain";
 import { fmt, type Messages } from "@/i18n/messages";
 import type { Workspace } from "@/state/useWorkspace";
 import { describeDiagnostic } from "../diagnostics";
@@ -21,6 +21,7 @@ export function PresetDialog({
   t,
   onClose,
   onApplied,
+  protectUserValues = false,
 }: {
   presetId: string;
   registry: CatalogRegistry;
@@ -28,7 +29,9 @@ export function PresetDialog({
   locale: string;
   t: Messages;
   onClose(): void;
-  onApplied(plan: PresetPlan, mode: "all" | "onlyEmpty"): void;
+  onApplied(plan: PresetPlan, mode: PresetApplyMode): void;
+  /** Recommended concepts (Sprint 2-D.5): keeping the user's own values is the default action. */
+  protectUserValues?: boolean;
 }) {
   const plan = useMemo(() => planPreset(workspace.spec, registry, presetId), [workspace.spec, registry, presetId]);
   if (!plan.ok) return null;
@@ -42,6 +45,8 @@ export function PresetDialog({
   };
   const source = (e: PresetPlanEntry) => (e.current?.source === "preset" ? t.presetDialog.sourcePreset : t.presetDialog.sourceUser);
   const writable = by("new").length + by("change").length;
+  // values the user set (or imported) — kept unless the user explicitly chooses to replace them
+  const userOwned = by("change").filter((e) => e.current?.source !== "preset");
 
   const section = (kind: PresetPlanEntry["kind"], title: string, render: (e: PresetPlanEntry) => React.ReactNode) => {
     const list = by(kind);
@@ -71,6 +76,12 @@ export function PresetDialog({
         {section("change", t.presetDialog.change, (e) => (
           <>
             {value(e, "current")} <span className="muted">({source(e)})</span> → <strong>{value(e, "next")}</strong>
+            {protectUserValues && e.current?.source !== "preset" && (
+              <span className="badge badge--set" data-testid="kept-by-default">
+                {" "}
+                {t.presetDialog.keptByDefault}
+              </span>
+            )}
           </>
         ))}
         {section("same", t.presetDialog.same, (e) => value(e, "next"))}
@@ -94,8 +105,20 @@ export function PresetDialog({
             <p className="small">{p.untouched.map((id) => attributeLabel(registry, id, locale)).join(", ")}</p>
           </details>
         )}
+        {protectUserValues && userOwned.length > 0 && <p className="small notice">{fmt(t.presetDialog.keepUserNote, { n: userOwned.length })}</p>}
         <div className="toolbar modal__actions">
-          {p.requiresOverwriteConfirmation ? (
+          {protectUserValues ? (
+            <>
+              <button type="button" className="button button--primary" disabled={!p.presetApplicable || writableEntries(p, "keepUser").length === 0} onClick={() => onApplied(p, "keepUser")}>
+                {userOwned.length > 0 ? t.presetDialog.applyKeepUser : t.presetDialog.apply}
+              </button>
+              {userOwned.length > 0 && (
+                <button type="button" className="button" disabled={!p.presetApplicable} onClick={() => onApplied(p, "all")}>
+                  {t.presetDialog.applyReplaceUser}
+                </button>
+              )}
+            </>
+          ) : p.requiresOverwriteConfirmation ? (
             <>
               <button type="button" className="button button--primary" disabled={!p.presetApplicable} onClick={() => onApplied(p, "all")}>
                 {t.presetDialog.applyAll}
