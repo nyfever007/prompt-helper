@@ -17,6 +17,8 @@ import { WorkspaceField } from "../controls/WorkspaceField";
 import { ModalDialog } from "../ModalDialog";
 import type { DetailedNavigator } from "../navigation";
 import { attributeLabel } from "../format";
+import { FaceBuilder } from "../face/FaceBuilder";
+import { FACE_CATEGORY_IDS, type FaceCategoryId } from "../face/faceSketchState";
 import { CategoryNav } from "./CategoryNav";
 import { PresetDialog } from "./PresetDialog";
 
@@ -53,6 +55,8 @@ export function DetailedEditor({
   });
   const [navOpen, setNavOpen] = useState(false);
   const [dialogPresetId, setDialogPresetId] = useState<string | null>(null);
+  // Face Builder open/closed is kept while moving between the face pages (session only).
+  const [faceOpen, setFaceOpen] = useState(true);
   const pendingFocus = useRef<string | null>(initialAttributeId ?? null);
   const node = flat.find((n) => n.category.id === selectedId) ?? flat[0];
 
@@ -172,6 +176,8 @@ export function DetailedEditor({
             locale={locale}
             t={t}
             onSelect={select}
+            faceOpen={faceOpen}
+            onFaceToggle={setFaceOpen}
             onOpenPreset={setDialogPresetId}
             sequence={sequenceAround(flat, node.category.id)}
             onStep={(id) => {
@@ -222,6 +228,8 @@ function CategoryPanel({
   locale,
   t,
   onSelect,
+  faceOpen,
+  onFaceToggle,
   onOpenPreset,
   sequence,
   onStep,
@@ -231,7 +239,9 @@ function CategoryPanel({
   workspace: Workspace;
   locale: string;
   t: Messages;
-  onSelect(id: string): void;
+  onSelect(id: string, attributeId?: string): void;
+  faceOpen: boolean;
+  onFaceToggle(open: boolean): void;
   onOpenPreset(id: string): void;
   sequence: { previous: CategoryNode | undefined; next: CategoryNode | undefined };
   onStep(id: string): void;
@@ -324,6 +334,18 @@ function CategoryPanel({
           <h3>{t.detailed.draftTitle}</h3>
           <p>{fmt(t.detailed.draftBody, { doc: c.docPath ?? "docs/catalogs/" })}</p>
         </div>
+      )}
+      {node.approved && node.applicable && (FACE_CATEGORY_IDS as readonly string[]).includes(c.id) && (
+        <FaceBuilder
+          registry={registry}
+          spec={workspace.spec}
+          categoryId={c.id as FaceCategoryId}
+          locale={locale}
+          t={t}
+          open={faceOpen}
+          onToggle={onFaceToggle}
+          onSelect={onSelect}
+        />
       )}
       {presets.length > 0 && (
         <div className="presets">

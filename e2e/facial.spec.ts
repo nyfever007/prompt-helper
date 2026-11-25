@@ -37,8 +37,8 @@ test("facial features: shapes, relative sliders, colors, multi traits, custom va
   // Face: shape + combinable traits; focusing a slider stores nothing
   await go(page, "얼굴");
   await field(page, "person.face.shape").getByRole("radio", { name: /^계란형/ }).check(); // visual cards (Sprint 2-D.1)
-  await pickChip(page, "person.face.jawline", "부드러운");
-  await pickChip(page, "person.face.jawline", "둥근");
+  await field(page, "person.face.jawline").getByRole("checkbox", { name: /^부드러운/ }).check(); // visual cards (Sprint 2-D.2)
+  await field(page, "person.face.jawline").getByRole("checkbox", { name: /^둥근/ }).check();
   await pickChip(page, "person.face.cheeks", "통통한");
   await field(page, "person.face.length").getByRole("slider").focus();
   await expect(field(page, "person.face.length")).toHaveAttribute("data-state", "unset");
@@ -57,8 +57,8 @@ test("facial features: shapes, relative sliders, colors, multi traits, custom va
   await go(page, "눈썹");
   await field(page, "person.eyebrows.shape").getByRole("radio", { name: /^완만한 아치/ }).check(); // visual cards (Sprint 2-D.1)
   await go(page, "코");
-  await pickChip(page, "person.nose.shape", "매부리형");
-  await pickChip(page, "person.nose.bridge_shape", "볼록한");
+  await field(page, "person.nose.shape").getByRole("radio", { name: /^매부리형/ }).check(); // visual cards (Sprint 2-D.2)
+  await field(page, "person.nose.bridge_shape").getByRole("radio", { name: /^볼록한/ }).check();
   await expect(page.getByTestId("covered-person.nose.bridge_shape")).toBeVisible();
   await go(page, "입술");
   await slide(page, "person.lips.lower_thickness", 1);
@@ -98,4 +98,29 @@ test("facial features: shapes, relative sliders, colors, multi traits, custom va
   await page.getByRole("button", { name: "카테고리 초기화 되돌리기" }).click();
   expect(await stored(page)).toEqual(before);
   expect(external).toEqual([]);
+});
+
+test("face builder (Sprint 2-D.2): one sketch of the face settings, redrawn live by sliders and cards; nothing extra is stored", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("tab", { name: /Detailed/ }).click();
+  await go(page, "눈");
+  const builder = page.getByTestId("face-builder");
+  const front = builder.getByRole("img", { name: /^정면 스케치/ });
+  await expect(front).toHaveAccessibleName("정면 스케치 — 설정 0개 반영");
+  const box = await front.boundingBox();
+  expect(box!.width).toBeGreaterThan(100); // rendered, not collapsed (desktop and mobile)
+  const before = await front.innerHTML();
+  const preview = page.getByTestId("slider-preview-person.eyes.spacing");
+  const previewBefore = await preview.innerHTML();
+  await slide(page, "person.eyes.spacing", 2);
+  await expect(page.getByTestId("slider-value-person.eyes.spacing")).toHaveText("아주 넓음");
+  expect(await preview.innerHTML()).not.toBe(previewBefore);
+  await field(page, "person.eyes.eyelids").getByRole("checkbox", { name: /^덮인 눈꺼풀/ }).check();
+  expect(await front.innerHTML()).not.toBe(before);
+  await expect(front).toHaveAccessibleName("정면 스케치 — 설정 2개 반영");
+  expect(Object.keys(await stored(page)).sort()).toEqual(["person.eyes.eyelids", "person.eyes.spacing"]);
+  // collapsing is a view choice only, kept while moving between face pages
+  await builder.locator("summary").click();
+  await go(page, "코");
+  await expect(page.getByTestId("face-builder")).not.toHaveAttribute("open", "");
 });

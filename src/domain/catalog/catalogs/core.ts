@@ -43,6 +43,9 @@ const APPROVED_PERSON_AREAS: Record<string, { en: string; ko: string }> = {
  * 0.11.0 Sprint 2-C.2 (format 0.5.0: explicit prompt output order `promptOrder` in prompt-order.ts,
  * separate from the UI `order` — same output as 0.10.0; contradiction/convention diagnostics with
  * slider conditions — no ID, value or output changes).
+ * 0.14.0 Sprint 2-D.2 (visual examples for jawline, eyelids, pupil shape, nose shape / bridge / tip and lip
+ * shape / proportion / Cupid's bow, drawn by the Face Builder geometry; `cards` control — no ID, value or
+ * output changes).
  * 0.13.0 Sprint 2-D.1 (visual examples — line art for face, eye and eyebrow shape, `cards` control — no ID,
  * value or output changes).
  * 0.12.0 Sprint 2-C.3 (appearance direction uses the common person scope — applies while no subject is
@@ -72,7 +75,7 @@ const NON_ABSTRACT = [...ORIENTED_SUBJECTS, "landscape"];
 export const coreCatalog = {
   formatVersion: "0.5.0",
   id: "prompter.core",
-  version: "0.13.0",
+  version: "0.14.0",
   title: { en: "Prompter core catalog", ko: "Prompter 기본 카탈로그" },
   groups: [
     { id: "what", order: 0, label: { en: "What to depict", ko: "무엇을 그릴까요" } },
@@ -1015,6 +1018,12 @@ export const coreCatalog = {
       fromVersion: "0.12.0",
       toVersion: "0.13.0",
       // No ID changes: 0.13.0 adds visual examples (line art) to face, eye and eyebrow shape.
+      changes: [],
+    },
+    {
+      fromVersion: "0.13.0",
+      toVersion: "0.14.0",
+      // No ID changes: 0.14.0 adds visual examples to more face, eye, nose and lip attributes.
       changes: [],
     },
   ],

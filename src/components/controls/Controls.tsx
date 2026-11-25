@@ -80,7 +80,8 @@ export function DropdownControl(p: OptionControlProps) {
  * Visual choice (cards). Sprint 2-D.1: an option with a READY example shows it (static SVG / image,
  * loaded lazily, fixed size so nothing jumps); an option with a placeholder example says so honestly;
  * an option with no example is a plain text card. Selection is shown by the native control, a ✓ badge
- * and the accent ring (not colour alone). Each example can be enlarged in an accessible dialog.
+ * and the accent ring (not colour alone). Each example can be enlarged in an accessible dialog; the zoom
+ * button sits beside the label (Sprint 2-D.2), so it never covers the drawing.
  */
 export function CardsControl(p: OptionControlProps) {
   const [zoom, setZoom] = useState<OptionDefinition | null>(null);
@@ -122,32 +123,40 @@ export function CardsControl(p: OptionControlProps) {
                         decoding="async"
                         onError={() => setFailed((f) => new Set(f).add(o.id))}
                       />
-                      <button type="button" className="link-button card__zoom" aria-label={fmt(p.t.controls.zoomOption, { name })} onClick={() => setZoom(o)}>
-                        {p.t.controls.zoom}
-                      </button>
                     </>
                   ) : (
                     <span className="card__placeholder">{p.t.controls.noImage}</span>
                   )}
-                  {checked && (
-                    <span className="card__check" aria-hidden="true">
-                      ✓
-                    </span>
-                  )}
                 </div>
               )}
-              <label className="card__body">
-                <input
-                  type={isMulti ? "checkbox" : "radio"}
-                  name={isMulti ? undefined : p.attribute.id}
-                  checked={checked}
-                  disabled={restricted && !checked}
-                  onChange={() => (isMulti ? p.onToggle(o.id) : p.onSelect(o.id))}
-                />
-                <span className="card__label">{name}</span>
-                {en && <span className="card__term" lang="en">{en}</span>}
-                {o.description && <span className="card__desc">{resolveText(o.description, p.locale)}</span>}
-              </label>
+              <div className="card__foot">
+                <label className="card__body">
+                  <input
+                    type={isMulti ? "checkbox" : "radio"}
+                    name={isMulti ? undefined : p.attribute.id}
+                    checked={checked}
+                    disabled={restricted && !checked}
+                    onChange={() => (isMulti ? p.onToggle(o.id) : p.onSelect(o.id))}
+                  />
+                  <span className="card__label">{name}</span>
+                  {en && <span className="card__term" lang="en">{en}</span>}
+                  {o.description && <span className="card__desc">{resolveText(o.description, p.locale)}</span>}
+                </label>
+                {/* Sprint 2-D.2: the ✓ badge and the zoom button sit beside the label, never over the drawing. */}
+                {checked && (example || placeholder) && (
+                  <span className="card__check" aria-hidden="true">
+                    ✓
+                  </span>
+                )}
+                {example && (
+                  <button type="button" className="button card__zoom" aria-label={fmt(p.t.controls.zoomOption, { name })} title={p.t.controls.zoom} onClick={() => setZoom(o)}>
+                    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false">
+                      <circle cx="6.5" cy="6.5" r="4.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
+                      <path d="M10 10l4 4M6.5 4.5v4M4.5 6.5h4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
           );
         })}

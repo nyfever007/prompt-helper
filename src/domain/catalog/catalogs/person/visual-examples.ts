@@ -9,8 +9,19 @@ import type { Attr } from "./builders";
  */
 export const VISUAL_ASSET_DIRS: Record<string, { dir: string; noun: { en: string; ko: string } }> = {
   "person.face.shape": { dir: "face-shape", noun: { en: "face shape", ko: "얼굴형" } },
+  // Sprint 2-D.2: features that are hard to name but easy to see. Drawn by the same geometry as the
+  // Face Builder (src/visual/face-sketch.ts); the nose shape card shows the side view and the front view.
+  "person.face.jawline": { dir: "jawline", noun: { en: "jawline", ko: "턱선" } },
   "person.eyes.shape": { dir: "eye-shape", noun: { en: "eye shape", ko: "눈 모양" } },
+  "person.eyes.eyelids": { dir: "eyelids", noun: { en: "eyelid", ko: "쌍꺼풀" } },
+  "person.eyes.pupil_shape": { dir: "pupil-shape", noun: { en: "pupil shape", ko: "동공 모양" } },
   "person.eyebrows.shape": { dir: "eyebrow-shape", noun: { en: "eyebrow shape", ko: "눈썹 모양" } },
+  "person.nose.shape": { dir: "nose-shape", noun: { en: "nose shape (side and front view)", ko: "코 모양 (옆모습·정면)" } },
+  "person.nose.bridge_shape": { dir: "nose-bridge", noun: { en: "nasal bridge (side view)", ko: "콧대 (옆모습)" } },
+  "person.nose.tip_shape": { dir: "nose-tip", noun: { en: "nasal tip", ko: "코끝" } },
+  "person.lips.shape": { dir: "lip-shape", noun: { en: "lip shape", ko: "입술 모양" } },
+  "person.lips.ratio": { dir: "lip-ratio", noun: { en: "lip proportion", ko: "입술 비율" } },
+  "person.lips.cupids_bow": { dir: "cupids-bow", noun: { en: "Cupid's bow", ko: "큐피드 보우" } },
 };
 
 export const VISUAL_PROVENANCE = {
@@ -33,7 +44,7 @@ export const withVisualExamples = (attributes: Attr[]): Attr[] =>
             id: `${o.id}-line-art`,
             status: "ready" as const,
             src: `/visual/person/${asset.dir}/${o.id}.svg`,
-            alt: { en: `Line drawing of a ${o.label.en.toLowerCase()} ${asset.noun.en}`, ko: `${o.label.ko} ${asset.noun.ko} 선화` },
+            alt: { en: `Line drawing, ${asset.noun.en}: ${o.label.en.toLowerCase()}`, ko: `${asset.noun.ko} 선화: ${o.label.ko}` },
             provenance: VISUAL_PROVENANCE,
           },
         ],

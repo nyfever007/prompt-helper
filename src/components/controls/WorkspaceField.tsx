@@ -11,6 +11,7 @@ import {
 } from "@/domain";
 import type { Messages } from "@/i18n/messages";
 import type { Workspace } from "@/state/useWorkspace";
+import { SLIDER_PREVIEWS, SliderPreview } from "../face/FaceSketch";
 import { AttributeField } from "./AttributeField";
 
 const FIELD_HIDDEN_CODES = new Set(["selection.inactive", "selection.option_inactive", "compiler.empty"]);
@@ -45,6 +46,7 @@ export function WorkspaceField({ attribute: a, registry, workspace, locale, t }:
       onClear={() => workspace.clear(a.id)}
       onClearAttribute={(id) => workspace.clear(id)}
       isAttributeSet={(id) => id in spec.selections}
+      {...(SLIDER_PREVIEWS[a.id] ? { visual: <SliderPreview registry={registry} spec={spec} attributeId={a.id} locale={locale} t={t} /> } : {})}
     />
   );
 }
