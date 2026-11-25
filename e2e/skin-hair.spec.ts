@@ -43,7 +43,7 @@ test("skin, hair and facial hair: palettes, groups, none vs unset, applicability
 
   // Hair: bald hides (but keeps) the hairstyle; back to “hair present” restores it
   await go(page, "헤어");
-  await pickChip(page, "person.hair.length", "허리 길이");
+  await field(page, "person.hair.length").getByRole("radio", { name: /^허리 길이/ }).check(); // visual cards (Sprint 2-D.3)
   await pickColor(page, "person.hair.primary_color", "짙은 갈색");
   await pickColor(page, "person.hair.secondary_color", "허니 블론드");
   await field(page, "person.hair.style").getByRole("searchbox").fill("반묶음 번");

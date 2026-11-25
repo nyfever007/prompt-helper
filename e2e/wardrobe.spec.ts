@@ -66,7 +66,7 @@ test("expression, makeup, garments and accessories: independent values, none/app
   await pickListed(page, "person.clothing.tops.type", "버튼다운", "radio", /^버튼다운 셔츠/);
   await pickColor(page, "person.clothing.tops.primary_color", "아이보리");
   await pickListed(page, "person.clothing.tops.material", "린넨", "radio", /^린넨/);
-  await pickChip(page, "person.clothing.tops.fit", "오버사이즈");
+  await field(page, "person.clothing.tops.fit").getByRole("radio", { name: /^오버사이즈/ }).check(); // visual cards (Sprint 2-D.3)
   await field(page, "person.clothing.tops.fit").getByRole("switch", { name: /프롬프트에 포함/ }).uncheck();
   await shot(page, "tops", project);
 

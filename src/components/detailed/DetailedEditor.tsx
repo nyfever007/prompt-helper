@@ -18,6 +18,8 @@ import { ModalDialog } from "../ModalDialog";
 import type { DetailedNavigator } from "../navigation";
 import { attributeLabel } from "../format";
 import { FaceBuilder } from "../face/FaceBuilder";
+import { FigureBuilder } from "../figure/FigureBuilder";
+import { isFigureCategory } from "../figure/figureSketchState";
 import { FACE_CATEGORY_IDS, type FaceCategoryId } from "../face/faceSketchState";
 import { CategoryNav } from "./CategoryNav";
 import { PresetDialog } from "./PresetDialog";
@@ -346,6 +348,9 @@ function CategoryPanel({
           onToggle={onFaceToggle}
           onSelect={onSelect}
         />
+      )}
+      {node.approved && node.applicable && isFigureCategory(registry, c.id) && (
+        <FigureBuilder registry={registry} spec={workspace.spec} categoryId={c.id} locale={locale} t={t} open={faceOpen} onToggle={onFaceToggle} onSelect={onSelect} />
       )}
       {presets.length > 0 && (
         <div className="presets">

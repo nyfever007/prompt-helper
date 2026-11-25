@@ -1,46 +1,18 @@
-import { isAttributeActive, isOptionAttribute, selectedCustomEntries, selectedOptionIds, type CatalogRegistry, type ImageSpec } from "@/domain";
+import type { CatalogRegistry, ImageSpec } from "@/domain";
 import { neutralParams, type FaceParams } from "@/visual/face-sketch";
+import { HAIR_STYLES, neutralHair, type HairParams, type HairStyle } from "@/visual/hair-sketch";
+import { color, degree, runBindings, single, type Binding, type SketchState } from "../sketch/bindings";
 
 /**
- * Sprint 2-D.2 — ImageSpec → face sketch parameters. READ-ONLY: the sketch never writes to the spec.
- *
- * - Unset attributes keep the preview-only neutral form (NEUTRAL); nothing is stored or prompted.
- * - A selection that is excluded from the prompt, or not applicable, is NOT drawn (the sketch shows what
- *   the prompt describes) and is reported, so the user can see why.
- * - Custom values and options without a drawing are reported as “not shown in the sketch”.
+ * Sprint 2-D.2 — ImageSpec → face sketch parameters (read-only; see ../sketch/bindings.ts for the rules).
+ * Sprint 2-D.3 adds hair, drawn on the same reference face.
  */
-export const FACE_CATEGORY_IDS = ["person_face", "person_eyes", "person_eyebrows", "person_nose", "person_lips"] as const;
+export const FACE_CATEGORY_IDS = ["person_face", "person_eyes", "person_eyebrows", "person_nose", "person_lips", "person_hair"] as const;
 export type FaceCategoryId = (typeof FACE_CATEGORY_IDS)[number];
+export type FaceSketchParams = FaceParams & { hair: HairParams };
 
-type Swatch = (optionId: string) => string | null;
-type Binding =
-  | { kind: "degree"; set(p: FaceParams, v: number): void }
-  /** Returns the option ids it could NOT draw. */
-  | { kind: "option"; set(p: FaceParams, ids: string[], swatch: Swatch): string[] };
-
-const degree = (set: (p: FaceParams, v: number) => void): Binding => ({ kind: "degree", set });
-const single = <T extends string>(known: readonly T[], set: (p: FaceParams, id: T) => void): Binding => ({
-  kind: "option",
-  set: (p, ids) => {
-    const id = ids[0];
-    if (id && (known as readonly string[]).includes(id)) {
-      set(p, id as T);
-      return [];
-    }
-    return ids;
-  },
-});
-const color = (set: (p: FaceParams, c: string) => void): Binding => ({
-  kind: "option",
-  set: (p, ids, swatch) => {
-    const c = ids[0] ? swatch(ids[0]) : null;
-    if (c) set(p, c);
-    return c ? [] : ids;
-  },
-});
-
-/** Which catalog attributes the sketch draws, and how. Everything else in the five areas is “not shown”. */
-export const FACE_BINDINGS: Record<string, Binding> = {
+/** Which catalog attributes the sketch draws, and how. Everything else in these areas is “not shown”. */
+export const FACE_BINDINGS: Record<string, Binding<FaceSketchParams>> = {
   "person.face.shape": single(["oval", "round", "square", "rectangular", "heart", "diamond", "triangular", "inverted_triangular"], (p, v) => (p.face.shape = v)),
   "person.face.length": degree((p, v) => (p.face.length = v)),
   "person.face.width": degree((p, v) => (p.face.width = v)),
@@ -93,7 +65,7 @@ export const FACE_BINDINGS: Record<string, Binding> = {
   "person.lips.shape": {
     kind: "option",
     set: (p, ids) => {
-      const known = ids.filter((x): x is FaceParams["lips"]["shapes"][number] => ["thin", "full", "heart", "rounded", "wide", "balanced"].includes(x));
+      const known = ids.filter((x): x is FaceSketchParams["lips"]["shapes"][number] => ["thin", "full", "heart", "rounded", "wide", "balanced"].includes(x));
       p.lips.shapes = known;
       return ids.filter((x) => !known.includes(x as never));
     },
@@ -105,57 +77,21 @@ export const FACE_BINDINGS: Record<string, Binding> = {
   "person.lips.cupids_bow": single(["flat", "subtle", "defined", "deep"], (p, v) => (p.lips.bow = v)),
   "person.lips.corners": degree((p, v) => (p.lips.corners = v)),
   "person.lips.natural_color": color((p, c) => (p.lips.color = c)),
+  // Sprint 2-D.3: hair (drawn on the same face; other hair attributes are reported as text)
+  "person.hair.presence": single(["present", "shaved", "bald", "partial_loss"], (p, v) => (p.hair.presence = v)),
+  "person.hair.length": single(["extremely_short", "ear", "chin", "neck", "shoulder", "chest", "mid_back", "waist", "hip", "knee", "floor"], (p, v) => (p.hair.length = v)),
+  "person.hair.texture": single(["straight", "wavy", "curly", "tightly_curly", "coily"], (p, v) => (p.hair.texture = v)),
+  "person.hair.volume": degree((p, v) => (p.hair.volume = v)),
+  "person.hair.part": single(["none", "center", "left", "right", "deep_left", "deep_right"], (p, v) => (p.hair.part = v)),
+  "person.hair.bangs_style": single(["none", "blunt", "wispy", "curtain", "side_swept", "choppy", "asymmetric", "micro", "feathered"], (p, v) => (p.hair.bangs = v)),
+  "person.hair.bangs_length": single(["very_short", "above_brows", "brow", "eye", "long"], (p, v) => (p.hair.bangsLength = v)),
+  "person.hair.style": single(Object.keys(HAIR_STYLES) as HairStyle[], (p, v) => (p.hair.style = v)),
+  "person.hair.primary_color": color((p, c) => (p.hair.color = c)),
 };
 
-export interface FaceSketchState {
-  params: FaceParams;
-  /** Set and drawn. */
-  drawn: string[];
-  /** Set but excluded from the prompt — not drawn. */
-  excluded: string[];
-  /** Set but not applicable in the current context — not drawn. */
-  inactive: string[];
-  /** Set, but (part of) the value has no drawing (custom values, attributes without a sketch). */
-  notDrawn: string[];
-}
+export type FaceSketchState = SketchState<FaceSketchParams>;
+export const neutralFaceSketch = (): FaceSketchParams => ({ ...neutralParams(), hair: neutralHair() });
 
-/**
- * @param force draw this attribute's stored value even when excluded/inactive (a slider's own preview explains its value).
- */
-export const faceSketchState = (registry: CatalogRegistry, spec: ImageSpec, force?: string): FaceSketchState => {
-  const params = neutralParams();
-  const state: FaceSketchState = { params, drawn: [], excluded: [], inactive: [], notDrawn: [] };
-  for (const a of registry.attributes()) {
-    if (!a.categoryId || !(FACE_CATEGORY_IDS as readonly string[]).includes(a.categoryId)) continue;
-    const sel = spec.selections[a.id];
-    if (!sel) continue;
-    if (a.id !== force) {
-      if (sel.excludedFromPrompt) {
-        state.excluded.push(a.id);
-        continue;
-      }
-      if (!isAttributeActive(registry, a, spec)) {
-        state.inactive.push(a.id);
-        continue;
-      }
-    }
-    const b = FACE_BINDINGS[a.id];
-    if (!b) {
-      state.notDrawn.push(a.id);
-      continue;
-    }
-    if (b.kind === "degree") {
-      if (sel.value.kind === "number") {
-        b.set(params, sel.value.value);
-        state.drawn.push(a.id);
-      } else state.notDrawn.push(a.id);
-      continue;
-    }
-    const ids = selectedOptionIds(sel.value);
-    const swatch: Swatch = (id) => (isOptionAttribute(a) ? (a.options.find((o) => o.id === id)?.swatch ?? null) : null);
-    const missed = b.set(params, ids, swatch);
-    if (ids.length > missed.length) state.drawn.push(a.id);
-    if (missed.length > 0 || selectedCustomEntries(sel.value).length > 0) state.notDrawn.push(a.id);
-  }
-  return state;
-};
+/** @param force draw this attribute's stored value even when excluded/inactive (a slider's own preview explains its value). */
+export const faceSketchState = (registry: CatalogRegistry, spec: ImageSpec, force?: string): FaceSketchState =>
+  runBindings(registry, spec, (c) => (FACE_CATEGORY_IDS as readonly string[]).includes(c), FACE_BINDINGS, neutralFaceSketch(), force);

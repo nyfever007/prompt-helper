@@ -43,6 +43,8 @@ const APPROVED_PERSON_AREAS: Record<string, { en: string; ko: string }> = {
  * 0.11.0 Sprint 2-C.2 (format 0.5.0: explicit prompt output order `promptOrder` in prompt-order.ts,
  * separate from the UI `order` — same output as 0.10.0; contradiction/convention diagnostics with
  * slider conditions — no ID, value or output changes).
+ * 0.15.0 Sprint 2-D.3 (visual examples for hair, body proportions and clothing — cards, or a thumbnail in the
+ * list for the large hairstyle / garment type lists; no ID, value or output changes).
  * 0.14.0 Sprint 2-D.2 (visual examples for jawline, eyelids, pupil shape, nose shape / bridge / tip and lip
  * shape / proportion / Cupid's bow, drawn by the Face Builder geometry; `cards` control — no ID, value or
  * output changes).
@@ -75,7 +77,7 @@ const NON_ABSTRACT = [...ORIENTED_SUBJECTS, "landscape"];
 export const coreCatalog = {
   formatVersion: "0.5.0",
   id: "prompter.core",
-  version: "0.14.0",
+  version: "0.15.0",
   title: { en: "Prompter core catalog", ko: "Prompter 기본 카탈로그" },
   groups: [
     { id: "what", order: 0, label: { en: "What to depict", ko: "무엇을 그릴까요" } },
@@ -767,13 +769,13 @@ export const coreCatalog = {
     // Sprint 2-D.1: face, eye and eyebrow shape show line-art examples (cards control; values unchanged).
     ...withVisualExamples(facialAttributes),
     // ── Person › Skin, Hair, Facial hair (Sprint 2-B.3, order 264–308) ──
-    ...skinHairAttributes,
+    ...withVisualExamples(skinHairAttributes),
     // ── Person › Body (Sprint 2-B.4, order 309–353) ──
-    ...bodyAttributes,
+    ...withVisualExamples(bodyAttributes),
     // ── Person › Expression & impression, Makeup (Sprint 2-B.5A, order 354–387) ──
     ...expressionMakeupAttributes,
     // ── Person › Wardrobe (Sprint 2-B.5B, order 388–459) ──
-    ...clothingAttributes,
+    ...withVisualExamples(clothingAttributes),
     // ── Person › Accessories (Sprint 2-B.5C, order 460–477) ──
     ...accessoriesAttributes,
     // ── Person › Pose & action (Sprint 2-B.6, order 478–499) ──
@@ -1024,6 +1026,12 @@ export const coreCatalog = {
       fromVersion: "0.13.0",
       toVersion: "0.14.0",
       // No ID changes: 0.14.0 adds visual examples to more face, eye, nose and lip attributes.
+      changes: [],
+    },
+    {
+      fromVersion: "0.14.0",
+      toVersion: "0.15.0",
+      // No ID changes: 0.15.0 adds visual examples to hair, body and clothing attributes.
       changes: [],
     },
   ],

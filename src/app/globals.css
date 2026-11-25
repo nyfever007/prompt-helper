@@ -435,9 +435,9 @@ select, textarea, input[type="number"], .dropdown, .text-input, .option-search i
 
 /* ── Sprint 2-D.2: face sketch (Face Builder, slider previews) and card zoom placement ───────── */
 /* Same tokens as the static card SVGs (src/visual/face-sketch.ts SKETCH_STYLE). */
-.face-sketch { --ink: #34322e; --fill: #ecebe7; --soft: #86827a; --iris: #a9a59c; --white: #fbfaf8; --pupil: #2a2825; --hl: #ffffff; --brow: #57544e; --lip: #d3cec6; --nostril: #6f6b64; display: block; }
+.face-sketch { --ink: #34322e; --fill: #ecebe7; --soft: #86827a; --iris: #a9a59c; --white: #fbfaf8; --pupil: #2a2825; --hl: #ffffff; --brow: #57544e; --lip: #d3cec6; --nostril: #6f6b64; --hair: #9b968c; --strand: #5f5b54; --cloth: #d9d5cd; --ghost: #c4c0b8; display: block; }
 @media (prefers-color-scheme: dark) {
-  .face-sketch { --ink: #ebe8e2; --fill: #34332f; --soft: #a09c92; --iris: #77736b; --white: #4a4944; --pupil: #121211; --hl: #ebe8e2; --brow: #cfcbc3; --lip: #5a5752; --nostril: #aaa69c; }
+  .face-sketch { --ink: #ebe8e2; --fill: #34332f; --soft: #a09c92; --iris: #77736b; --white: #4a4944; --pupil: #121211; --hl: #ebe8e2; --brow: #cfcbc3; --lip: #5a5752; --nostril: #aaa69c; --hair: #66625b; --strand: #a9a59b; --cloth: #4a4843; --ghost: #5d5a54; }
 }
 .face-sketch path, .face-sketch circle { vector-effect: non-scaling-stroke; }
 .face-sketch .o { fill: var(--fill); stroke: var(--ink); stroke-width: 2; stroke-linejoin: round; }
@@ -451,8 +451,18 @@ select, textarea, input[type="number"], .dropdown, .text-input, .option-search i
 .face-sketch .b { fill: var(--brow); }
 .face-sketch .n { fill: var(--nostril); }
 .face-sketch .lp { fill: var(--lip); stroke: var(--soft); stroke-width: 1.2; stroke-linejoin: round; }
+/* Sprint 2-D.3: hair, garments, mannequin, ghost figure (same classes as the static cards) */
+.face-sketch .hr { fill: var(--hair); stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round; }
+.face-sketch .hs { fill: none; stroke: var(--strand); stroke-width: 1.1; stroke-linecap: round; stroke-linejoin: round; }
+.face-sketch .hst { fill: var(--hair); fill-opacity: 0.4; stroke: var(--soft); stroke-width: 1.1; stroke-dasharray: 2 2; }
+.face-sketch .hrl { fill: none; stroke: var(--strand); stroke-width: 3; stroke-linecap: round; }
+.face-sketch .g { fill: var(--cloth); stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round; }
+.face-sketch .gl { fill: none; stroke: var(--ink); stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
+.face-sketch .gs { fill: none; stroke: var(--soft); stroke-width: 1; stroke-linecap: round; stroke-dasharray: 3 2; }
+.face-sketch .gh { fill: none; stroke: var(--ghost); stroke-width: 1.1; stroke-linejoin: round; }
+.face-sketch .k { fill: var(--fill); stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round; }
 /* The area being edited stays at full strength; the other features step back a little. */
-.face-sketch[data-focus] g[data-layer]:not([data-layer="base"]):not([data-layer="face"]) { opacity: 0.5; transition: opacity 0.15s; }
+.face-sketch[data-focus] g[data-layer]:not([data-layer="base"]):not([data-layer="face"]):not([data-layer="hair"]):not([data-layer="hairBack"]) { opacity: 0.5; transition: opacity 0.15s; }
 .face-sketch[data-focus="eyes"] g[data-layer="eyes"], .face-sketch[data-focus="brows"] g[data-layer="brows"],
 .face-sketch[data-focus="nose"] g[data-layer="nose"], .face-sketch[data-focus="lips"] g[data-layer="lips"] { opacity: 1; }
 
@@ -490,3 +500,11 @@ select, textarea, input[type="number"], .dropdown, .text-input, .option-search i
   .slider-preview svg { width: 96px; height: 72px; }
 }
 .card__foot .card__check { position: static; flex: none; margin: 10px 0 0; }
+
+/* ── Sprint 2-D.3: Figure Builder and list thumbnails ───────── */
+.figure-builder__figure { width: 140px; height: 280px; }
+.list-options label:has(.list-thumb) { align-items: center; }
+.list-thumb { width: 64px; height: 48px; flex: none; border-radius: 6px; background: var(--surface-2); object-fit: contain; }
+@media (max-width: 860px) {
+  .figure-builder__figure { width: 120px; height: 240px; }
+}
