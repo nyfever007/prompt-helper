@@ -127,7 +127,7 @@ test.describe("E2E-only fixture catalog (/e2e-fixtures)", () => {
     await shot(page, "detailed-draft", info.project.name);
     await go(page, "얼굴");
     await expect(field(page, "x.face.shape").getByText("예시 이미지 준비 중").first()).toBeVisible();
-    await field(page, "x.face.shape").getByRole("button", { name: "예시 크게 보기" }).click();
+    await field(page, "x.face.shape").getByRole("button", { name: "계란형 예시 크게 보기" }).click();
     await expect(page.getByRole("dialog", { name: "계란형" })).toBeVisible();
     await shot(page, "fixture-card-zoom", info.project.name);
     await page.getByRole("dialog", { name: "계란형" }).getByRole("button", { name: "닫기" }).click();

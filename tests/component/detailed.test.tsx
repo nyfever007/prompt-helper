@@ -109,7 +109,7 @@ describe("generic controls and unset", () => {
     const f = field("x.face.shape");
     expect(within(f).getAllByText("예시 이미지 준비 중").length).toBeGreaterThan(0);
     expect(within(f).getByText("Oval")).toBeInTheDocument();
-    await user.click(within(f).getByRole("button", { name: "예시 크게 보기" }));
+    await user.click(within(f).getByRole("button", { name: "계란형 예시 크게 보기" }));
     const dlg = screen.getByRole("dialog", { name: "계란형" });
     expect(within(dlg).getByRole("img")).toHaveAttribute("alt", "계란형 테스트 예시");
     await user.click(within(dlg).getByRole("button", { name: "닫기" }));

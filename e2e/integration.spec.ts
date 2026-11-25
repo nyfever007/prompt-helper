@@ -72,11 +72,11 @@ test("B — precise person in Detailed: identity, face, skin/hair/body, wardrobe
   await go(page, "성별");
   await chip(page, "person.identity.gender", "여성");
   await go(page, "얼굴");
-  await chip(page, "person.face.shape", "계란형");
+  await field(page, "person.face.shape").getByRole("radio", { name: /^계란형/ }).check(); // visual cards (Sprint 2-D.1)
   await go(page, "눈");
-  await chip(page, "person.eyes.shape", "아몬드형");
+  await field(page, "person.eyes.shape").getByRole("radio", { name: /^아몬드형/ }).check(); // visual cards (Sprint 2-D.1)
   await go(page, "눈썹");
-  await chip(page, "person.eyebrows.shape", "완만한 아치");
+  await field(page, "person.eyebrows.shape").getByRole("radio", { name: /^완만한 아치/ }).check(); // visual cards (Sprint 2-D.1)
   await go(page, "코");
   await chip(page, "person.nose.shape", "매부리형");
   await go(page, "입술");
@@ -227,7 +227,7 @@ test("E — complex saved spec survives reload, JSON export/import; Sprint 0/1/2
     await page.locator('input[type="file"]').setInputFiles(`tests/fixtures/${f}`);
     await expect(page.getByText("명세를 가져왔습니다.").first(), f).toBeVisible();
     expect((await promptText(page)).length, f).toBeGreaterThan(20);
-    expect(await page.evaluate(() => JSON.parse(localStorage.getItem("prompter:v1:workspace") ?? "{}").spec?.catalog?.version), f).toBe("0.12.0");
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem("prompter:v1:workspace") ?? "{}").spec?.catalog?.version), f).toBe("0.13.0");
   }
 });
 

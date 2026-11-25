@@ -16,6 +16,9 @@
   --danger-soft: #fdecec;
   /* Ring around color swatches: visible on both themes (dark swatches on a dark surface). */
   --swatch-ring: rgba(0, 0, 0, 0.25);
+  /* TD-18 (Sprint 2-D.1): boundary of FUNCTIONAL controls (inputs, chips, cards, buttons) — ≥ 3:1 against
+     --surface, --bg and --surface-2 (WCAG 1.4.11). Decorative panel borders keep --border. */
+  --border-strong: #85827b;
   --radius: 10px;
   --font: ui-sans-serif, system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI", sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -40,6 +43,7 @@
     --danger: #ff8787;
     --danger-soft: #3a1d1d;
     --swatch-ring: rgba(255, 255, 255, 0.45);
+    --border-strong: #77756e;
     color-scheme: dark;
   }
 }
@@ -408,3 +412,23 @@ textarea { width: 100%; resize: vertical; min-height: 80px; }
 /* Sprint 2-C.3: related settings are links to the setting (navigation only). */
 .diag__related-link { font-size: inherit; }
 .blocked .diag__related { display: block; margin-top: 4px; color: inherit; }
+
+/* ── Sprint 2-D.1: visual choice cards and functional-control contrast (TD-18) ───────── */
+select, textarea, input[type="number"], .dropdown, .text-input, .option-search input, .cat-search-input,
+.chip, .segmented, .button, .list-options, .card { border-color: var(--border-strong); }
+.button--primary, .chip[data-checked="true"] { border-color: var(--accent); }
+.list-options li[data-checked="true"] { box-shadow: inset 3px 0 0 var(--accent); } /* not colour alone */
+.cards { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+.card { position: relative; }
+.card[data-checked="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.card:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.card__media { aspect-ratio: 4 / 3; background: var(--surface-2); }
+.card__media img { object-fit: contain; padding: 6px; }
+.card__check { position: absolute; top: 6px; left: 6px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--accent-contrast); font-size: 0.8rem; font-weight: 700; }
+.card--text .card__body { min-height: 100%; justify-content: center; }
+.card__zoom { color: var(--text); border: 1px solid var(--border-strong); }
+.zoom figure img { background: var(--surface-2); border-radius: 8px; object-fit: contain; max-height: 60vh; }
+@media (max-width: 860px) {
+  .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .card__body { padding: 8px; }
+}

@@ -497,7 +497,7 @@ describe("ImageSpec 0.2.0 compatibility (D2)", () => {
     expect(r.status).toBe("valid");
     if (r.status !== "valid") return;
     expect(r.spec.schemaVersion).toBe("0.3.0"); // migrated 0.1.0 → 0.2.0 → 0.3.0 (version-only steps)
-    expect(r.spec.catalog).toEqual({ id: "prompter.core", version: "0.12.0" });
+    expect(r.spec.catalog).toEqual({ id: "prompter.core", version: "0.13.0" });
     expect(r.spec.selections).toEqual(raw.selections);
     expect(r.migrations).toEqual([]);
     expect(r.diagnostics.filter((d) => d.severity !== "info")).toEqual([]);

@@ -30,3 +30,10 @@ describe.each([["light", light], ["dark", dark]] as const)("%s theme", (_name, t
     expect(ratio(t[fg]!, t[bg]!)).toBeGreaterThanOrEqual(4.5);
   });
 });
+
+/** TD-18 (Sprint 2-D.1): boundaries of functional controls ≥ 3:1 (WCAG 1.4.11) against every surface they sit on. */
+describe.each([["light", light], ["dark", dark]] as const)("%s theme — functional control boundaries", (_name, t) => {
+  it.each(["surface", "bg", "surface-2"])("border-strong on %s ≥ 3:1", (bg) => {
+    expect(ratio(t["border-strong"]!, t[bg]!)).toBeGreaterThanOrEqual(3);
+  });
+});

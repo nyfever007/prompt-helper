@@ -272,7 +272,7 @@ describe("dialogs (TD-02): initial focus, focus kept inside, Escape, focus resto
   it("example zoom dialog: Escape closes and returns focus to the zoom button", async () => {
     const { user, go } = await open(getFixtureRegistry());
     await go("얼굴");
-    const zoom = within(field("x.face.shape")).getByRole("button", { name: "예시 크게 보기" });
+    const zoom = within(field("x.face.shape")).getByRole("button", { name: "계란형 예시 크게 보기" });
     await user.click(zoom);
     expect(document.activeElement).toBe(within(screen.getByRole("dialog")).getByRole("button", { name: "닫기" }));
     await user.keyboard("{Escape}");

@@ -10,6 +10,7 @@ import { BODY_CATEGORY_DESCRIPTION, bodyAttributes, bodyCategories } from "./per
 import { WARDROBE_CATEGORY_DESCRIPTION, clothingAttributes, clothingRules, wardrobeCategories } from "./person/clothing";
 import { EXPRESSION_MAKEUP_DESCRIPTIONS, expressionCategories, expressionMakeupAttributes, expressionMakeupRules } from "./person/expression-makeup";
 import { FACIAL_CATEGORY_DESCRIPTIONS, facialAttributes, facialRules } from "./person/facial";
+import { withVisualExamples } from "./person/visual-examples";
 import { identityAgeModel, identityAttributes, identityCategories, identityRules } from "./person/identity";
 import { SKIN_HAIR_CATEGORY_DESCRIPTIONS, skinHairAttributes, skinHairRules } from "./person/skin-hair";
 
@@ -42,6 +43,8 @@ const APPROVED_PERSON_AREAS: Record<string, { en: string; ko: string }> = {
  * 0.11.0 Sprint 2-C.2 (format 0.5.0: explicit prompt output order `promptOrder` in prompt-order.ts,
  * separate from the UI `order` — same output as 0.10.0; contradiction/convention diagnostics with
  * slider conditions — no ID, value or output changes).
+ * 0.13.0 Sprint 2-D.1 (visual examples — line art for face, eye and eyebrow shape, `cards` control — no ID,
+ * value or output changes).
  * 0.12.0 Sprint 2-C.3 (appearance direction uses the common person scope — applies while no subject is
  * chosen, TD-14; intimate innerwear options tagged `garment.intimate` for policy 0.3.0, TD-12 — no ID,
  * value or phrase changes).
@@ -69,7 +72,7 @@ const NON_ABSTRACT = [...ORIENTED_SUBJECTS, "landscape"];
 export const coreCatalog = {
   formatVersion: "0.5.0",
   id: "prompter.core",
-  version: "0.12.0",
+  version: "0.13.0",
   title: { en: "Prompter core catalog", ko: "Prompter 기본 카탈로그" },
   groups: [
     { id: "what", order: 0, label: { en: "What to depict", ko: "무엇을 그릴까요" } },
@@ -758,7 +761,8 @@ export const coreCatalog = {
     // ── Person › Identity (Sprint 2-B.1, order 201–216) ──
     ...identityAttributes,
     // ── Person › Face, Eyes, Eyebrows, Nose, Lips (Sprint 2-B.2, order 217–263) ──
-    ...facialAttributes,
+    // Sprint 2-D.1: face, eye and eyebrow shape show line-art examples (cards control; values unchanged).
+    ...withVisualExamples(facialAttributes),
     // ── Person › Skin, Hair, Facial hair (Sprint 2-B.3, order 264–308) ──
     ...skinHairAttributes,
     // ── Person › Body (Sprint 2-B.4, order 309–353) ──
@@ -1005,6 +1009,12 @@ export const coreCatalog = {
       fromVersion: "0.11.0",
       toVersion: "0.12.0",
       // No ID changes: 0.12.0 changes the appearance-direction subject scope and adds innerwear policy tags.
+      changes: [],
+    },
+    {
+      fromVersion: "0.12.0",
+      toVersion: "0.13.0",
+      // No ID changes: 0.13.0 adds visual examples (line art) to face, eye and eyebrow shape.
       changes: [],
     },
   ],
