@@ -9,6 +9,24 @@
 - 컴파일러(`COMPILER_VERSION`): 0.1.0 / generic-en adapter: 0.1.0
 - 로컬 저장 envelope(`STORAGE_FORMAT_VERSION`): 1
 
+## [Sprint 2-D.7] — 2026-11-25 — Random Quality & Prompt Optimization
+
+버전 변화 없음: core 카탈로그 0.17.0, 카탈로그 형식·컴파일러(Full 출력 동일)·ImageSpec·저장 형식·안전 정책 그대로. 의존성 추가: `gpt-tokenizer` 4.0.4(MIT, 로컬 토큰 계산, 지연 로딩).
+
+### Added
+- 랜덤 방식 Natural(기본)·Creative·Chaos. Natural·Creative는 기존 충돌 규칙·`suggestedWhen`·관계와 가중치 데이터(`domain/random/styles.ts`)를 써서 어울리는 값을 고르고, 극단값·장식을 줄이며, 선택 사항인 세부 항목을 비워 둘 수 있습니다. Chaos는 2-D.6 생성 그대로입니다.
+- 프롬프트 출력 방식 Compact·Balanced·Full(`domain/compiler/detail.ts`). ImageSpec과 분리, 생략한 속성과 이유 표시, 복사·.txt 내보내기·모바일 복사가 보이는 프롬프트를 씀.
+- 길이와 비용: 설정 속성 수, 출력 속성 수, 글자 수, 토큰 수(로컬 o200k_base, 그 밖은 추정 표시), 텍스트 입력 비용(확인된 공개 가격 또는 직접 입력, 이미지 생성 비용 제외 안내).
+- 예시 문서 [docs/examples/random-prompts.md](docs/examples/random-prompts.md)(코드에서 생성, 테스트로 최신 상태 확인).
+- 테스트: `unit/random-styles`(87), `unit/prompt-detail`(12), `unit/prompt-examples`(1), `component/prompt-detail`(3), e2e `optimization`(데스크톱·모바일, ARIA 스냅샷 포함). 2-D.6 테스트는 Chaos로 그대로 통과하고, 보존·되돌리기·안전 테스트는 세 방식 모두에 적용.
+
+### Changed
+- Random 탭: 방식 선택, 결과(요약·개수·스케치·값 목록)를 버튼 바로 아래로 옮기고, 결과가 있으면 기본 선택 5개를 접음.
+- 랜덤 결과의 프롬프트 미리보기 기본값은 Balanced, 기존 프로젝트는 Full.
+
+### Fixed
+- 모바일 미리보기 시트에서 내용이 길면 항목이 서로 겹치던 문제(시트 안 항목이 줄어들지 않게 함).
+
 ## [Sprint 2-D.6] — 2026-11-25 — Random Composer
 
 버전 변화 없음: core 카탈로그 0.17.0, 카탈로그 형식·컴파일러·ImageSpec·저장 형식·안전 정책 그대로.

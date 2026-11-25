@@ -23,6 +23,8 @@ test("random composer: from nothing, keep the user's value, regenerate, edit, un
   expect(await tabs.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
 
   await page.getByRole("tab", { name: /Random/ }).click();
+  // Sprint 2-D.7: the whole-catalog generation of 2-D.6 is the Chaos style (Natural is the default)
+  await page.getByTestId("random-style").getByText("Chaos", { exact: true }).click();
   await page.getByTestId("random-generate").click();
   let s = await stored(page);
   expect(Object.keys(s).length).toBeGreaterThan(150);

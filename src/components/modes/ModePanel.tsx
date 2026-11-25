@@ -1,6 +1,6 @@
 "use client";
 
-import type { CatalogRegistry } from "@/domain";
+import { DEFAULT_RANDOM_STYLE, type CatalogRegistry, type RandomStyle } from "@/domain";
 import type { Messages } from "@/i18n/messages";
 import type { Mode } from "@/state/useUiPrefs";
 import type { Workspace } from "@/state/useWorkspace";
@@ -26,6 +26,8 @@ export function ModePanel({
   onModeChange,
   navigatorRef,
   initialAttributeId,
+  randomStyle = DEFAULT_RANDOM_STYLE,
+  onRandomStyle,
 }: {
   mode: Mode;
   /** Registered by the Detailed editor so “go to attribute” works while it is shown. */
@@ -39,10 +41,16 @@ export function ModePanel({
   onPresetApplied(name: string, count: number): void;
   /** Recommended mode: “edit in Basic / Detailed” after applying a concept. */
   onModeChange?(mode: Mode): void;
+  /** Random mode: the selected style (a view preference, not part of the spec). */
+  randomStyle?: RandomStyle;
+  onRandomStyle?(style: RandomStyle): void;
 }) {
   if (mode === "recommended")
     return <RecommendedMode registry={registry} workspace={workspace} locale={locale} t={t} onPresetApplied={onPresetApplied} onEdit={(m) => onModeChange?.(m)} />;
-  if (mode === "random") return <RandomComposer registry={registry} workspace={workspace} locale={locale} t={t} onEdit={(m) => onModeChange?.(m)} />;
+  if (mode === "random")
+    return (
+      <RandomComposer registry={registry} workspace={workspace} locale={locale} t={t} onEdit={(m) => onModeChange?.(m)} style={randomStyle} onStyle={(s) => onRandomStyle?.(s)} />
+    );;
   if (mode === "basic") return <BasicComposer registry={registry} workspace={workspace} locale={locale} t={t} />;
   if (mode === "detailed")
     return (

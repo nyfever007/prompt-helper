@@ -2,6 +2,7 @@ import {
   type PresetApplyMode,
   applyRandomComposition,
   composeRandom,
+  DEFAULT_RANDOM_STYLE,
   applyPresetPlan,
   applySelection,
   clearSelection,
@@ -19,8 +20,18 @@ import {
   type InactiveSelection,
   type PresetPlan,
   type PresetTransaction,
+  type RandomStyle,
   type SelectionValue,
 } from "@/domain";
+
+/** Summary of the latest random run (session only). */
+export interface LastRandom {
+  id: number;
+  written: number;
+  removed: number;
+  safetyDropped: string[];
+  style: RandomStyle;
+}
 
 export type WorkspaceAction =
   | { type: "set"; attributeId: string; value: SelectionValue }
@@ -31,7 +42,7 @@ export type WorkspaceAction =
   | { type: "applyPreset"; plan: PresetPlan; mode: PresetApplyMode }
   | { type: "undoPreset" }
   /** Sprint 2-D.6: one Random Composer run (deterministic for the seed). */
-  | { type: "applyRandom"; seed: number }
+  | { type: "applyRandom"; seed: number; style?: RandomStyle }
   | { type: "setExcluded"; attributeId: string; excluded: boolean }
   | { type: "resetCategory"; categoryId: string; at?: string }
   /** Restore one recorded category reset (default: the most recent). */
@@ -99,7 +110,7 @@ export interface WorkspaceState {
   lastResetSeq?: number;
   lastCategoryRestore: CategoryRestoreResult | null;
   /** Session-only summary of the last Random Composer run (its undo is `presetTransaction`). */
-  lastRandom?: { id: number; written: number; removed: number; safetyDropped: string[] } | null;
+  lastRandom?: LastRandom | null;
 }
 
 export const initialWorkspaceState = (registry: CatalogRegistry): WorkspaceState => ({
@@ -252,7 +263,7 @@ const createStep =
         };
       }
       case "applyRandom": {
-        const composition = composeRandom(state.spec, registry, action.seed);
+        const composition = composeRandom(state.spec, registry, action.seed, action.style);
         const { spec, transaction } = applyRandomComposition(state.spec, registry, composition);
         if (transaction.changes.length === 0) return state;
         return {
@@ -266,6 +277,7 @@ const createStep =
             written: composition.patches.length,
             removed: composition.stale.length,
             safetyDropped: composition.safetyDropped,
+            style: action.style ?? DEFAULT_RANDOM_STYLE,
           },
         };
       }

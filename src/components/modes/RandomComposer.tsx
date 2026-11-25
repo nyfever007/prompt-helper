@@ -1,6 +1,6 @@
 "use client";
 
-import { isRandomSelection, RANDOM_ORIGIN, type CatalogRegistry } from "@/domain";
+import { isRandomSelection, RANDOM_ORIGIN, RANDOM_STYLES, type CatalogRegistry, type RandomStyle } from "@/domain";
 import { fmt, type Messages } from "@/i18n/messages";
 import type { Workspace } from "@/state/useWorkspace";
 import { cameraLayers } from "@/visual/camera-sketch";
@@ -25,7 +25,24 @@ const HEAD_BOX = [-25, -6, 250, 262] as const;
  * replaces random values; the last run can be undone (existing preset undo). The result is the same
  * ImageSpec, editable everywhere.
  */
-export function RandomComposer({ registry, workspace, locale, t, onEdit }: { registry: CatalogRegistry; workspace: Workspace; locale: string; t: Messages; onEdit(mode: "basic" | "detailed"): void }) {
+export function RandomComposer({
+  registry,
+  workspace,
+  locale,
+  t,
+  onEdit,
+  style,
+  onStyle,
+}: {
+  registry: CatalogRegistry;
+  workspace: Workspace;
+  locale: string;
+  t: Messages;
+  onEdit(mode: "basic" | "detailed"): void;
+  /** Natural (default) / Creative / Chaos — Sprint 2-D.7. */
+  style: RandomStyle;
+  onStyle(style: RandomStyle): void;
+}) {
   const r = t.random;
   const spec = workspace.spec;
   const sels = Object.entries(spec.selections);
@@ -41,8 +58,21 @@ export function RandomComposer({ registry, workspace, locale, t, onEdit }: { reg
       <p className="muted">{r.intro}</p>
       <p className="small">{r.keep}</p>
 
+      <fieldset className="random__styles" data-testid="random-style">
+        <legend>{r.style}</legend>
+        <div className="detail__options">
+          {RANDOM_STYLES.map((s) => (
+            <label key={s} className={`detail__option${style === s ? " is-selected" : ""}`}>
+              <input type="radio" name="random-style" value={s} checked={style === s} onChange={() => onStyle(s)} />
+              {r.styles[s]}
+            </label>
+          ))}
+        </div>
+        <p className="muted small">{r.styleHelp[style]}</p>
+      </fieldset>
+
       <div className="random__actions">
-        <button type="button" className="button button--primary random__go" onClick={() => workspace.randomize()} data-testid="random-generate">
+        <button type="button" className="button button--primary random__go" onClick={() => workspace.randomize(style)} data-testid="random-generate">
           🎲 {hasResult ? r.regenerate : r.generate}
         </button>
         {lastIsRandom && (
@@ -61,32 +91,11 @@ export function RandomComposer({ registry, workspace, locale, t, onEdit }: { reg
           </>
         )}
       </div>
-      <p className="muted small">{r.creative}</p>
-
-      <details className="random__basics" open>
-        <summary>{r.basics}</summary>
-        <div className="random__fields">
-          {RANDOM_BASICS.map((id) => {
-            const a = registry.getAttribute(id);
-            if (!a) return null;
-            const sel = spec.selections[id];
-            const mine = sel !== undefined && !isRandomSelection(sel);
-            return (
-              <div key={id} className="random__field" data-random-basic={id}>
-                <span className={`badge ${mine ? "badge--set" : "badge--random"}`} data-testid={`basic-state-${id}`}>
-                  {mine ? r.stateMine : r.stateRandom}
-                </span>
-                <WorkspaceField attribute={a} registry={registry} workspace={workspace} locale={locale} t={t} />
-              </div>
-            );
-          })}
-        </div>
-      </details>
-
+      <p className="muted small">{style === "chaos" ? r.creative : r.detailHint}</p>
 
       {last && lastIsRandom && (
         <p className="notice" role="status" data-testid="random-result" key={last.id}>
-          {fmt(r.done, { n: last.written })}
+          {fmt(r.done, { n: last.written })} {fmt(r.styleUsed, { style: r.styles[last.style] })}.
           {last.removed > 0 && <> {fmt(r.removed, { n: last.removed })}</>}
           {last.safetyDropped.length > 0 && <> {fmt(r.safety, { n: last.safetyDropped.length })}</>}
         </p>
@@ -109,6 +118,26 @@ export function RandomComposer({ registry, workspace, locale, t, onEdit }: { reg
           </ul>
         </details>
       )}
+
+      <details className="random__basics" open={!hasResult}>
+        <summary>{r.basics}</summary>
+        <div className="random__fields">
+          {RANDOM_BASICS.map((id) => {
+            const a = registry.getAttribute(id);
+            if (!a) return null;
+            const sel = spec.selections[id];
+            const mine = sel !== undefined && !isRandomSelection(sel);
+            return (
+              <div key={id} className="random__field" data-random-basic={id}>
+                <span className={`badge ${mine ? "badge--set" : "badge--random"}`} data-testid={`basic-state-${id}`}>
+                  {mine ? r.stateMine : r.stateRandom}
+                </span>
+                <WorkspaceField attribute={a} registry={registry} workspace={workspace} locale={locale} t={t} />
+              </div>
+            );
+          })}
+        </div>
+      </details>
     </section>
   );
 }

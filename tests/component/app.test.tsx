@@ -75,7 +75,7 @@ describe("Basic mode essentials (Sprint 0 coverage kept)", () => {
     const { user } = await setUp();
     expect(screen.getByRole("heading", { name: "피사체" })).toBeInTheDocument();
     await fillBasics(user);
-    await user.selectOptions(screen.getByRole("combobox"), "en");
+    await user.selectOptions(screen.getByRole("combobox", { name: "언어" }), "en");
     expect(screen.getByRole("radio", { name: "Person" })).toBeChecked();
     expect(prompt()).toBe(EXPECTED);
   });
