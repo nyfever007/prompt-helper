@@ -10,6 +10,7 @@ import {
   type CatalogRegistry,
   type CategoryNode,
   type PresetPlan,
+  writableEntries,
 } from "@/domain";
 import { fmt, type Messages } from "@/i18n/messages";
 import type { Workspace } from "@/state/useWorkspace";
@@ -200,7 +201,7 @@ export function DetailedEditor({
           t={t}
           onClose={() => setDialogPresetId(null)}
           onApplied={(plan: PresetPlan, mode) => {
-            const count = plan.entries.filter((e) => e.kind === "new" || (mode === "all" && e.kind === "change")).length;
+            const count = writableEntries(plan, mode).length;
             workspace.applyPreset(plan, mode);
             setDialogPresetId(null);
             onPresetApplied(resolveText(plan.preset.label, locale), count);

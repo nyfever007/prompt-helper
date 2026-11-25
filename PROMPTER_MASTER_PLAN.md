@@ -210,8 +210,9 @@ Create a fixed evaluation set including portraits, full-body figures, skin marks
 - 2-D.2 Face and facial-feature visual choices; combined face preview.
 - 2-D.3 Hair, body and clothing visual choices.
 - 2-D.4 Pose, camera and lighting visual choices.
-- 2-D.5 Recommended mode and recommendation presets.
-- 2-D.6 Visual editing integration and usability validation.
+- 2-D.5 Recommended mode and recommendation presets (done — 12 concepts, ADR-067).
+- 2-D.6 Random Composer: random values for every applicable unset attribute of the whole catalog, user values and pinned values kept, random vs user values distinguished, applicability and safety respected, existing ImageSpec, no AI / paid API (requirements approved in the Sprint 2-D.5 directive).
+- 2-D.7 Visual editing integration and usability validation (moved from 2-D.6, incl. TD-16).
 - **Exit:** a user without professional terms can set face, hair, body, clothing, pose, camera and lighting by visual choice or recommendation, editing the same ImageSpec as Basic/Detailed; recommendations apply only after confirmation and can be undone; text editing remains available for everything.
 
 ### Sprint 3 — Precision editor

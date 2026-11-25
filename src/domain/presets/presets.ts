@@ -9,6 +9,13 @@ import { customKey, selectedOptionIds, type SelectionValue } from "../spec/value
 import { validateSpecAgainstCatalog } from "../validation/specValidator";
 
 export type PresetEntryKind = "new" | "change" | "same" | "inapplicable" | "restricted";
+/**
+ * - `all`: new + changed entries (overwrites explicit values; needs confirmation)
+ * - `onlyEmpty`: only attributes that are currently unset
+ * - `keepUser` (Sprint 2-D.5, recommended concepts): unset attributes, plus values that came from a
+ *   preset — a value the user set (or imported) is never replaced
+ */
+export type PresetApplyMode = "all" | "onlyEmpty" | "keepUser";
 
 export interface PresetPlanEntry {
   attributeId: string;
@@ -42,7 +49,7 @@ export interface PresetPlan {
 export interface PresetTransaction {
   presetId: string;
   presetVersion: string;
-  mode: "all" | "onlyEmpty";
+  mode: PresetApplyMode;
   changes: Array<{ attributeId: string; before?: AttributeSelection; after: AttributeSelection }>;
   userEdited: string[];
 }
@@ -131,13 +138,17 @@ export const planPreset = (spec: ImageSpec, registry: CatalogRegistry, presetId:
  * writes only attributes that are currently unset. Inapplicable, restricted
  * and unchanged entries are never written; unrelated attributes are never touched.
  */
+/** The entries a mode writes (the UI's "applied" count uses the same rule). */
+export const writableEntries = (plan: PresetPlan, mode: PresetApplyMode): PresetPlanEntry[] =>
+  plan.entries.filter((e) => e.kind === "new" || (e.kind === "change" && (mode === "all" || (mode === "keepUser" && e.current?.source === "preset"))));
+
 export const applyPresetPlan = (
   spec: ImageSpec,
   registry: CatalogRegistry,
   plan: PresetPlan,
-  mode: "all" | "onlyEmpty",
+  mode: PresetApplyMode,
 ): { spec: ImageSpec; transaction: PresetTransaction } => {
-  const writable = plan.entries.filter((e) => e.kind === "new" || (mode === "all" && e.kind === "change"));
+  const writable = writableEntries(plan, mode);
   let next = spec;
   const changes: PresetTransaction["changes"] = [];
   for (const e of writable) {

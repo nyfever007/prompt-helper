@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { KeyValueStore } from "@/domain";
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES, type UiLocale } from "@/i18n/messages";
 
-export const MODES = ["basic", "detailed", "precision"] as const;
+export const MODES = ["recommended", "basic", "detailed", "precision"] as const;
 export type Mode = (typeof MODES)[number];
 
 export const UI_PREFS_KEY = "prompter:v1:ui";

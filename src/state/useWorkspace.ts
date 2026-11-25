@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import {
+  type PresetApplyMode,
   compilePrompt,
   createSpecStorage,
   findInactiveSelections,
@@ -50,7 +51,7 @@ export interface Workspace {
   hasResetSnapshot: boolean;
   presetTransaction: PresetTransaction | null;
   lastPresetUndo: PresetUndoResult | null;
-  applyPreset(plan: PresetPlan, mode: "all" | "onlyEmpty"): void;
+  applyPreset(plan: PresetPlan, mode: PresetApplyMode): void;
   undoPreset(): void;
   /** Recent category resets in this session, most recent first (TD-09). */
   categoryResets: CategoryResetRecord[];
@@ -126,7 +127,7 @@ export const useWorkspace = (registry: CatalogRegistry, store: KeyValueStore | n
   const reset = useCallback(() => dispatch({ type: "reset" }), []);
   const restoreResetSnapshot = useCallback(() => dispatch({ type: "restoreResetSnapshot" }), []);
   const replace = useCallback((next: ImageSpec) => dispatch({ type: "replace", spec: next }), []);
-  const applyPreset = useCallback((plan: PresetPlan, mode: "all" | "onlyEmpty") => dispatch({ type: "applyPreset", plan, mode }), []);
+  const applyPreset = useCallback((plan: PresetPlan, mode: PresetApplyMode) => dispatch({ type: "applyPreset", plan, mode }), []);
   const undoPreset = useCallback(() => dispatch({ type: "undoPreset" }), []);
   const setExcluded = useCallback((attributeId: string, excluded: boolean) => dispatch({ type: "setExcluded", attributeId, excluded }), []);
   const resetCategory = useCallback((categoryId: string) => dispatch({ type: "resetCategory", categoryId, at: new Date().toISOString() }), []);

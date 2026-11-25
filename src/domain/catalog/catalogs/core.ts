@@ -2,6 +2,7 @@ import type { CatalogInput, Condition } from "../schema";
 import { appearanceAttribute } from "./person/appearance";
 import { consistencyRules } from "./consistency-rules";
 import { corePromptOrder } from "./prompt-order";
+import { recommendedPresets } from "./recommended";
 import { cameraAttributes, cameraCategories, cameraCategoryOf, cameraRules } from "./shared/camera";
 import { lightingAttributes, lightingCategories, lightingCategoryOf, lightingRules } from "./shared/lighting";
 import { POSE_CATEGORY_DESCRIPTION, poseAttributes, poseCategories, poseRules } from "./person/pose";
@@ -43,6 +44,8 @@ const APPROVED_PERSON_AREAS: Record<string, { en: string; ko: string }> = {
  * 0.11.0 Sprint 2-C.2 (format 0.5.0: explicit prompt output order `promptOrder` in prompt-order.ts,
  * separate from the UI `order` — same output as 0.10.0; contradiction/convention diagnostics with
  * slider conditions — no ID, value or output changes).
+ * 0.17.0 Sprint 2-D.5 (12 recommended concept presets — product presets on the existing preset system; no
+ * attribute, ID, value or output changes).
  * 0.16.0 Sprint 2-D.4 (visual examples for pose, camera and lighting — cards; no ID, value or output changes).
  * 0.15.0 Sprint 2-D.3 (visual examples for hair, body proportions and clothing — cards, or a thumbnail in the
  * list for the large hairstyle / garment type lists; no ID, value or output changes).
@@ -78,7 +81,7 @@ const NON_ABSTRACT = [...ORIENTED_SUBJECTS, "landscape"];
 export const coreCatalog = {
   formatVersion: "0.5.0",
   id: "prompter.core",
-  version: "0.16.0",
+  version: "0.17.0",
   title: { en: "Prompter core catalog", ko: "Prompter 기본 카탈로그" },
   groups: [
     { id: "what", order: 0, label: { en: "What to depict", ko: "무엇을 그릴까요" } },
@@ -1042,10 +1045,16 @@ export const coreCatalog = {
       // No ID changes: 0.16.0 adds visual examples to pose, camera and lighting attributes.
       changes: [],
     },
+    {
+      fromVersion: "0.16.0",
+      toVersion: "0.17.0",
+      // No ID changes: 0.17.0 adds the recommended concept presets.
+      changes: [],
+    },
   ],
   // Prompt output order (TD-08): explicit groups, independent of the UI `order` and categories.
   promptOrder: corePromptOrder,
-  // Product composite presets require separate approval (none yet). Test-only presets live in the E2E fixture catalog.
-  presets: [],
+  // Product presets: the recommended concepts (Sprint 2-D.5, approved). Test-only presets live in the E2E fixture catalog.
+  presets: recommendedPresets,
   ageModel: identityAgeModel,
 } satisfies CatalogInput;

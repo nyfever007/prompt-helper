@@ -112,7 +112,9 @@ describe("product exposure is separate from catalog expressiveness (D1)", () => 
         expect(inSubtree).toEqual([]);
       }
     }
-    expect(core.presets).toEqual([]); // product composite presets need separate approval
+    // Sprint 2-D.5: the only product presets are the approved recommended concepts — not tied to a category page
+    expect(core.presets.length).toBe(12);
+    expect(core.presets.every((p) => p.categoryId === undefined && p.status === "approved")).toBe(true);
   });
 
   it("fixture: draft, deferred and precision-tier attributes are never exposed in Detailed", () => {
@@ -497,7 +499,7 @@ describe("ImageSpec 0.2.0 compatibility (D2)", () => {
     expect(r.status).toBe("valid");
     if (r.status !== "valid") return;
     expect(r.spec.schemaVersion).toBe("0.3.0"); // migrated 0.1.0 → 0.2.0 → 0.3.0 (version-only steps)
-    expect(r.spec.catalog).toEqual({ id: "prompter.core", version: "0.16.0" });
+    expect(r.spec.catalog).toEqual({ id: "prompter.core", version: "0.17.0" });
     expect(r.spec.selections).toEqual(raw.selections);
     expect(r.migrations).toEqual([]);
     expect(r.diagnostics.filter((d) => d.severity !== "info")).toEqual([]);
