@@ -70,10 +70,10 @@ const FACIAL_IDS = [
   ...["shape", "mouth_width", "upper_thickness", "lower_thickness", "ratio", "cupids_bow", "corners", "natural_color"].map((x) => `person.lips.${x}`),
 ];
 
-describe("8. core catalog 0.15.0", () => {
+describe("8. core catalog 0.16.0", () => {
   it("is valid, versioned and declares its format", () => {
     expect(core.id).toBe("prompter.core");
-    expect(core.version).toBe("0.15.0");
+    expect(core.version).toBe("0.16.0");
     expect(coreCatalog.formatVersion).toBe("0.5.0");
   });
 

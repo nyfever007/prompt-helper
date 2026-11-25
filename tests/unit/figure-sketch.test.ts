@@ -6,16 +6,17 @@ import { FIGURE_BINDINGS, figureSketchState } from "@/components/figure/figureSk
 import { layersString } from "@/visual/sketch-core";
 import { figureLayers, neutralBody, skeleton } from "@/visual/figure-sketch";
 import { headLayers } from "@/visual/hair-sketch";
+import { poseLayers } from "@/visual/pose-sketch";
 import { buildSpec, multi, single } from "../fixtures/specs";
 
-/** Sprint 2-D.3 — hair (head + figure view), body (neutral mannequin) and clothing sketches, read-only mapping. */
+/** Sprint 2-D.3 — hair (head + figure view), body (neutral mannequin) and clothing sketches; 2-D.4 adds pose. Read-only mapping. */
 const core = getCoreRegistry();
 const num = (value: number): SelectionValue => ({ kind: "number", value });
 const drawSpec = (entries: Array<[string, SelectionValue]>) => {
   const spec = buildSpec(core, entries);
   const f = faceSketchState(core, spec).params;
   const g = figureSketchState(core, spec).params;
-  return `${layersString(headLayers(f, f.hair))}|${layersString(figureLayers(g.body, g.outfit, g.hair))}`;
+  return `${layersString(headLayers(f, f.hair))}|${layersString(figureLayers(g.body, g.outfit, g.hair))}|${layersString(poseLayers(g.body, g.pose, { yaw: 30 }))}`;
 };
 const stateOf = (id: string, entries: Array<[string, SelectionValue]>) => (id.startsWith("person.hair.") ? faceSketchState : figureSketchState)(core, buildSpec(core, entries));
 const bindings = { ...Object.fromEntries(Object.entries(FACE_BINDINGS).filter(([id]) => id.startsWith("person.hair."))), ...FIGURE_BINDINGS };

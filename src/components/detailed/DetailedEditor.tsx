@@ -20,6 +20,8 @@ import { attributeLabel } from "../format";
 import { FaceBuilder } from "../face/FaceBuilder";
 import { FigureBuilder } from "../figure/FigureBuilder";
 import { isFigureCategory } from "../figure/figureSketchState";
+import { ScenePreview } from "../scene/ScenePreview";
+import { isCameraCategory, isLightCategory } from "../scene/sceneSketchState";
 import { FACE_CATEGORY_IDS, type FaceCategoryId } from "../face/faceSketchState";
 import { CategoryNav } from "./CategoryNav";
 import { PresetDialog } from "./PresetDialog";
@@ -351,6 +353,19 @@ function CategoryPanel({
       )}
       {node.approved && node.applicable && isFigureCategory(registry, c.id) && (
         <FigureBuilder registry={registry} spec={workspace.spec} categoryId={c.id} locale={locale} t={t} open={faceOpen} onToggle={onFaceToggle} onSelect={onSelect} />
+      )}
+      {node.approved && node.applicable && (isCameraCategory(registry, c.id) || isLightCategory(registry, c.id)) && (
+        <ScenePreview
+          kind={isCameraCategory(registry, c.id) ? "camera" : "light"}
+          registry={registry}
+          spec={workspace.spec}
+          categoryId={c.id}
+          locale={locale}
+          t={t}
+          open={faceOpen}
+          onToggle={onFaceToggle}
+          onSelect={onSelect}
+        />
       )}
       {presets.length > 0 && (
         <div className="presets">

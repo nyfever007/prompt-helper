@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { closePreview, ensurePreviewOpen, guardNetwork } from "./helpers";
+import { closePreview, ensurePreviewOpen, guardNetwork, pickOption } from "./helpers";
 
 /**
  * Sprint 2-C.2 — category reset history (TD-09) and contradiction / convention diagnostics (TD-10)
@@ -17,7 +17,7 @@ const go = async (page: Page, label: string) => {
   if ((await toggle.isVisible()) && (await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
   await nav(page).getByRole("treeitem", { name: label, exact: true }).locator(":scope > .cat-row").click();
 };
-const pickChip = (page: Page, id: string, label: string) => field(page, id).locator("label.chip").filter({ has: page.getByText(label, { exact: true }) }).click();
+const pickChip = (page: Page, id: string, label: string) => pickOption(page, id, label); // chips or visual cards
 const stored = async (page: Page) => page.evaluate(() => JSON.parse(localStorage.getItem("prompter:v1:workspace") ?? "{}").spec?.selections ?? {});
 const resetPage = async (page: Page, n: number) => {
   await page.getByTestId("category-reset").click();

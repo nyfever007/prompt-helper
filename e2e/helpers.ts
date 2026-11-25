@@ -34,3 +34,15 @@ export const guardNetwork = (page: Page, baseURL: string) => {
   });
   return external;
 };
+
+/**
+ * Choose an option by its label, whatever the control: chips, or visual cards (Sprint 2-D.1–2-D.4). Clicks the
+ * label that holds the radio / checkbox with exactly that accessible name.
+ */
+export const pickOption = (page: Page, attributeId: string, label: string) =>
+  page
+    .locator(`[data-attribute-id="${attributeId}"]`)
+    .locator("label")
+    .filter({ has: page.getByRole("radio", { name: label, exact: true }).or(page.getByRole("checkbox", { name: label, exact: true })) })
+    .first()
+    .click();

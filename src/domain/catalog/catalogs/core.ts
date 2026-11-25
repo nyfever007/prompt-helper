@@ -43,6 +43,7 @@ const APPROVED_PERSON_AREAS: Record<string, { en: string; ko: string }> = {
  * 0.11.0 Sprint 2-C.2 (format 0.5.0: explicit prompt output order `promptOrder` in prompt-order.ts,
  * separate from the UI `order` — same output as 0.10.0; contradiction/convention diagnostics with
  * slider conditions — no ID, value or output changes).
+ * 0.16.0 Sprint 2-D.4 (visual examples for pose, camera and lighting — cards; no ID, value or output changes).
  * 0.15.0 Sprint 2-D.3 (visual examples for hair, body proportions and clothing — cards, or a thumbnail in the
  * list for the large hairstyle / garment type lists; no ID, value or output changes).
  * 0.14.0 Sprint 2-D.2 (visual examples for jawline, eyelids, pupil shape, nose shape / bridge / tip and lip
@@ -77,7 +78,7 @@ const NON_ABSTRACT = [...ORIENTED_SUBJECTS, "landscape"];
 export const coreCatalog = {
   formatVersion: "0.5.0",
   id: "prompter.core",
-  version: "0.15.0",
+  version: "0.16.0",
   title: { en: "Prompter core catalog", ko: "Prompter 기본 카탈로그" },
   groups: [
     { id: "what", order: 0, label: { en: "What to depict", ko: "무엇을 그릴까요" } },
@@ -167,7 +168,8 @@ export const coreCatalog = {
     { id: "shared_mood", parentId: "shared", order: 45, status: "approved", label: { en: "Mood", ko: "분위기" } },
     { id: "shared_output", parentId: "shared", order: 46, status: "approved", label: { en: "Output", ko: "출력" } },
   ],
-  attributes: [
+  // Sprint 2-D.4: visual examples apply to the whole list (only attributes with an asset folder change).
+  attributes: withVisualExamples([
     // ── What ────────────────────────────────────────────────────────────────
     {
       id: "intent.description",
@@ -809,7 +811,7 @@ export const coreCatalog = {
         { id: "ultrawide_21_9", label: { en: "Ultra-wide 21:9", ko: "울트라와이드 21:9" }, prompt: { text: "ultra-wide 21:9" }, parameterValue: "21:9" },
       ],
     },
-  ],
+  ]),
   rules: [
     {
       id: "overhead-vs-direction",
@@ -1032,6 +1034,12 @@ export const coreCatalog = {
       fromVersion: "0.14.0",
       toVersion: "0.15.0",
       // No ID changes: 0.15.0 adds visual examples to hair, body and clothing attributes.
+      changes: [],
+    },
+    {
+      fromVersion: "0.15.0",
+      toVersion: "0.16.0",
+      // No ID changes: 0.16.0 adds visual examples to pose, camera and lighting attributes.
       changes: [],
     },
   ],

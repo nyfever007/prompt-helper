@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
-import { closePreview, ensurePreviewOpen } from "./helpers";
+import { closePreview, ensurePreviewOpen, pickOption } from "./helpers";
 
 const SHOTS = process.env.E2E_SCREENSHOT_DIR;
 const WORKSPACE_KEY = "prompter:v1:workspace";
@@ -10,8 +10,7 @@ const WORKSPACE_KEY = "prompter:v1:workspace";
 const output = (page: Page) => page.getByTestId("prompt-output");
 const field = (page: Page, attributeId: string) => page.locator(`[data-attribute-id="${attributeId}"]`);
 /** Click a chip by its exact visible label inside one attribute field (as a user would). */
-const pick = (page: Page, attributeId: string, label: string) =>
-  field(page, attributeId).locator("label.chip").filter({ has: page.getByText(label, { exact: true }) }).click();
+const pick = (page: Page, attributeId: string, label: string) => pickOption(page, attributeId, label); // chips or visual cards
 const shot = async (page: Page, name: string, project: string) => {
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/${project}-${name}.png`, fullPage: true, scale: "css" });
 };

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { pickColor, closePreview, ensurePreviewOpen, guardNetwork } from "./helpers";
+import { pickColor, closePreview, ensurePreviewOpen, guardNetwork, pickOption } from "./helpers";
 
 /**
  * Sprint 2-B.6 — appearance direction (Basic ↔ Detailed), pose, camera and lighting on the
@@ -12,8 +12,7 @@ const shot = async (page: Page, name: string, project: string) => {
 const output = (page: Page) => page.getByTestId("prompt-output");
 const field = (page: Page, id: string) => page.locator(`[data-attribute-id="${id}"]`);
 const nav = (page: Page) => page.getByRole("navigation", { name: "카테고리" });
-const pickChip = (page: Page, id: string, label: string) =>
-  field(page, id).locator("label.chip").filter({ has: page.getByText(label, { exact: true }) }).click();
+const pickChip = (page: Page, id: string, label: string) => pickOption(page, id, label); // chips or visual cards
 const pickListed = async (page: Page, id: string, query: string, role: "radio" | "checkbox", name: RegExp) => {
   await field(page, id).getByRole("searchbox").fill(query);
   await field(page, id).getByRole(role, { name }).check();
@@ -119,4 +118,30 @@ test("appearance direction in Basic and Detailed, pose, camera and lighting — 
   await page.getByRole("tab", { name: /Basic/ }).click();
   await expect(field(page, AD).getByRole("checkbox", { name: /^우아한/ })).toBeChecked();
   expect(external).toEqual([]);
+});
+
+test("pose, camera and lighting previews (Sprint 2-D.4): live, combined, read-only", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("tab", { name: /Detailed/ }).click();
+  await go(page, "기본 자세");
+  const pose = page.getByTestId("figure-builder").getByRole("img", { name: /^자세 스케치/ });
+  const p0 = await pose.innerHTML();
+  await pickChip(page, "person.pose.posture", "무릎 꿇은");
+  expect(await pose.innerHTML()).not.toBe(p0);
+  expect((await pose.boundingBox())!.height).toBeGreaterThan(120); // rendered (desktop and mobile)
+
+  await go(page, "프레이밍 및 시점");
+  const cam = page.getByTestId("camera-preview").getByRole("img", { name: /^카메라 미리보기/ });
+  const c0 = await cam.innerHTML();
+  await pickChip(page, "composition.framing", "상반신");
+  await pickChip(page, "camera.angle", "로우 앵글 (올려다봄)");
+  expect(await cam.innerHTML()).not.toBe(c0);
+  await expect(cam).toHaveAccessibleName("카메라 미리보기 — 설정 2개 반영");
+
+  await go(page, "주광");
+  const light = page.getByTestId("light-preview").getByRole("img", { name: /^조명 미리보기/ });
+  const l0 = await light.innerHTML();
+  await pickChip(page, "lighting.direction", "역광");
+  expect(await light.innerHTML()).not.toBe(l0);
+  expect(Object.keys(await stored(page)).sort()).toEqual(["camera.angle", "composition.framing", "lighting.direction", "person.pose.posture"]);
 });

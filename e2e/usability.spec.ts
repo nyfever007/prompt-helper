@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { writeFileSync } from "node:fs";
-import { closePreview, ensurePreviewOpen, guardNetwork, pickColor } from "./helpers";
+import { closePreview, ensurePreviewOpen, guardNetwork, pickColor, pickOption } from "./helpers";
 
 /**
  * Sprint 2-C.1 — collapsed color picker (TD-13), category tree keyboard (TD-01), dialog focus (TD-02),
@@ -141,7 +141,7 @@ test("dialogs: focus starts inside, Tab stays inside, Escape closes and focus re
   await page.goto("/");
   await page.getByRole("tab", { name: /Detailed/ }).click();
   await go(page, "프레이밍 및 시점");
-  await field(page, "camera.angle").locator("label.chip").filter({ has: page.getByText("로우 앵글 (올려다봄)", { exact: true }) }).click();
+  await pickOption(page, "camera.angle", "로우 앵글 (올려다봄)");
   const reset = page.getByTestId("category-reset");
   await reset.click();
   const dialog = page.getByTestId("category-reset-dialog");
@@ -169,7 +169,7 @@ test("editing flow: previous/next pages, header include/exclude, mobile drawer a
   const seq = page.getByTestId("category-sequence");
   await seq.getByRole("button", { name: /다음: 렌즈 및 원근감/ }).click();
   await expect(page.getByRole("heading", { level: 2, name: "렌즈 및 원근감" })).toBeFocused();
-  await field(page, "camera.lens_type").locator("label.chip").filter({ has: page.getByText("망원", { exact: true }) }).click();
+  await pickOption(page, "camera.lens_type", "망원");
   await field(page, "camera.lens_type").locator("header").getByRole("switch", { name: /프롬프트에 포함/ }).uncheck();
   expect((await stored(page))["camera.lens_type"].excludedFromPrompt).toBe(true);
   await shot(page, "lens-page", project);

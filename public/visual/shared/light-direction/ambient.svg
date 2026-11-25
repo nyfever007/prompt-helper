@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 120" width="160" height="120"><style>
+svg{--ink:#34322e;--fill:#ecebe7;--soft:#86827a;--iris:#a9a59c;--white:#fbfaf8;--pupil:#2a2825;--hl:#ffffff;--brow:#57544e;--lip:#d3cec6;--nostril:#6f6b64;--hair:#9b968c;--strand:#5f5b54;--cloth:#d9d5cd;--ghost:#c4c0b8;--sky:#e9edf0;--ground:#e4dfd3;--tree:#c9d1c1;--flower:#d7a6a0;--mark:#3b5bdb}
+@media (prefers-color-scheme:dark){svg{--ink:#ebe8e2;--fill:#34332f;--soft:#a09c92;--iris:#77736b;--white:#4a4944;--pupil:#121211;--hl:#ebe8e2;--brow:#cfcbc3;--lip:#5a5752;--nostril:#aaa69c;--hair:#66625b;--strand:#a9a59b;--cloth:#4a4843;--ghost:#5d5a54;--sky:#2a2e33;--ground:#34322c;--tree:#3d4538;--flower:#8a5d58;--mark:#7c95ff}}
+path,circle{vector-effect:non-scaling-stroke}
+.o{fill:var(--fill);stroke:var(--ink);stroke-width:2;stroke-linejoin:round}
+.f{fill:var(--fill)}
+.l{fill:none;stroke:var(--ink);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.s{fill:none;stroke:var(--soft);stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round}
+.w{fill:var(--white)}.i{fill:var(--iris)}.p{fill:var(--pupil)}.h{fill:var(--hl)}.b{fill:var(--brow)}.n{fill:var(--nostril)}
+.lp{fill:var(--lip);stroke:var(--soft);stroke-width:1.2;stroke-linejoin:round}
+.hr{fill:var(--hair);stroke:var(--ink);stroke-width:1.6;stroke-linejoin:round}
+.hs{fill:none;stroke:var(--strand);stroke-width:1.1;stroke-linecap:round;stroke-linejoin:round}
+.hst{fill:var(--hair);fill-opacity:.4;stroke:var(--soft);stroke-width:1.1;stroke-dasharray:2 2}
+.hrl{fill:none;stroke:var(--strand);stroke-width:3;stroke-linecap:round}
+.g{fill:var(--cloth);stroke:var(--ink);stroke-width:1.6;stroke-linejoin:round}
+.gl{fill:none;stroke:var(--ink);stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round}
+.gs{fill:none;stroke:var(--soft);stroke-width:1;stroke-linecap:round;stroke-dasharray:3 2}
+.gh{fill:none;stroke:var(--ghost);stroke-width:1.1;stroke-linejoin:round}
+.k{fill:var(--fill);stroke:var(--ink);stroke-width:1.6;stroke-linejoin:round}
+.jt{fill:var(--soft)}.sky{fill:var(--sky)}.gr{fill:var(--ground);stroke:var(--soft);stroke-width:1}.tr{fill:var(--tree);stroke:var(--ink);stroke-width:1.2}.fl{fill:var(--flower);stroke:var(--ink);stroke-width:1}
+.bk{fill:var(--hl);fill-opacity:.55;stroke:var(--soft);stroke-width:.8}.fm{fill:none;stroke:var(--mark);stroke-width:2;stroke-linecap:round}.gd{fill:none;stroke:var(--mark);stroke-width:1;stroke-dasharray:4 3;opacity:.8}.fb{fill:none;stroke:var(--ink);stroke-width:1.5}.lb{fill:var(--ink);opacity:.82}
+.lx{stroke:none}.lb2{stroke:#2e2c28;stroke-width:1.4}.lg{fill:none;stroke:#000;stroke-opacity:.22;stroke-width:1}.ls{stroke:#2e2c28;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round}.shd{fill:var(--ghost);opacity:.55}.pr{fill:var(--white);stroke:var(--soft);stroke-width:1.2;stroke-linejoin:round}
+</style><svg x="0" y="0" width="160" height="120" viewBox="0 0 200 150" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="abd" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="112"><stop offset="0" stop-color="#aaa9a6"/><stop offset="1" stop-color="#8f8e8c"/></linearGradient></defs><path class="lx" d="M0 0 L200 0 L200 112 L0 112 Z" style="fill:url(#abd)"/><path class="lx" d="M0 112 L200 112 L200 150 L0 150 Z" style="fill:#989692"/><filter id="af0" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3.5"/></filter><g filter="url(#af0)" opacity="0.1"><path class="lx" d="M13.5 120 A56.9 6 0 1 0 127.2 120 A56.9 6 0 1 0 13.5 120 Z" style="fill:#000000"/></g><defs><radialGradient id="ahd" gradientUnits="userSpaceOnUse" cx="100" cy="58.3" r="59.5" fx="100" fy="58.3"><stop offset="0" stop-color="#bdbab2"/><stop offset="0.5" stop-color="#bdbab2"/><stop offset="1" stop-color="#484848"/><stop offset="1" stop-color="#484848"/></radialGradient></defs><defs><linearGradient id="abs" gradientUnits="userSpaceOnUse" x1="100" y1="90" x2="100" y2="118"><stop offset="0" stop-color="#a09d98"/><stop offset="1" stop-color="#484848"/></linearGradient></defs><path class="lb2" d="M52 112 C56 96 78 92 90 90 L90 82 L110 82 L110 90 C122 92 144 96 148 112 Z" style="fill:url(#abs)"/><path class="lb2" d="M66 62 A34 34 0 1 0 134 62 A34 34 0 1 0 66 62 Z" style="fill:url(#ahd)"/><path class="lg" d="M100 28 Q94 62 100 96"/><path class="lg" d="M66 64 Q100 71 134 64"/><path class="lx" d="M100 66 L103.5 78 L99 79 Z" style="fill:#94928d"/></svg></svg>

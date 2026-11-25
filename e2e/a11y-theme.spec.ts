@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { pickColor } from "./helpers";
+import { pickColor, pickOption } from "./helpers";
 
 /**
  * Sprint 2-C.4 (TD-16) — keyboard-only regression of the 2-C.1/2-C.2/2-C.3 interactions and the dark
@@ -82,7 +82,7 @@ test("keyboard only: tree, search, palette, reset dialog + history, related-sett
   // a second reset elsewhere; restore the OLDER one from the history with the keyboard
   await openNav(page);
   await item(page, "렌즈 및 원근감").locator(":scope > .cat-row").click();
-  await field(page, "camera.lens_type").locator("label.chip").filter({ has: page.getByText("망원", { exact: true }) }).click();
+  await pickOption(page, "camera.lens_type", "망원");
   await reset.focus();
   await page.keyboard.press("Enter");
   await page.keyboard.press("Shift+Tab");
@@ -162,8 +162,8 @@ test.describe("dark theme (prefers-color-scheme: dark)", () => {
     // a convention notice (info), a meaning-conflict warning and a safety hold together
     await openNav(page);
     await item(page, "렌즈 및 원근감").locator(":scope > .cat-row").click();
-    await field(page, "camera.lens_type").locator("label.chip").filter({ has: page.getByText("망원", { exact: true }) }).click();
-    await field(page, "camera.perspective").locator("label.chip").filter({ has: page.getByText("과장된", { exact: true }) }).click();
+    await pickOption(page, "camera.lens_type", "망원");
+    await pickOption(page, "camera.perspective", "과장된");
     await shot(page, "dark-diagnostics", project);
     await openNav(page);
     await item(page, "인상 및 매력").locator(":scope > .cat-row").click();

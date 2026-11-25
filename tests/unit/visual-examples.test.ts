@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { getCoreRegistry, isOptionAttribute } from "@/domain";
-import { DRAWN_BOTTOM_TYPES, DRAWN_DRESS_TYPES, DRAWN_HAIR_STYLES, DRAWN_TOP_TYPES, VISUAL_ASSET_DIRS } from "@/domain/catalog/catalogs/person/visual-examples";
+import { assetSrc, DRAWN_BOTTOM_TYPES, DRAWN_DRESS_TYPES, DRAWN_HAIR_STYLES, DRAWN_TOP_TYPES, VISUAL_ASSET_DIRS } from "@/domain/catalog/catalogs/person/visual-examples";
 import { BOTTOM_TYPES, DRESS_TYPES, TOP_TYPES } from "@/visual/figure-sketch";
 import { HAIR_STYLES } from "@/visual/hair-sketch";
 
@@ -26,7 +26,7 @@ describe("visual examples", () => {
       }
       expect(o.examples, o.id).toHaveLength(1);
       const e = o.examples![0]!;
-      expect([e.status, e.src], o.id).toEqual(["ready", `/visual/person/${VISUAL_ASSET_DIRS[id]!.dir}/${o.id}.svg`]);
+      expect([e.status, e.src], o.id).toEqual(["ready", assetSrc(VISUAL_ASSET_DIRS[id]!.dir, o.id)]);
       expect(e.alt.ko && e.alt.en, o.id).toBeTruthy();
       expect(e.provenance?.license, o.id).toBe("Project-owned");
       const file = `public${e.src}`;
