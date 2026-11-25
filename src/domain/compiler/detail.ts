@@ -1,6 +1,6 @@
 import type { CatalogRegistry } from "../catalog/registry";
 import type { AttributeDefinition } from "../catalog/schema";
-import { NO_LOCKS, type Locks } from "../spec/locks";
+import { locksOf, type Locks } from "../spec/locks";
 import type { AttributeSelection, ImageSpec } from "../spec/schema";
 import { selectedCustomEntries, selectedOptionIds } from "../spec/values";
 import { genericEnglishAdapter } from "./adapters/generic";
@@ -126,7 +126,7 @@ export const viewPrompt = (
   options: { adapter?: PromptAdapter; locked?: Locks } = {},
 ): PromptView => {
   const adapter = options.adapter ?? genericEnglishAdapter;
-  const locked = options.locked ?? NO_LOCKS;
+  const locked = options.locked ?? locksOf(spec);
   const base = { ...compilation, detail, omitted: [], fullFragmentCount: compilation.fragments.length };
   if (detail === "full" || compilation.blocked) return base;
   const keep = KEEP[detail];

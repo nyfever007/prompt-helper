@@ -48,7 +48,7 @@ describe("5. deterministic prompt compilation", () => {
       compilerVersion: "0.5.0",
       adapterId: "generic-en",
       adapterVersion: "0.1.0",
-      specSchemaVersion: "0.3.0",
+      specSchemaVersion: "0.4.0",
       catalogId: "prompter.core",
       catalogVersion: "0.17.0",
       safetyPolicyId: "prompter.baseline",

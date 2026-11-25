@@ -1,12 +1,30 @@
 "use client";
 
 import { useId, useMemo, useState } from "react";
-import { isAttributeActive, normalizeSearch, resolveText, valueOwner, type CatalogRegistry, type ValueOwner } from "@/domain";
+import {
+  isAttributeActive,
+  isOptionAttribute,
+  normalizeSearch,
+  resolveText,
+  selectedCustomEntries,
+  selectedOptionIds,
+  valueOwner,
+  type AttributeDefinition,
+  type CatalogRegistry,
+  type SelectionValue,
+  type ValueOwner,
+} from "@/domain";
 import { fmt, type Messages } from "@/i18n/messages";
 import type { Workspace } from "@/state/useWorkspace";
 import { describeValue } from "../format";
 
 type LockFilter = "all" | "locked" | "unlocked";
+
+/** Palette swatches and user-defined colors of a value (color attributes). */
+const swatchesOf = (a: AttributeDefinition, v: SelectionValue): string[] => [
+  ...(isOptionAttribute(a) ? selectedOptionIds(v).flatMap((id) => a.options.find((o) => o.id === id)?.swatch ?? []) : []),
+  ...selectedCustomEntries(v).flatMap((c) => (c.color ? [c.color] : [])),
+];
 type OutputFilter = "all" | "included" | "excluded";
 
 /**
@@ -170,7 +188,12 @@ export function PrecisionPanel({
                       <td data-label={p.columns.category} className="muted small">
                         {r.category}
                       </td>
-                      <td data-label={p.columns.value}>{r.value}</td>
+                      <td data-label={p.columns.value}>
+                        {swatchesOf(r.a, r.s.value).map((hex, i) => (
+                          <span key={i} className="swatch swatch--inline" style={{ background: hex }} aria-hidden="true" />
+                        ))}
+                        {r.value}
+                      </td>
                       <td data-label={p.columns.source}>
                         <span className={`badge badge--source-${r.owner}`}>
                           {p.sources[r.owner]}

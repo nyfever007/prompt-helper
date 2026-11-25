@@ -1,4 +1,4 @@
-import { RANDOM_ORIGIN, resolveText, selectedCustomEntries, selectedOptionIds, type AttributeDefinition, type CatalogRegistry, type SelectionValue } from "@/domain";
+import { normalizeHex, RANDOM_ORIGIN, resolveText, selectedCustomEntries, selectedOptionIds, type AttributeDefinition, type CatalogRegistry, type SelectionValue } from "@/domain";
 
 /** Human-readable, localized summary of a selection value (UI only). Custom entries show their name. */
 export const describeValue = (attribute: AttributeDefinition, value: SelectionValue, locale: string): string => {
@@ -8,7 +8,7 @@ export const describeValue = (attribute: AttributeDefinition, value: SelectionVa
       const opts = attribute.type === "single" || attribute.type === "multi" ? attribute.options : [];
       return [
         ...selectedOptionIds(value).map((id) => resolveText(opts.find((o) => o.id === id)?.label, locale) || id),
-        ...selectedCustomEntries(value).map((c) => c.label),
+        ...selectedCustomEntries(value).map((c) => (c.color && normalizeHex(c.label) !== c.color ? `${c.label} (${c.color})` : c.label)),
       ].join(", ");
     }
     case "number":

@@ -7,9 +7,11 @@ import { SelectionValueSchema } from "./values";
  * 0.2.0 (Sprint 2-A): optional `AttributeSelection.origin` (preset provenance).
  * 0.3.0 (Sprint 2-B.1): optional `AttributeSelection.excludedFromPrompt`,
  * custom entries in single/multi values, `unit` on number/range values.
- * Older apps cannot read newer files; this app reads 0.1.0 and 0.2.0 via migration.
+ * 0.4.0 (Sprint 3.2, ADR-071): optional `AttributeSelection.locked` (attribute lock, ADR-070 option A)
+ * and optional `color` (#RRGGBB) on custom entries (user-defined colors).
+ * Older apps cannot read newer files; this app reads 0.1.0–0.3.0 via (lossless) migration.
  */
-export const IMAGE_SPEC_SCHEMA_VERSION = "0.3.0" as const;
+export const IMAGE_SPEC_SCHEMA_VERSION = "0.4.0" as const;
 export const IMAGE_SPEC_KIND = "prompter.image-spec" as const;
 
 export const SelectionSourceSchema = z.enum(["user", "preset", "import"]);
@@ -40,6 +42,12 @@ export const AttributeSelectionSchema = z
      * Kept when the value changes; removed together with the selection.
      */
     excludedFromPrompt: z.literal(true).optional(),
+    /**
+     * Editing state (Sprint 3.2; Sprint 3.1 kept it beside the spec): the value is pinned — random
+     * regeneration, presets, resets and undo keep it, direct edits wait until it is unlocked.
+     * Independent of `excludedFromPrompt`; never read by the compiler or the safety policy. Absent = unlocked.
+     */
+    locked: z.literal(true).optional(),
   })
   .strict()
   .refine((s) => s.origin === undefined || s.source === "preset", {

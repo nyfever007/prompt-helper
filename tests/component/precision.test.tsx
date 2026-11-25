@@ -3,7 +3,7 @@ import { cleanup, render, screen, waitFor, within } from "@testing-library/react
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PrompterApp } from "@/components/PrompterApp";
-import { createMemoryStore, getCoreRegistry, LOCKS_STORAGE_KEY, WORKSPACE_STORAGE_KEY } from "@/domain";
+import { createMemoryStore, getCoreRegistry, LEGACY_LOCKS_STORAGE_KEY, WORKSPACE_STORAGE_KEY } from "@/domain";
 
 afterEach(() => cleanup());
 
@@ -65,8 +65,8 @@ describe("locks", () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     await first.user.click(screen.getByRole("button", { name: "설정 초기화" }));
     expect(Object.keys(saved(store))).toEqual(["person.identity.species"]);
-    expect(saved(store)["person.identity.species"]).toEqual(before);
-    expect(JSON.parse(store.getItem(LOCKS_STORAGE_KEY)!).attributeIds).toEqual(["person.identity.species"]);
+    expect(saved(store)["person.identity.species"]).toEqual({ ...before, locked: true }); // the lock is stored in the spec (0.4.0)
+    expect(store.getItem(LEGACY_LOCKS_STORAGE_KEY)).toBeNull();
 
     cleanup();
     await setUp(store);
@@ -162,5 +162,52 @@ describe("Precision tab", () => {
     await user.click(within(row("style.preset")!).getByRole("button", { name: /편집으로 이동$/ }));
     expect(tab(/Detailed/)).toHaveAttribute("aria-selected", "true");
     await waitFor(() => expect(field("style.preset")).toBeInTheDocument());
+  });
+});
+
+describe("Sprint 3.1 lock data → ImageSpec 0.4.0 (migration on load)", () => {
+  const v030 = (selections: Record<string, unknown>) =>
+    JSON.stringify({
+      kind: "prompter.workspace",
+      storageVersion: 1,
+      savedAt: "2026-11-25T10:00:00.000Z",
+      spec: { kind: "prompter.image-spec", schemaVersion: "0.3.0", task: "text-to-image", catalog: { id: core.id, version: core.version }, selections },
+    });
+  const legacy = (ids: string[]) => JSON.stringify({ kind: "prompter.locks", version: 1, catalogId: core.id, attributeIds: ids });
+  const selections = {
+    "style.preset": { value: { kind: "single", optionId: "watercolor" }, source: "user" },
+    "mood.tone": { value: { kind: "multi", optionIds: ["calm"] }, source: "user" },
+  };
+
+  it("a 0.3.0 workspace with Sprint 3.1 locks opens with the same values and locks; the side key is removed after saving", async () => {
+    const store = createMemoryStore({ [WORKSPACE_STORAGE_KEY]: v030(selections), [LEGACY_LOCKS_STORAGE_KEY]: legacy(["style.preset", "camera.angle"]) });
+    await setUp(store);
+    expect(screen.getByTestId("lock-status")).toHaveTextContent("잠긴 속성 1개");
+    const env = JSON.parse(store.getItem(WORKSPACE_STORAGE_KEY)!);
+    expect(env.spec.schemaVersion).toBe("0.4.0");
+    expect(env.spec.selections["style.preset"]).toEqual({ ...selections["style.preset"], locked: true });
+    expect(env.spec.selections["mood.tone"]).toEqual(selections["mood.tone"]);
+    expect(store.getItem(LEGACY_LOCKS_STORAGE_KEY)).toBeNull();
+  });
+
+  it("if saving fails, the side key is kept (nothing is lost) and the locks still apply in the session", async () => {
+    const base = createMemoryStore({ [WORKSPACE_STORAGE_KEY]: v030(selections), [LEGACY_LOCKS_STORAGE_KEY]: legacy(["style.preset"]) });
+    const failing = {
+      ...base,
+      setItem: (k: string, v: string) => {
+        if (k === WORKSPACE_STORAGE_KEY) throw new Error("quota");
+        base.setItem(k, v);
+      },
+    };
+    await setUp(failing);
+    expect(screen.getByTestId("lock-status")).toHaveTextContent("잠긴 속성 1개");
+    expect(base.getItem(LEGACY_LOCKS_STORAGE_KEY)).not.toBeNull();
+  });
+
+  it("a 0.3.0 workspace without lock data opens unchanged (no locks)", async () => {
+    const store = createMemoryStore({ [WORKSPACE_STORAGE_KEY]: v030(selections) });
+    await setUp(store);
+    expect(screen.queryByTestId("lock-status")).toBeNull();
+    expect(JSON.parse(store.getItem(WORKSPACE_STORAGE_KEY)!).spec.selections).toEqual(selections);
   });
 });

@@ -58,10 +58,16 @@ function EntryEditor({
   const idBase = useId();
   const store = (l: string, e: string) => {
     if (l.trim() === "" || others.some((o) => customKey(o.label) === customKey(l))) return;
-    onChange({ label: l, ...(e.trim() !== "" ? { expression: e } : {}) });
+    // a user color (Sprint 3.2) stays with its entry when the name or wording changes
+    onChange({ label: l, ...(e.trim() !== "" ? { expression: e } : {}), ...(entry.color ? { color: entry.color } : {}) });
   };
   return (
     <li className="custom-entry" data-testid={`custom-entry-${attribute.id}-${index}`}>
+      {entry.color && (
+        <p className="small custom-entry__color">
+          <span className="swatch" style={{ background: entry.color }} aria-hidden="true" /> {entry.color}
+        </p>
+      )}
       <div className="custom-entry__row">
         <label htmlFor={`${idBase}-l`} className="small">
           {t.custom.name}

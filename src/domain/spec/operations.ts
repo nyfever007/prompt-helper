@@ -1,7 +1,7 @@
 import type { CatalogRegistry } from "../catalog/registry";
 import { checkValueForAttribute } from "../catalog/valueCheck";
 import { error, fail, ok, type Result } from "../shared/diagnostics";
-import { NO_LOCKS, type Locks } from "./locks";
+import { locksOf, type Locks } from "./locks";
 import type { AttributeSelection, ImageSpec, SelectionOrigin, SelectionSource } from "./schema";
 import type { SelectionValue } from "./values";
 
@@ -55,6 +55,8 @@ export const applySelection = (
     ...(source === "preset" && origin ? { origin } : {}),
     // Output state is independent of the value: changing the value keeps it (approved D3).
     ...(previous?.excludedFromPrompt ? { excludedFromPrompt: true as const } : {}),
+    // Locks are kept too (callers never write a locked attribute; this is defensive).
+    ...(previous?.locked ? { locked: true as const } : {}),
   };
   return ok({ ...spec, selections: { ...spec.selections, [attributeId]: next } });
 };
@@ -98,7 +100,7 @@ export const resetCategory = (
   spec: ImageSpec,
   registry: CatalogRegistry,
   categoryId: string,
-  locked: Locks = NO_LOCKS,
+  locked: Locks = locksOf(spec),
 ): { spec: ImageSpec; removed: Record<string, AttributeSelection>; kept: string[] } => {
   const removed: Record<string, AttributeSelection> = {};
   const kept: string[] = [];

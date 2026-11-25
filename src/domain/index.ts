@@ -17,6 +17,7 @@ export * from "./spec/values";
 export * from "./spec/factory";
 export * from "./spec/operations";
 export * from "./spec/locks";
+export * from "./spec/color";
 export * from "./spec/migrations";
 export * from "./validation/specValidator";
 export * from "./validation/analyze";

@@ -6,7 +6,7 @@ import { compilePrompt } from "../compiler/compiler";
 import { attributeImportance, RANDOM_PRESET_ID } from "../compiler/detail";
 import type { PresetTransaction } from "../presets/presets";
 import { applySelection } from "../spec/operations";
-import { NO_LOCKS, type Locks } from "../spec/locks";
+import { locksOf, type Locks } from "../spec/locks";
 import type { AttributeSelection, ImageSpec, SelectionOrigin } from "../spec/schema";
 import { selectedOptionIds, type SelectionValue } from "../spec/values";
 import { DEFAULT_RANDOM_STYLE, ODD, OPTIONAL, PROFILES, RARE, RELATIONS, type Relation, type RandomStyle, type StyleProfile } from "./styles";
@@ -244,7 +244,7 @@ export const composeRandom = (
   registry: CatalogRegistry,
   seed: number,
   style: RandomStyle = DEFAULT_RANDOM_STYLE,
-  locked: Locks = NO_LOCKS,
+  locked: Locks = locksOf(spec),
 ): RandomComposition => {
   const owned = (id: string) => isOwned(spec.selections[id]) || locked.has(id);
   const rand = rng(seed);

@@ -4,7 +4,7 @@ import type { CatalogRegistry } from "../catalog/registry";
 import type { PresetDefinition } from "../catalog/schema";
 import { error, fail, ok, type Diagnostic, type Result } from "../shared/diagnostics";
 import { applySelection } from "../spec/operations";
-import { NO_LOCKS, type Locks } from "../spec/locks";
+import { locksOf, NO_LOCKS, type Locks } from "../spec/locks";
 import type { AttributeSelection, ImageSpec, SelectionOrigin } from "../spec/schema";
 import { customKey, selectedOptionIds, type SelectionValue } from "../spec/values";
 import { validateSpecAgainstCatalog } from "../validation/specValidator";
@@ -143,7 +143,7 @@ export const planPreset = (spec: ImageSpec, registry: CatalogRegistry, presetId:
 /** The entries a mode writes (the UI's "applied" count uses the same rule). Locked attributes are never written (Sprint 3.1). */
 export const writableEntries = (plan: PresetPlan, mode: PresetApplyMode, locked: Locks = NO_LOCKS): PresetPlanEntry[] =>
   plan.entries.filter(
-    (e) => !locked.has(e.attributeId) && (e.kind === "new" || (e.kind === "change" && (mode === "all" || (mode === "keepUser" && e.current?.source === "preset")))),
+    (e) => !locked.has(e.attributeId) && !e.current?.locked && (e.kind === "new" || (e.kind === "change" && (mode === "all" || (mode === "keepUser" && e.current?.source === "preset")))),
   );
 
 export const applyPresetPlan = (
@@ -151,7 +151,7 @@ export const applyPresetPlan = (
   registry: CatalogRegistry,
   plan: PresetPlan,
   mode: PresetApplyMode,
-  locked: Locks = NO_LOCKS,
+  locked: Locks = locksOf(spec),
 ): { spec: ImageSpec; transaction: PresetTransaction } => {
   const writable = writableEntries(plan, mode, locked);
   let next = spec;
@@ -183,7 +183,7 @@ export const markUserEdited = (tx: PresetTransaction, attributeId: string): Pres
 export const undoPresetTransaction = (
   spec: ImageSpec,
   tx: PresetTransaction,
-  locked: Locks = NO_LOCKS,
+  locked: Locks = locksOf(spec),
 ): { spec: ImageSpec; restored: string[]; kept: string[] } => {
   const selections = { ...spec.selections };
   const restored: string[] = [];

@@ -14,6 +14,7 @@ import { selectedCustomEntries, selectedOptionIds, type CustomEntry, type Select
 import { validateSpecAgainstCatalog } from "../validation/specValidator";
 import { genericEnglishAdapter } from "./adapters/generic";
 import { detectNonLatinScripts } from "./language";
+import { hexToRgb, nearestSwatchOption, normalizeHex } from "../spec/color";
 import type { HiddenReason, PromptAdapter, PromptCompilation, PromptFragment, PromptParameterValue } from "./types";
 
 /**
@@ -42,8 +43,20 @@ const phrase = (registry: CatalogRegistry, spec: ImageSpec, option: OptionDefini
   return option.prompt.text;
 };
 
-/** A custom entry is output as its expression, or — when none was given — its name, verbatim. */
-export const customOutput = (c: CustomEntry): string => normalizeWhitespace(c.expression ?? c.label);
+/**
+ * A custom entry is output as its expression, or — when none was given — its name, verbatim.
+ * A custom COLOR (Sprint 3.2) always states the exact color: its hex and RGB values, plus the nearest
+ * catalog color as a hint ("close to …"), after the user's own wording or name if there is one
+ * (a name that is just the hex is not repeated). Palette options are unaffected.
+ */
+export const customOutput = (c: CustomEntry, attribute?: AttributeDefinition): string => {
+  if (!c.color) return normalizeWhitespace(c.expression ?? c.label);
+  const [r, g, b] = hexToRgb(c.color);
+  const near = attribute && (attribute.type === "single" || attribute.type === "multi") ? nearestSwatchOption(attribute.options, c.color) : undefined;
+  const exact = `custom color ${c.color} (RGB ${r}, ${g}, ${b}${near ? `, close to ${near.prompt.text}` : ""})`;
+  const own = c.expression ?? (normalizeHex(c.label) === c.color ? undefined : c.label);
+  return normalizeWhitespace(own ? `${own}, ${exact}` : exact);
+};
 
 interface Rendered {
   text: string;
@@ -89,7 +102,7 @@ const renderValue = (
       const custom = selectedCustomEntries(value);
       if (options.length === 0 && custom.length === 0) return null; // inactive option: kept, not compiled
       const params = options.map((o) => o.parameterValue).filter((p) => p !== undefined);
-      const text = [...options.map((o) => phrase(registry, spec, o, adapterId, takenOver)), ...custom.map(customOutput)].filter(Boolean).join(", ");
+      const text = [...options.map((o) => phrase(registry, spec, o, adapterId, takenOver)), ...custom.map((c) => customOutput(c, attribute))].filter(Boolean).join(", ");
       const parameter = value.kind === "single" ? options[0]?.parameterValue : params.length ? params.join(",") : undefined;
       return { text, options, custom, ...(parameter !== undefined ? { parameter } : {}) };
     }
@@ -391,7 +404,7 @@ const rawText = (attribute: AttributeDefinition, value: SelectionValue, spec: Im
   if (attribute.type === "single" || attribute.type === "multi") {
     const ids = selectedOptionIds(value);
     const opts = attribute.options.filter((o) => ids.includes(o.id));
-    return [...opts.flatMap((o) => [o.prompt.text, ...(o.prompt.variants ?? []).map((v) => v.text)]), ...selectedCustomEntries(value).map(customOutput)].join(", ");
+    return [...opts.flatMap((o) => [o.prompt.text, ...(o.prompt.variants ?? []).map((v) => v.text)]), ...selectedCustomEntries(value).map((c) => customOutput(c, attribute))].join(", ");
   }
   return renderValue(registry, spec, attribute, value, "", new Set())?.text ?? "";
 };
