@@ -5,6 +5,7 @@ import { exportPromptText, getPromptOutput, type CatalogRegistry, type PromptCom
 import { fmt, type Messages } from "@/i18n/messages";
 import { copyText } from "./clipboard";
 import { describeDiagnostic } from "./diagnostics";
+import { RelatedSettings } from "./RelatedSettings";
 import { downloadText, timestamp } from "./download";
 import { attributeLabel } from "./format";
 
@@ -90,6 +91,7 @@ export function PromptPreview({
                       <strong>{t.field.guidance}:</strong> {desc.guidance}
                     </p>
                   )}
+                  <RelatedSettings ids={String(d.params?.relatedAttributes ?? "").split(",").filter(Boolean)} registry={registry} locale={locale} t={t} />
                 </li>
               );
             })}

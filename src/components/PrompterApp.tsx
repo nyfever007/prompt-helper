@@ -19,6 +19,7 @@ import { describeDiagnostic } from "./diagnostics";
 import { downloadText, timestamp } from "./download";
 import { attributeLabel, optionLabel } from "./format";
 import { ModePanel } from "./modes/ModePanel";
+import { GoToAttribute } from "./navigation";
 import { Notices, type Notice } from "./Notices";
 import { PromptPreview } from "./PromptPreview";
 import { RecoveryPanel } from "./RecoveryPanel";
@@ -61,6 +62,22 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
   const [dismissed, setDismissed] = useState<ReadonlySet<string>>(new Set());
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  // “Go to attribute” (Sprint 2-C.3): navigate the mounted Detailed editor, or open Detailed at that attribute.
+  const detailedNavigator = useRef<((categoryId: string, attributeId?: string) => void) | null>(null);
+  const [navTarget, setNavTarget] = useState<string | null>(null);
+  const goToAttribute = useCallback(
+    (attributeId: string) => {
+      const categoryId = registry.getAttribute(attributeId)?.categoryId;
+      if (!categoryId) return;
+      setPreviewOpen(false); // the mobile preview sheet would cover the editor
+      if (mode === "detailed" && detailedNavigator.current) detailedNavigator.current(categoryId, attributeId);
+      else {
+        setNavTarget(attributeId);
+        setMode("detailed");
+      }
+    },
+    [registry, mode, setMode],
+  );
   const previewToggle = useRef<HTMLButtonElement>(null);
   // Mobile bottom sheet (non-modal): opening moves focus to its title; Escape or “hide” returns it to the toolbar button.
   const openPreview = (open: boolean, returnFocus = false) => {
@@ -185,6 +202,7 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
   };
 
   return (
+    <GoToAttribute.Provider value={goToAttribute}>
     <div className="app" lang={locale} data-mode={mode} data-preview-open={previewOpen}>
       <header className="app__header">
         <div>
@@ -270,6 +288,8 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
         <div id="mode-panel" role="tabpanel" aria-labelledby={`tab-${mode}`} className="layout__editor">
           <ModePanel
             mode={mode}
+            navigatorRef={detailedNavigator}
+            initialAttributeId={navTarget}
             registry={registry}
             workspace={workspace}
             locale={locale}
@@ -327,5 +347,6 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
         </button>
       </div>
     </div>
+    </GoToAttribute.Provider>
   );
 }

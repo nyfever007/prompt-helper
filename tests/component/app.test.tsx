@@ -216,11 +216,22 @@ describe("safety in the UI", () => {
     expect(screen.getByTestId("provenance-intent.description")).toHaveTextContent("안전 정책에 의해 프롬프트 출력이 차단됨");
   });
 
-  it("permitted adult fashion wording is not blocked", async () => {
+  it("policy 0.3.0 (TD-15): adult fashion wording with sexual appeal waits for a set adult age — guidance links to the age setting; an adult age releases it", async () => {
     const { user } = await setUp();
     await user.type(screen.getByRole("textbox", { name: /이미지 설명/ }), "Confident adult model in lingerie, editorial");
+    // 0.2.0 output this directly; “adult” in free text is not a set age.
+    const blocked = screen.getByTestId("prompt-blocked");
+    expect(blocked).toHaveTextContent("이 표현을 사용하려면 인물의 성인 연령 정보를 명확하게 설정해야 합니다");
+    expect(within(blocked).getByTestId("related-settings")).toHaveTextContent("관련 설정: 연령대 (연령), 외형적 연령 (연령), 실제 연령 (연령)");
+    await user.click(within(blocked).getByRole("button", { name: "연령대 (연령) — 이 설정으로 이동" }));
+    // Basic → Detailed › 연령, focused on the setting; nothing was set automatically
+    expect(tab(/Detailed/)).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("heading", { level: 2, name: "연령" })).toBeInTheDocument();
+    expect(document.activeElement).toBe(field("person.identity.age_group"));
+    expect(screen.getByTestId("prompt-blocked")).toBeInTheDocument();
+    await user.selectOptions(within(field("person.identity.age_group")).getByRole("combobox"), "young_adult");
     expect(screen.queryByTestId("prompt-blocked")).toBeNull();
-    expect(prompt()).toBe("Confident adult model in lingerie, editorial.");
+    expect(prompt()).toBe("Confident adult model in lingerie, editorial. Age group: young adult.");
   });
 });
 

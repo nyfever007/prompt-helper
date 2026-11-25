@@ -17,6 +17,9 @@ import { buildSpec, single, text } from "../fixtures/specs";
 
 const core = getCoreRegistry();
 const check = (t: string) => evaluateSafety({ tags: [], texts: [{ attributeId: "intent.description", text: t }] });
+/** Same text with a structured adult confirmation (what the compiler adds when the age assessment is adult). */
+const checkAdult = (t: string) =>
+  evaluateSafety({ tags: [{ attributeId: "person.identity.age", optionId: "$age", tag: "age.adult_confirmed" }], texts: [{ attributeId: "intent.description", text: t }] });
 const compileText = (t: string) => compilePrompt(buildSpec(core, [["intent.description", text(t)]]), core);
 
 describe("safety: prohibited content is blocked", () => {
@@ -38,6 +41,13 @@ describe("safety: prohibited content is blocked", () => {
     ["a naked man", "nudity"],
     ["topless model", "nudity"],
     ["알몸의 여성", "nudity"],
+    // Policy 0.3.0 (TD-12): intimate apparel with minor / ambiguous-age wording is blocked — the same for every
+    // intimate garment (0.2.0 blocked “underwear”/“bra” as sexual wording but let “briefs”/“boxer shorts” pass).
+    ["kids in thermal underwear building a snowman", "minor-intimate-apparel"],
+    ["a boy in briefs", "minor-intimate-apparel"],
+    ["a teenager in boxer shorts", "minor-intimate-apparel"],
+    ["a girl in a sports bra", "minor-intimate-apparel"],
+    ["속옷 차림의 초등학생", "minor-intimate-apparel"],
     ["나체 조각상 같은 성인 남성", "nudity"],
   ])("%s → blocked (%s)", (input, ruleId) => {
     const r = check(input);
@@ -60,8 +70,6 @@ describe("safety: prohibited content is blocked", () => {
 describe("safety: legitimate content stays permitted", () => {
   it.each([
     "An adult woman in an elegant evening gown with a plunging neckline",
-    "Confident adult model in lingerie, tasteful editorial fashion photo",
-    "A sensual, moody portrait of an adult man",
     "Curvy adult woman in a fitted bodycon dress",
     "Slim adult woman with a large bust, wearing a turtleneck sweater",
     "Athletic bodybuilder, shirtless at the gym",
@@ -72,23 +80,39 @@ describe("safety: legitimate content stays permitted", () => {
     "Kids in swimsuits splashing at the beach",
     "Nude lipstick and nude heels, beige palette",
     "Seen with the naked eye",
-    "A 25-year-old woman, sexy evening look",
-    "baby blue sports car, sexy curves",
-    "섹시한 정장을 입은 성인 여성, 아기자기한 카페",
-    "칼로리 높은 디저트 광고, 섹시한 분위기",
     "전라도 시골 마을 풍경",
     "성교육 포스터 일러스트",
     "자위대 기지의 전경",
     "판타지 게임 속 성기사",
     "교복을 입은 학생들이 운동장에서 뛰어노는 모습",
-    "대학생 커플의 로맨틱한 데이트, 섹시한 드레스",
     "장노출로 찍은 도시 야경",
     "누드톤 메이크업의 성인 모델",
     "Erection of a steel tower, construction site",
     "5세대 이동통신 광고, 19세기 거리",
+    // Policy 0.3.0 (TD-12): garment classification words are not sexual appeal on their own.
+    "An adult woman in underwear, catalog photo",
+    "A man in briefs, product shot",
+    "A runner in a sports bra and leggings",
+    "속옷 브랜드 광고, 성인 모델",
   ])("%s → not blocked", (input) => {
     const r = check(input);
     expect(r.blocked, JSON.stringify(r.findings)).toBe(false);
+  });
+
+  // Policy 0.3.0 (TD-15, approved change): sexual-appeal wording needs a STRUCTURED adult age. Free text
+  // (“adult”, “25-year-old”) does not confirm it. These were “not blocked” under 0.2.0; with a confirmed
+  // adult age they are still permitted, and none of them is mistaken for minor wording (baby blue, 칼로리, 대학생 …).
+  it.each([
+    "Confident adult model in lingerie, tasteful editorial fashion photo",
+    "A sensual, moody portrait of an adult man",
+    "A 25-year-old woman, sexy evening look",
+    "baby blue sports car, sexy curves",
+    "섹시한 정장을 입은 성인 여성, 아기자기한 카페",
+    "칼로리 높은 디저트 광고, 섹시한 분위기",
+    "대학생 커플의 로맨틱한 데이트, 섹시한 드레스",
+  ])("%s → withheld until an adult age is set; permitted for a confirmed adult", (input) => {
+    expect(check(input).findings.map((f) => f.ruleId)).toEqual(["appeal-age-unconfirmed"]);
+    expect(checkAdult(input).blocked).toBe(false);
   });
 });
 

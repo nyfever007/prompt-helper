@@ -18,8 +18,9 @@ export interface LexiconEntry {
 export interface SafetySignalDef {
   id: string;
   label: LocalizedText;
-  /** Catalog option `policyTags` that raise this signal. */
+  /** Catalog option `policyTags` (and structured compiler tags such as `age.adult_confirmed`) that raise this signal. */
   tags: readonly string[];
+  /** Text terms; empty for structured-only signals. */
   lexicon: readonly LexiconEntry[];
 }
 
@@ -29,6 +30,13 @@ export interface SafetyRuleDef {
   severity: "block" | "warn";
   /** Every group must have at least one present signal (AND of ORs). */
   allOf: ReadonlyArray<readonly string[]>;
+  /**
+   * None of these signals may be present (0.3.0). Used for “not confirmed adult” and to
+   * report one cause once (a more specific rule already covers the combination).
+   */
+  noneOf?: readonly string[];
+  /** Where the user resolves it (UI hint only): `age` → the catalog's age settings. */
+  resolution?: "age";
   message: LocalizedText;
   guidance: LocalizedText;
 }

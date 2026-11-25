@@ -56,11 +56,17 @@
 - 출력은 피사체 바로 다음 독립 문장(“Appearance direction: beautiful, elegant.”)입니다. 피사체 문구와 합치는 방식은 컴파일러 변경이 필요해 쓰지 않았습니다. 미설정이면 기존 출력이 그대로입니다.
 - 해석적 속성이며 다른 값을 자동 설정하지 않고 성별로 제한하지 않습니다(“잘생긴”·“아름다운” 모두 누구에게나).
 - 의미가 같은 인상 값은 기존 `covers` 규칙으로 한 번만 출력합니다: 매력적인 ↔ 시각적 매력도 “매력적인”, 눈길을 끄는 ↔ “눈에 띄게 매력적인”, 우아한·몽환적인 ↔ 분위기 “우아한”·“몽환적인”, 세련된 ↔ 전체 인상 “세련된”. 저장된 값은 바뀌지 않습니다.
-- 안전: “섹시한(sexy)”은 기존 어휘의 성적 매력 표현이며 `appeal.suggestive` 태그도 가집니다. 미성년·모호 연령과 함께면 기존 규칙으로 차단(프롬프트 제외 값도 검사), 연령 신호가 없으면 기존 정책대로 차단하지 않습니다. 아름다운·잘생긴·예쁜·귀여운·사랑스러운 등은 그 자체로 신호가 없습니다. 외모 방향은 연령 판단을 바꾸지 않습니다.
+- 안전(정책 0.3.0, Sprint 2-C.3): “섹시한(sexy)”은 성적 매력 표현이며 `appeal.suggestive` 태그도 가집니다.
+  - **성인 연령이 설정된 경우에만** 출력됩니다.
+  - 미성년·모호 연령과 함께면 차단합니다(프롬프트 제외 값도 검사).
+  - **연령을 설정하지 않았으면 출력을 보류**하고 연령 설정으로 이동하는 안내를 보여 줍니다(0.2.0까지는 출력).
+  - 아름다운·잘생긴·예쁜·귀여운·사랑스러운 등은 그 자체로 신호가 없으며, 연령 설정 없이도 출력됩니다.
+  - 외모 방향은 연령 판단을 바꾸지 않습니다.
+- 적용 조건(Sprint 2-C.3, TD-14): 다른 인물 속성과 같습니다. 피사체가 1인 인물이거나 **미설정**이면 적용되고, 명시적인 비인물 피사체·여러 사람이면 값을 보존한 채 출력하지 않습니다. Basic에서는 피사체가 인물로 정해졌거나 값이 있을 때 표시합니다.
 
 | 순서 | Attribute ID | 한국어 / English | 단계 | 입력 | 문장 틀 | 선택지 또는 구간 → 프롬프트 표현 | 적용 조건 | 검색 별칭 |
 |---|---|---|---|---|---|---|---|---|
-| 195 | `person.appearance.direction` | 외모 방향 / Appearance direction | Basic+Detailed | 다중 · 검색 목록 + 사용자 정의 | `Appearance direction: {value}.` | 아름다운(Beautiful) → beautiful; 잘생긴(Handsome) → handsome; 예쁜(Pretty) → pretty; 귀여운(Cute) → cute; 눈부시게 아름다운(Stunning) → stunning; 섹시한(Sexy) → sexy; 빼어나게 아름다운(Gorgeous) → gorgeous; 매력적인(Attractive) → attractive; 호감 가는 매력(Charming) → charming; 우아한(Elegant) → elegant; 눈길을 끄는(Striking) → striking; 세련된(Refined) → refined; 사랑스러운(Adorable) → adorable; 투박하고 강인한(Rugged) → rugged; 몽환적인(Ethereal) → ethereal; 중성적인(Androgynous) → androgynous; 평범한 외모(Ordinary-looking) → ordinary-looking; 개성 있는 외모(Distinctive) → distinctive | `subject.kind` ∈ person | appearance, look, 외모, 외모 방향, 미모 |
+| 195 | `person.appearance.direction` | 외모 방향 / Appearance direction | Basic+Detailed | 다중 · 검색 목록 + 사용자 정의 | `Appearance direction: {value}.` | 아름다운(Beautiful) → beautiful; 잘생긴(Handsome) → handsome; 예쁜(Pretty) → pretty; 귀여운(Cute) → cute; 눈부시게 아름다운(Stunning) → stunning; 섹시한(Sexy) → sexy; 빼어나게 아름다운(Gorgeous) → gorgeous; 매력적인(Attractive) → attractive; 호감 가는 매력(Charming) → charming; 우아한(Elegant) → elegant; 눈길을 끄는(Striking) → striking; 세련된(Refined) → refined; 사랑스러운(Adorable) → adorable; 투박하고 강인한(Rugged) → rugged; 몽환적인(Ethereal) → ethereal; 중성적인(Androgynous) → androgynous; 평범한 외모(Ordinary-looking) → ordinary-looking; 개성 있는 외모(Distinctive) → distinctive | `subject.kind` ∈ person 또는 미설정 (2-C.3) | appearance, look, 외모, 외모 방향, 미모 |
 
 ## 3. 충돌 안내 (비차단, 값 자동 변경 없음)
 

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { INTIMATE_INNERWEAR } from "@/domain/catalog/catalogs/person/clothing";
 import {
   baselinePolicy,
   compilePrompt,
@@ -289,16 +290,25 @@ describe("common features", () => {
 });
 
 describe("safety (directive §12): neutral clothing description, existing policy unchanged", () => {
-  it("clothing phrases raise no signal, except innerwear words the existing lexicon already treats as appeal wording", () => {
+  it("policy 0.3.0 (TD-12): no clothing phrase is sexual wording; intimate innerwear is classified as intimate apparel — blocked only with minor/ambiguous age, the same for every intimate garment", () => {
     const flagged: string[] = [];
+    const rules = new Set<string>();
     for (const a of wardrobe) {
       const texts = isOptionAttribute(a) ? a.options.map((o) => [o.id, o.prompt.text] as const) : a.type === "number" ? (a.bands ?? []).map((b, i) => [String(i), b.text] as const) : [];
       for (const [id, t] of texts) {
         const r = evaluateSafety({ tags: [], texts: [{ attributeId: a.id, text: `${a.prompt.template.replace("{value}", t)} girl child` }] }, baselinePolicy);
         if (r.findings.length) flagged.push(`${a.id}/${id}`);
+        for (const f of r.findings) rules.add(f.ruleId);
+        // Without age wording no clothing phrase raises any finding (also no “sexual appeal” withholding).
+        expect(evaluateSafety({ tags: [], texts: [{ attributeId: a.id, text: a.prompt.template.replace("{value}", t) }] }, baselinePolicy).findings, `${a.id}/${id}`).toEqual([]);
       }
     }
-    expect(flagged).toEqual(["thermal", "sports_bra", "everyday_bra", "full_coverage"].map((o) => `${C("innerwear.type")}/${o}`));
+    // 0.2.0 flagged only thermal / sports_bra / everyday_bra / full_coverage (as sexual wording) and let briefs, boxers, shapewear pass.
+    expect(flagged).toEqual([...INTIMATE_INNERWEAR].map((o) => `${C("innerwear.type")}/${o}`));
+    expect([...rules]).toEqual(["minor-intimate-apparel"]);
+    // The registered options carry the same structured classification.
+    const type = core.getAttribute(C("innerwear.type"))!;
+    expect(isOptionAttribute(type) && type.options.filter((o) => o.policyTags?.includes("garment.intimate")).map((o) => o.id)).toEqual([...INTIMATE_INNERWEAR]);
   });
 
   it("innerwear: adults are not blocked; a minor (or ambiguous age) is blocked, also when the innerwear value is excluded or the age is hidden", () => {
@@ -309,8 +319,16 @@ describe("safety (directive §12): neutral clothing description, existing policy
     expect(out([["person.identity.apparent_age", { kind: "number", value: 15, unit: "years" }], ...bra]).blocked).toBe(true);
     const excluded = setPromptExclusion(buildSpec(core, [["person.identity.age_group", single("child")], ...bra]), C("innerwear.type"), true);
     expect(compilePrompt(excluded, core).blocked).toBe(true);
-    // Neutral innerwear wording outside the existing lexicon is not treated as sexual
+    // Layering tops are not intimate apparel (unchanged)
     expect(out([["person.identity.age_group", single("child")], [C("innerwear.type"), single("undershirt")]]).blocked).toBe(false);
+    // Consistency (0.3.0): briefs, boxer shorts and shapewear now behave exactly like the bras / underwear
+    for (const o of INTIMATE_INNERWEAR) {
+      const v: Array<[string, SelectionValue]> = [[C("innerwear.type"), single(o)]];
+      expect(out(v).blocked, `${o} unknown age`).toBe(false);
+      expect(out([["person.identity.age", { kind: "number", value: 30, unit: "years" }], ...v]).blocked, `${o} adult`).toBe(false);
+      const minor = out([["person.identity.age_group", single("adolescent")], ...v]);
+      expect(minor.diagnostics.filter((d) => d.code.startsWith("safety.")).map((d) => d.code), `${o} minor`).toEqual(["safety.minor-intimate-apparel"]);
+    }
   });
 
   it("coverage, fit and garment “none” add no exposure: never blocked with a minor", () => {

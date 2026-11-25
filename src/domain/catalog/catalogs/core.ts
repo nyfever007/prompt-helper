@@ -42,6 +42,9 @@ const APPROVED_PERSON_AREAS: Record<string, { en: string; ko: string }> = {
  * 0.11.0 Sprint 2-C.2 (format 0.5.0: explicit prompt output order `promptOrder` in prompt-order.ts,
  * separate from the UI `order` — same output as 0.10.0; contradiction/convention diagnostics with
  * slider conditions — no ID, value or output changes).
+ * 0.12.0 Sprint 2-C.3 (appearance direction uses the common person scope — applies while no subject is
+ * chosen, TD-14; intimate innerwear options tagged `garment.intimate` for policy 0.3.0, TD-12 — no ID,
+ * value or phrase changes).
  *
  * Every list here is an extensible STARTING POINT, not a final scope. No option
  * count limits are implied; add entries as data and bump `version`.
@@ -66,7 +69,7 @@ const NON_ABSTRACT = [...ORIENTED_SUBJECTS, "landscape"];
 export const coreCatalog = {
   formatVersion: "0.5.0",
   id: "prompter.core",
-  version: "0.11.0",
+  version: "0.12.0",
   title: { en: "Prompter core catalog", ko: "Prompter 기본 카탈로그" },
   groups: [
     { id: "what", order: 0, label: { en: "What to depict", ko: "무엇을 그릴까요" } },
@@ -996,6 +999,12 @@ export const coreCatalog = {
       fromVersion: "0.10.0",
       toVersion: "0.11.0",
       // No ID changes: 0.11.0 adds the explicit prompt output order and diagnostic rules (output unchanged).
+      changes: [],
+    },
+    {
+      fromVersion: "0.11.0",
+      toVersion: "0.12.0",
+      // No ID changes: 0.12.0 changes the appearance-direction subject scope and adds innerwear policy tags.
       changes: [],
     },
   ],

@@ -2,21 +2,33 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { CatalogRegistry, compilePrompt, getCoreRegistry, type CatalogInput, type CatalogRegistry as Registry, type SelectionValue } from "@/domain";
-import { getFixtureRegistry } from "@/testing/fixtureCatalog";
+import { buildFixtureCatalog } from "@/testing/fixtureCatalog";
 import { placeUnlistedByOrder } from "@/testing/promptOrder";
-import { cloneCore, extendedRegistry, mulberry32, sampleValues } from "../fixtures/catalogs";
+import { baselinePolicy020 } from "../fixtures/baselinePolicy-0.2.0";
+import { buildExtendedCatalog, cloneCore, mulberry32, sampleValues } from "../fixtures/catalogs";
 import { buildSpec, multi, single } from "../fixtures/specs";
 
 /**
  * TD-08 (Sprint 2-C.2) — prompt output order is the catalog's explicit `promptOrder`, separate
  * from the UI `order`. Golden data was recorded from the 0.10.0 code (output order = `order`)
- * BEFORE the change: same specs → byte-identical prompts and fragment order.
+ * BEFORE the change: same specs → byte-identical prompts and fragment order. The golden data was
+ * compiled with safety policy 0.2.0; the comparison uses that exact policy (test fixture) so it
+ * checks ORDER only — the intended Sprint 2-C.3 policy change is covered by safety-policy tests.
+ * Likewise the catalogs use the pre-2-C.3 subject scope of the appearance direction (single person
+ * only); the intended TD-14 difference is asserted separately below.
  */
+const policy = { safetyPolicy: baselinePolicy020 };
+const AD = "person.appearance.direction";
+/** The catalog as of 0.11.0 for the appearance-direction scope (only an explicit single person). */
+const pre2c3 = (c: CatalogInput): Registry => {
+  c.attributes.find((a) => a.id === AD)!.appliesWhen = [{ op: "anyOf", attributeId: "subject.kind", optionIds: ["person"] }];
+  return CatalogRegistry.createOrThrow(c);
+};
 type Golden = { order: string[]; every: { prompt: string; fragments: number[] }; specs: Array<[string, number[]]> };
 const golden = JSON.parse(readFileSync(new URL("../fixtures/golden-prompt-order-0.10.0.json", import.meta.url), "utf8")) as Record<string, Golden>;
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 const core = getCoreRegistry();
-const registries: Array<[string, () => Registry]> = [["core", () => core], ["fixture", getFixtureRegistry], ["extended", extendedRegistry]];
+const registries: Array<[string, () => Registry]> = [["core", () => pre2c3(cloneCore())], ["fixture", () => pre2c3(buildFixtureCatalog())], ["extended", () => pre2c3(buildExtendedCatalog())]];
 
 describe("golden: identical output to 0.10.0 (order-based) for 3 catalogs", () => {
   it.each(registries)("%s: 120 random specs + an all-attributes spec give the same prompt text and fragment order", (name, make) => {
@@ -28,14 +40,32 @@ describe("golden: identical output to 0.10.0 (order-based) for 3 catalogs", () =
     const mismatches: number[] = [];
     for (let n = 0; n < g.specs.length; n++) {
       const entries = all.filter(() => rand() < 0.5).map((a) => [a.id, sampleValues(a)[rand() < 0.5 ? 0 : 1]] as [string, SelectionValue]);
-      const c = compilePrompt(buildSpec(reg, entries), reg);
+      const c = compilePrompt(buildSpec(reg, entries), reg, policy);
       const [hash, fragments] = g.specs[n]!;
       if (sha(c.prompt) !== hash || JSON.stringify(c.fragments.map((f) => g.order.indexOf(f.attributeId))) !== JSON.stringify(fragments)) mismatches.push(n);
     }
     expect(mismatches).toEqual([]);
-    const every = compilePrompt(buildSpec(reg, all.map((a) => [a.id, sampleValues(a)[0]] as [string, SelectionValue])), reg);
+    const every = compilePrompt(buildSpec(reg, all.map((a) => [a.id, sampleValues(a)[0]] as [string, SelectionValue])), reg, policy);
     expect(every.prompt).toBe(g.every.prompt);
     expect(every.fragments.map((f) => g.order.indexOf(f.attributeId))).toEqual(g.every.fragments);
+  });
+
+  it("TD-14 (Sprint 2-C.3): the ONLY difference to the pinned catalog is the appearance-direction sentence while no subject is chosen", () => {
+    const pinned = pre2c3(cloneCore());
+    const all = core.attributes();
+    const rand = mulberry32(20261125);
+    let differing = 0;
+    for (let n = 0; n < 120; n++) {
+      const entries = all.filter(() => rand() < 0.5).map((a) => [a.id, sampleValues(a)[rand() < 0.5 ? 0 : 1]] as [string, SelectionValue]);
+      const now = compilePrompt(buildSpec(core, entries), core, policy).fragments.map((f) => f.attributeId);
+      const before = compilePrompt(buildSpec(pinned, entries), pinned, policy).fragments.map((f) => f.attributeId);
+      const subjectUnset = !entries.some(([id]) => id === "subject.kind");
+      if (subjectUnset && entries.some(([id]) => id === AD) && now.includes(AD)) {
+        differing++;
+        expect(now.filter((id) => id !== AD), String(n)).toEqual(before); // everything else identical, same order
+      } else expect(now, String(n)).toEqual(before);
+    }
+    expect(differing).toBeGreaterThan(0);
   });
 
   it("core: the full prompt order of all 348 attributes equals the 0.10.0 output order, in 15 explicit groups", () => {

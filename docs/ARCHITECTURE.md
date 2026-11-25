@@ -395,3 +395,30 @@ state/workspaceReducer.ts ── categoryResets[≤5] { id, categoryId, at, remo
 | 규칙마다 발생 조건과 발생하지 않는 대표 조건, 출력 불변·비차단·안전 독립 | `consistency-rules` |
 | 여러 초기화, 오래된 기록 먼저 복원, 이후 수정 우선, 이력 5개, 프리셋 독립, 안전 우회 없음 | `category-reset` (TD-09) |
 | UI 이력 목록·안내 표시 | `component/reset-history-diagnostics`, E2E `architecture` |
+
+## 18. Sprint 2-C.3: 안전·적용 조건 일관성
+
+안전 정책 0.3.0, core 0.12.0. ImageSpec과 컴파일러 형식은 그대로입니다.
+
+```text
+compiler.ts ── assessAge(spec) → minor / ambiguous / adult / unknown
+               adult일 때만 tag age.adult_confirmed (자유 입력은 성인 확인 불가)
+               finding.resolution = "age" → params.relatedAttributes = 연령대, 외형적 연령, 실제 연령
+safety/baselinePolicy.ts ── signals + garment.intimate, age.adult_confirmed
+                            rules + minor-intimate-apparel (noneOf 성적 신호), appeal-age-unconfirmed (noneOf 성인·미성년·모호)
+safety/evaluate.ts ── 규칙 = allOf(그룹마다 하나 이상) AND noneOf(모두 없음)
+catalogs/person/clothing.ts ── INTIMATE_INNERWEAR 8개 → policyTags garment.intimate
+catalogs/person/appearance.ts ── scope forPerson (피사체 미설정이어도 적용)
+components/navigation.ts ── GoToAttribute 컨텍스트 (PrompterApp) → Detailed 탐색(navigatorRef) 또는 Detailed로 전환 후 initialAttributeId
+components/RelatedSettings.tsx ── “관련 설정” 버튼 (필드 안내, 미리보기 차단 패널)
+modes/BasicComposer.tsx ── 피사체 미설정이고 값이 없으면 인물 전용 속성은 표시 대기 (표시 규칙만)
+```
+
+| 보장 | 근거 테스트 |
+|---|---|
+| 0.2.0 대비 차이 170개(불변 840개, 합계 1,010개)가 모두 승인 범주, 차단 → 허용 0개, 나체·노골적 내용 불변 | `safety-policy-0.3` |
+| 연령 상태 10개 × 성적 매력 표현(등록·사용자 정의·자유 입력) | `safety-policy-0.3` |
+| 출력 경로, 제외, 적용 불가, 초기화·복원, 프리셋·되돌리기, JSON 가져오기로 우회할 수 없음 | `safety-policy-0.3` |
+| 같은 의미의 의복 표현(등록 선택지·자유 입력)은 같은 결과, 성별과 무관 | `safety-policy-0.3`, `clothing-catalog` |
+| 출력 순서 불변(정책 고정 골든), TD-14 차이는 외모 방향 문장뿐 | `prompt-order` |
+| UI: 안내, 연령 설정으로 이동, 피사체 없이 시작, Basic 표시 | `component/safety-applicability`, `component/app`, E2E `safety` |
