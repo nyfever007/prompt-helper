@@ -18,6 +18,7 @@ import {
   type GroupDefinition,
   type OptionDefinition,
   type PresetDefinition,
+  type PromptGroup,
   type Tier,
 } from "./schema";
 import { compareSemVer } from "./semver";
@@ -56,6 +57,9 @@ const byOrderThenId = (a: { order: number; id: string }, b: { order: number; id:
 export class CatalogRegistry implements ConditionContext {
   private readonly attributesById: ReadonlyMap<string, AttributeDefinition>;
   private readonly sortedAttributes: readonly AttributeDefinition[];
+  /** Prompt output order (TD-08): the catalog `promptOrder` flattened, or the UI order when absent. Computed once. */
+  private readonly promptOrdered: readonly AttributeDefinition[];
+  private readonly promptGroupById: ReadonlyMap<string, string>;
   private readonly sortedGroups: readonly GroupDefinition[];
   private readonly sortedCategories: readonly CategoryDefinition[];
   /** Option lookup by id per option attribute (the catalog is deep-frozen, so indexes never go stale). */
@@ -66,6 +70,11 @@ export class CatalogRegistry implements ConditionContext {
   private constructor(private readonly catalog: Catalog) {
     this.sortedAttributes = Object.freeze([...catalog.attributes].sort(byOrderThenId));
     this.attributesById = new Map(this.sortedAttributes.map((a) => [a.id, a]));
+    // Integrity guarantees every attribute is listed exactly once when `promptOrder` exists.
+    this.promptOrdered = catalog.promptOrder
+      ? Object.freeze(catalog.promptOrder.flatMap((g) => g.attributes.map((id) => this.attributesById.get(id)!)))
+      : this.sortedAttributes;
+    this.promptGroupById = new Map((catalog.promptOrder ?? []).flatMap((g) => g.attributes.map((id) => [id, g.id] as const)));
     this.optionsById = new Map(
       this.sortedAttributes.filter(isOptionAttribute).map((a) => [a.id, new Map(a.options.map((o) => [o.id, o] as const))] as const),
     );
@@ -179,7 +188,24 @@ export class CatalogRegistry implements ConditionContext {
     return g;
   }
 
-  /** All attributes in deterministic (order, id) order. */
+  /**
+   * All attributes in PROMPT OUTPUT order (TD-08): the catalog's `promptOrder` groups, or
+   * (order, id) when the catalog has none. The compiler uses this; the UI uses `attributes()`.
+   */
+  promptAttributes(): readonly AttributeDefinition[] {
+    return this.promptOrdered;
+  }
+
+  /** Prompt output group of an attribute (undefined when the catalog has no `promptOrder`). */
+  promptGroupOf(attributeId: string): string | undefined {
+    return this.promptGroupById.get(attributeId);
+  }
+
+  get promptGroups(): readonly PromptGroup[] {
+    return this.catalog.promptOrder ?? [];
+  }
+
+  /** All attributes in deterministic UI (order, id) order. */
   attributes(): readonly AttributeDefinition[] {
     return this.sortedAttributes;
   }
@@ -325,6 +351,8 @@ function checkIntegrity(catalog: Catalog): Diagnostic[] {
   for (const a of catalog.attributes) out.push(...checkAttributeUi(a, attributes, catalog));
   out.push(...checkPresets(catalog, attributes));
   out.push(...checkMigrations(catalog, attributes));
+
+  out.push(...checkPromptOrder(catalog, attributes));
 
   const ruleIds = new Set<string>();
   for (const r of catalog.rules) {
@@ -557,6 +585,27 @@ function checkMigrations(catalog: Catalog, attributes: Map<string, AttributeDefi
   return out;
 }
 
+/** `promptOrder` (TD-08): known, unique group ids; every attribute listed exactly once. */
+function checkPromptOrder(catalog: Catalog, attributes: Map<string, AttributeDefinition>): Diagnostic[] {
+  if (!catalog.promptOrder) return [];
+  const out: Diagnostic[] = [];
+  const groups = new Set<string>();
+  const listed = new Map<string, string>();
+  for (const g of catalog.promptOrder) {
+    if (groups.has(g.id)) out.push(error("catalog.prompt_order_duplicate_group", `Duplicate prompt group "${g.id}"`));
+    groups.add(g.id);
+    for (const id of g.attributes) {
+      if (!attributes.has(id)) out.push(error("catalog.prompt_order_unknown", `Prompt group "${g.id}" lists unknown attribute "${id}"`));
+      else if (listed.has(id)) out.push(error("catalog.prompt_order_duplicate", `Attribute "${id}" is listed in prompt groups "${listed.get(id)}" and "${g.id}"`));
+      else listed.set(id, g.id);
+    }
+  }
+  for (const id of attributes.keys()) {
+    if (!listed.has(id)) out.push(error("catalog.prompt_order_missing", `Attribute "${id}" has no place in promptOrder`));
+  }
+  return out;
+}
+
 function checkCondition(c: Condition, attributes: Map<string, AttributeDefinition>, where: string): Diagnostic[] {
   if (c.op === "derived") return [];
   if (c.op === "intervalMismatch") {
@@ -570,6 +619,11 @@ function checkCondition(c: Condition, attributes: Map<string, AttributeDefinitio
   const target = attributes.get(c.attributeId);
   if (!target) {
     return [error("catalog.unknown_attribute_ref", `${where} references unknown attribute "${c.attributeId}"`)];
+  }
+  if (c.op === "numberIn") {
+    if (target.type !== "number") return [error("catalog.invalid_condition", `${where}: numberIn requires a number attribute ("${c.attributeId}")`)];
+    if (c.min !== undefined && c.max !== undefined && c.min > c.max) return [error("catalog.invalid_condition", `${where}: numberIn min > max`)];
+    return [];
   }
   if (c.op === "selectedCount" && !isOptionAttribute(target)) {
     return [error("catalog.invalid_condition", `${where}: selectedCount requires an option attribute ("${c.attributeId}")`)];

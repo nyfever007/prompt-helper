@@ -5,6 +5,7 @@ import {
   type CatalogInput,
   type SelectionValue,
 } from "@/domain";
+import { placeUnlistedByOrder } from "@/testing/promptOrder";
 
 /** Deep clone of the core catalog as plain mutable data. */
 export const cloneCore = (): CatalogInput => structuredClone(coreCatalog) as CatalogInput;
@@ -24,7 +25,7 @@ export const coreAttr = (c: CatalogInput, id: string): MutableSingle => {
  */
 export const buildExtendedCatalog = (): CatalogInput => {
   const c = cloneCore();
-  c.version = "0.11.0";
+  c.version = "0.12.0";
 
   // Hierarchical subject sub-categories (Sprint 4 will expand these for real).
   coreAttr(c, "subject.kind").options.push(
@@ -118,8 +119,8 @@ export const buildExtendedCatalog = (): CatalogInput => {
   c.migrations = [
     ...(c.migrations ?? []),
     {
-      fromVersion: "0.10.0",
-      toVersion: "0.11.0",
+      fromVersion: "0.11.0",
+      toVersion: "0.12.0",
       changes: [
         { op: "renameOption", attributeId: "style.preset", from: "render_3d", to: "cgi_render", reason: { en: "Clearer id", ko: "더 명확한 ID" } },
         { op: "renameOption", attributeId: "mood.tone", from: "eerie", to: "uncanny", reason: { en: "Clearer id", ko: "더 명확한 ID" } },
@@ -135,7 +136,7 @@ export const buildExtendedCatalog = (): CatalogInput => {
     ...r,
     when: r.when.map((w) => ("optionIds" in w ? { ...w, optionIds: w.optionIds.map((id) => (id === "eerie" ? "uncanny" : id)) } : w)),
   }));
-  return c;
+  return placeUnlistedByOrder(c);
 };
 
 export const extendedRegistry = (): CatalogRegistry => CatalogRegistry.createOrThrow(buildExtendedCatalog());
@@ -168,7 +169,7 @@ export const buildPolicyCatalog = (): CatalogInput => {
     single("x.body", 3040, [["slim", ["body.slim"]], ["curvy", ["body.curvy"]], ["athletic", ["body.athletic"]]]),
     single("x.exposure", 3050, [["clothed", []], ["unclothed_figure", ["exposure.nudity"]]]),
   );
-  return c;
+  return placeUnlistedByOrder(c);
 };
 export const policyRegistry = (): CatalogRegistry => CatalogRegistry.createOrThrow(buildPolicyCatalog());
 

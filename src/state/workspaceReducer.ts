@@ -28,17 +28,28 @@ export type WorkspaceAction =
   | { type: "applyPreset"; plan: PresetPlan; mode: "all" | "onlyEmpty" }
   | { type: "undoPreset" }
   | { type: "setExcluded"; attributeId: string; excluded: boolean }
-  | { type: "resetCategory"; categoryId: string }
-  | { type: "undoCategoryReset" };
+  | { type: "resetCategory"; categoryId: string; at?: string }
+  /** Restore one recorded category reset (default: the most recent). */
+  | { type: "undoCategoryReset"; recordId?: number };
+
+/** Session-only history of category resets (TD-09): most recent first, at most this many. */
+export const CATEGORY_RESET_HISTORY_LIMIT = 5;
 
 /**
- * Session-only record of the LAST category reset: exactly the selection objects
- * it removed. Undo restores each only if that attribute is still unset.
+ * Session-only record of one category reset (TD-09): exactly the selection objects it
+ * removed (value, exclusion, custom entries, preset origin — by reference), plus which of
+ * those attributes the user changed afterwards. Restoring brings back only attributes that
+ * are still unset AND untouched since this reset; everything else stays as it is now.
  */
 export interface CategoryResetRecord {
+  /** Increasing sequence number in this session (operation order). */
   id: number;
   categoryId: string;
+  /** When the reset happened (ISO, for the history list); absent in tests that omit it. */
+  at?: string;
   removed: Record<string, AttributeSelection>;
+  /** Removed attributes that were set, cleared or toggled again after this reset (kept on restore). */
+  editedSince: string[];
 }
 
 /** Result of the last category-reset undo (for the notice). */
@@ -46,6 +57,7 @@ export interface CategoryRestoreResult {
   id: number;
   categoryId: string;
   restored: string[];
+  /** Kept as they are now: set again or edited (incl. cleared) after the reset. */
   skipped: string[];
 }
 
@@ -76,7 +88,10 @@ export interface WorkspaceState {
   /** Session-only record of the LAST preset application (undo target). */
   presetTransaction: PresetTransaction | null;
   lastPresetUndo: PresetUndoResult | null;
-  lastCategoryReset: CategoryResetRecord | null;
+  /** Recent category resets, most recent first (≤ CATEGORY_RESET_HISTORY_LIMIT). */
+  categoryResets: CategoryResetRecord[];
+  /** Last used reset sequence number (keeps ids increasing after the history empties). */
+  lastResetSeq?: number;
   lastCategoryRestore: CategoryRestoreResult | null;
 }
 
@@ -86,7 +101,7 @@ export const initialWorkspaceState = (registry: CatalogRegistry): WorkspaceState
   transition: null,
   presetTransaction: null,
   lastPresetUndo: null,
-  lastCategoryReset: null,
+  categoryResets: [],
   lastCategoryRestore: null,
 });
 
@@ -102,11 +117,49 @@ const diffInactive = (registry: CatalogRegistry, before: ImageSpec, after: Image
   return { id: prevId + 1, newlyInactive, reactivated };
 };
 
+/** Attribute ids whose stored selection differs between two specs (added, removed or replaced). */
+const changedAttributeIds = (before: ImageSpec, after: ImageSpec): string[] => {
+  if (before === after) return [];
+  const out: string[] = [];
+  for (const id of Object.keys(before.selections)) if (before.selections[id] !== after.selections[id]) out.push(id);
+  for (const id of Object.keys(after.selections)) if (!(id in before.selections)) out.push(id);
+  return out;
+};
+
+/** Marks later changes in every recorded reset that removed those attributes (their current state wins on restore). */
+const trackEdits = (records: CategoryResetRecord[], changed: readonly string[]): CategoryResetRecord[] => {
+  if (changed.length === 0 || records.length === 0) return records;
+  let touched = false;
+  const next = records.map((r) => {
+    const hits = changed.filter((id) => id in r.removed && !r.editedSince.includes(id));
+    if (hits.length === 0) return r;
+    touched = true;
+    return { ...r, editedSince: [...r.editedSince, ...hits] };
+  });
+  return touched ? next : records;
+};
+
 /**
  * Thin UI reducer over pure domain operations. Invalid actions leave the
  * spec untouched (the UI only offers valid values).
  */
-export const createWorkspaceReducer =
+export const createWorkspaceReducer = (registry: CatalogRegistry) => {
+  const step = createStep(registry);
+  return (state: WorkspaceState, action: WorkspaceAction): WorkspaceState => {
+    const next = step(state, action);
+    if (next === state || next.spec === state.spec) return next;
+    // Any later change of an attribute that a recorded reset removed protects the current value (TD-09).
+    // The new record of a `resetCategory` is excluded: its own removals are not edits.
+    const changed = changedAttributeIds(state.spec, next.spec);
+    if (action.type === "resetCategory") {
+      const [own, ...older] = next.categoryResets;
+      return own ? { ...next, categoryResets: [own, ...trackEdits(older, changed)] } : next;
+    }
+    return { ...next, categoryResets: trackEdits(next.categoryResets, changed) };
+  };
+};
+
+const createStep =
   (registry: CatalogRegistry) =>
   (state: WorkspaceState, action: WorkspaceAction): WorkspaceState => {
     const prevId = state.transition?.id ?? 0;
@@ -147,25 +200,37 @@ export const createWorkspaceReducer =
         let tx = state.presetTransaction;
         // Cleared preset values count as user edits: a later preset undo never re-writes them.
         for (const id of Object.keys(removed)) tx = tx ? markUserEdited(tx, id) : tx;
+        const record: CategoryResetRecord = {
+          id: (state.categoryResets[0]?.id ?? state.lastResetSeq ?? 0) + 1,
+          categoryId: action.categoryId,
+          ...(action.at ? { at: action.at } : {}),
+          removed,
+          editedSince: [],
+        };
         return {
           ...state,
           spec,
           transition: diffInactive(registry, state.spec, spec, prevId) ?? state.transition,
           presetTransaction: tx,
-          lastCategoryReset: { id: (state.lastCategoryReset?.id ?? 0) + 1, categoryId: action.categoryId, removed },
+          // Newest first; the oldest record beyond the limit is dropped (session only, never persisted).
+          categoryResets: [record, ...state.categoryResets].slice(0, CATEGORY_RESET_HISTORY_LIMIT),
+          lastResetSeq: record.id,
           lastCategoryRestore: null,
         };
       }
       case "undoCategoryReset": {
-        const record = state.lastCategoryReset;
+        const record = action.recordId === undefined ? state.categoryResets[0] : state.categoryResets.find((r) => r.id === action.recordId);
         if (!record) return state;
-        const result = restoreCategoryReset(state.spec, record.removed);
+        // Attributes edited after this reset keep their current state (even when that is “unset”).
+        const editable = Object.fromEntries(Object.entries(record.removed).filter(([id]) => !record.editedSince.includes(id)));
+        const result = restoreCategoryReset(state.spec, editable);
+        const skipped = [...new Set([...result.skipped, ...record.editedSince])].sort();
         return {
           ...state,
           spec: result.spec,
           transition: diffInactive(registry, state.spec, result.spec, prevId) ?? state.transition,
-          lastCategoryReset: null,
-          lastCategoryRestore: { id: (state.lastCategoryRestore?.id ?? 0) + 1, categoryId: record.categoryId, restored: result.restored, skipped: result.skipped },
+          categoryResets: state.categoryResets.filter((r) => r !== record),
+          lastCategoryRestore: { id: (state.lastCategoryRestore?.id ?? 0) + 1, categoryId: record.categoryId, restored: result.restored, skipped },
         };
       }
       case "applyPreset": {
@@ -204,15 +269,17 @@ export const createWorkspaceReducer =
           transition: null,
           presetTransaction: null,
           lastPresetUndo: null,
-          // A full reset supersedes a pending category undo (restoring the full snapshot covers it).
-          lastCategoryReset: null,
+          // A full reset supersedes pending category undos (restoring the full snapshot covers them).
+          categoryResets: [],
+          lastResetSeq: state.categoryResets[0]?.id ?? state.lastResetSeq,
           lastCategoryRestore: null,
         };
       }
       case "restoreResetSnapshot":
         if (!state.resetSnapshot) return state;
-        return { ...state, spec: state.resetSnapshot, resetSnapshot: null, transition: null, presetTransaction: null, lastCategoryReset: null };
+        return { ...state, spec: state.resetSnapshot, resetSnapshot: null, transition: null, presetTransaction: null, categoryResets: [] };
       case "replace":
-        return { ...state, spec: action.spec, transition: null, presetTransaction: null, lastCategoryReset: null };
+        // A whole new spec (import, recovery): earlier resets no longer describe it.
+        return { ...state, spec: action.spec, transition: null, presetTransaction: null, categoryResets: [] };
     }
   };

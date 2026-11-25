@@ -155,8 +155,10 @@ export function PromptPreview({
           <ul>
             {notes.map((d, i) => {
               const desc = describeDiagnostic(d, ctx);
+              const basis = d.code.startsWith("rule.") ? (d.params?.basis as "contradiction" | "convention" | undefined) : undefined;
               return (
-                <li key={`${d.code}-${i}`} className={`diag diag--${d.severity}`} data-code={d.code}>
+                <li key={`${d.code}-${i}`} className={`diag diag--${d.severity}`} data-code={d.code} data-basis={basis}>
+                  {basis && <span className={`diag__basis diag__basis--${basis}`}>{t.field.basis[basis]}</span>}
                   {desc.text}
                   {desc.guidance && <span className="diag__guidance">{desc.guidance}</span>}
                 </li>

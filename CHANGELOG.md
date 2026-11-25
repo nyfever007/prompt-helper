@@ -9,7 +9,38 @@
 - 컴파일러(`COMPILER_VERSION`): 0.1.0 / generic-en adapter: 0.1.0
 - 로컬 저장 envelope(`STORAGE_FORMAT_VERSION`): 1
 
-## [0.10.0] — 2026-11-25 — Sprint 2-C.1: UI, UX & accessibility + 로드맵 갱신 (승인됨)
+## [0.11.0] — 2026-11-25 — Sprint 2-C.2: Architecture, state management & diagnostics (승인됨)
+
+버전 변화: 카탈로그 형식 0.4.0 → **0.5.0**(추가만), core 카탈로그 0.10.0 → **0.11.0**(ID 변경 없음, 마이그레이션 `changes: []`), 컴파일러 0.4.0 → **0.5.0**(같은 카탈로그 순서면 같은 출력). ImageSpec 0.3.0과 안전 정책 0.2.0은 그대로이며, 프롬프트 출력도 같습니다.
+
+### Added
+- TD-08: 카탈로그 `promptOrder` — 출력 그룹 15개와 그룹 안 속성 ID 목록(`catalogs/prompt-order.ts`)
+  - UI `order`·카테고리와 독립적입니다.
+  - 무결성 검사: 누락·중복·알 수 없는 ID·중복 그룹은 오류입니다.
+  - `registry.promptAttributes()`·`promptGroupOf()`·`promptGroups`를 추가했습니다.
+  - 골든 데이터: `tests/fixtures/golden-prompt-order-0.10.0.json`(변경 전 코드로 기록)
+- TD-09: 카테고리 초기화 이력(세션 최근 5개, 최신 순)
+  - 기록마다 복원할 수 있고, 초기화 뒤 사용자가 바꾼 속성(`editedSince`)은 현재 상태를 유지합니다.
+  - 이전 초기화 목록 UI를 추가했습니다.
+- TD-10: 조건 `numberIn`, 규칙 `basis`(contradiction·convention), 규칙 24개
+  - 의미 충돌 17개: 얼굴·눈·코·입술·신체·표정
+  - 관례 차이 7개: 조리개 ↔ 피사계 심도, 렌즈 ↔ 원근감, 빛 질감 ↔ 그림자 경계, 대비 ↔ 그림자
+  - 안내에 “의미 충돌”·“관례와 다름” 표시와 관련 설정 목록을 붙였습니다.
+- 테스트:
+  - `prompt-order`(13), `consistency-rules`(32), `category-reset` TD-09(9), `migration`(+1)
+  - `component/reset-history-diagnostics`(3), E2E `architecture`(데스크톱·모바일 각 2)
+- 스크린샷 `docs/screenshots/sprint-2c2/`
+- 문서: ADR-062–064, `docs/SPRINT_2C2_REPORT.md`, CATALOG_DESIGN_STANDARD 0.3.0, 카탈로그 문서(신체·얼굴·눈·코·입술·표정·카메라·조명)의 TD-10 항목
+
+### Changed
+- `WorkspaceState.lastCategoryReset` → `categoryResets`(이력)
+- `undoCategoryReset(recordId?)`: 복원 안내의 “유지한 항목”이 초기화 뒤 지운 경우도 포함합니다.
+- 기존 규칙 `sky-light-in-studio`를 관례 차이로 분류했습니다(심각도 그대로).
+- 신체 테스트의 “신체 규칙 없음”을 “신체 속성만 읽는 비차단 규칙 5개”로 정확히 바꿨습니다(ADR-052 일부 대체).
+- 테스트에서 core를 복제해 속성을 추가하는 카탈로그는 `placeUnlistedByOrder`로 예전 위치에 배치합니다.
+- 테스트 확장 카탈로그를 0.11.0 → 0.12.0으로 올렸습니다.
+
+## [0.10.0] — 2026-11-25 — Sprint 2-C.1: UI, UX & accessibility + 로드맵 갱신 (승인·병합, PR #10)
 
 버전 변화: core 카탈로그 0.9.0 → **0.10.0**(ID·선택지·출력 변경 없음, 마이그레이션 `changes: []`). ImageSpec 0.3.0, 카탈로그 형식 0.4.0, 컴파일러 0.4.0, 안전 정책 0.2.0은 그대로.
 

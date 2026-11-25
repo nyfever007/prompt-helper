@@ -24,8 +24,10 @@ import type { HiddenReason, PromptAdapter, PromptCompilation, PromptFragment, Pr
  * conditional wording, `covers` de-duplication, safety over non-output values
  * and structured age signals. Specs that use none of these compile exactly as
  * with 0.3.0 (regression-tested).
+ * 0.5.0: output order from the catalog `promptOrder` (separate from the UI order,
+ * TD-08); same text for the same catalog order (golden-tested).
  */
-export const COMPILER_VERSION = "0.4.0";
+export const COMPILER_VERSION = "0.5.0";
 
 /** Collapse whitespace for prompt output. The stored spec is never modified. */
 export const normalizeWhitespace = (text: string): string => text.replace(/\s+/gu, " ").trim();
@@ -178,11 +180,15 @@ export const compilePrompt = (
   const hidden = new Map<string, HiddenReason>();
   const covered: NonNullable<PromptCompilation["covered"]> = [];
 
+  // Prompt output order (TD-08): the catalog's explicit `promptOrder`, independent of the UI order.
+  // Precomputed by the registry — no sorting here. Covers / takeovers / fragments all follow it.
+  const promptOrder = registry.promptAttributes();
+
   // Pass 1 — which attributes will state their own meaning (set, valid, included, applicable).
   const producing = new Map<string, OptionDefinition[]>();
   const validSet: AttributeDefinition[] = [];
   if (catalogUsable) {
-    for (const attribute of registry.attributes()) {
+    for (const attribute of promptOrder) {
       const selection = spec.selections[attribute.id];
       if (!selection) continue; // unset → nothing
       if (hasErrors(valueProblems.get(attribute.id) ?? [])) continue; // already reported
@@ -211,7 +217,7 @@ export const compilePrompt = (
 
   // Semantic coverage: an attribute whose (registered) meaning is already stated by
   // another produced option is output once — by the covering attribute (catalog order).
-  for (const attribute of registry.attributes()) {
+  for (const attribute of promptOrder) {
     const opts = producing.get(attribute.id);
     if (!opts || covered.some((c) => c.attributeId === attribute.id)) continue;
     for (const o of opts) {
@@ -232,7 +238,7 @@ export const compilePrompt = (
 
   // Pass 2 — fragments. A semantic unit of a preset phrase whose axis is stated by a
   // direct selection is taken over by that selection (output once, direct choice wins).
-  for (const attribute of registry.attributes()) {
+  for (const attribute of promptOrder) {
     if (!producing.has(attribute.id)) continue;
     const selection = spec.selections[attribute.id]!;
     const takenOver = new Set<string>();

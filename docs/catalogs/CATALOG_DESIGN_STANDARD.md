@@ -1,6 +1,6 @@
 # Prompter — Catalog Design Standard
 
-- Version: 0.2.0
+- Version: 0.3.0
 - Status: Agreed design baseline; implementation changes require approval
 - Parent specification: `PROMPTER_MASTER_PLAN.md`
 - Applies to: Basic, Detailed, Precision and subsequent catalog extensions
@@ -28,7 +28,7 @@ Every attribute definition documents:
 | Rules | Dependencies, conflicts, safety restrictions and actionable diagnostics |
 | Visual examples | Asset metadata, comparison controls, provenance and rights |
 | Tier / status | Basic, Detailed, Precision; draft or approved |
-| Version / order | Migration and display management |
+| Version / order | Migration and display management. `order` is the UI order only; the prompt output position is the catalog `promptOrder` (0.3.0, TD-08) |
 | Suggested default | Optional suggestion, never an implicit selection |
 
 ## 3. Independence and semantic axes
@@ -73,11 +73,11 @@ Use cards for visually meaningful comparisons; search for large vocabularies; mu
 
 ## 8. Prompt compilation and provenance
 
-Compile only explicit eligible selections. Keep the source ImageSpec independent of prompt prose. Preserve deterministic compilation, fragment provenance and version metadata. Deduplicate equivalent semantics; direct choices override preset-derived values on the same semantic axis. Retain independent axes and diagnose genuine contradictions. Distinguish (D10): semantic duplicates (`covers` — output once with provenance), same-axis overrides (direct > preset), independent axes (all output), genuine conflicts (rule diagnostics, nothing rewritten) and atypical but valid creative combinations (non-blocking notice only). Conditional wording (`prompt.variants`) may depend on derived facts such as the age assessment; the stored selection never changes. Do not use arbitrary string deletion as the semantic mechanism. Never infer a visual stereotype from context. Preserve free text verbatim and show mixed-language notices when applicable. Provider limitations must be disclosed rather than silently changing intent.
+Compile only explicit eligible selections. Keep the source ImageSpec independent of prompt prose. Preserve deterministic compilation, fragment provenance and version metadata. Deduplicate equivalent semantics; direct choices override preset-derived values on the same semantic axis. Retain independent axes and diagnose genuine contradictions. Distinguish (D10): semantic duplicates (`covers` — output once with provenance), same-axis overrides (direct > preset), independent axes (all output), genuine conflicts (rule diagnostics, nothing rewritten) and atypical but valid creative combinations (non-blocking notice only). Conditional wording (`prompt.variants`) may depend on derived facts such as the age assessment; the stored selection never changes. Do not use arbitrary string deletion as the semantic mechanism. **Output order (0.3.0, TD-08):** the catalog `promptOrder` lists output groups and, inside each, attribute ids in output order; every attribute appears exactly once (integrity error otherwise). It is independent of the UI `order`, categories and subcategories: a new attribute is placed by inserting its id where its sentence belongs, without renumbering anything. **Conflict classes (0.3.0, TD-10):** a `conflict` rule states its `basis` — `contradiction` (opposite meanings, warning) or `convention` (unusual against common practice but legitimate, info). Physical realism or photographic convention is never enforced; fantasy and stylization stay possible. Choice ↔ slider rules use `numberIn` and hold only for a slider value the user set (no inference). Never infer a visual stereotype from context. Preserve free text verbatim and show mixed-language notices when applicable. Provider limitations must be disclosed rather than silently changing intent.
 
 ## 9. Presets and reset
 
-Presets are explicit partial patches. Preview additions, changes, unchanged values, inapplicable/restricted patches and expected conflicts. Require confirmation before overwriting explicit values. Preserve unrelated selections and record preset provenance. Undo restores only affected values not subsequently edited by the user, even if the edited value later equals the preset value. Current session-level undo remains the baseline. User-defined permanent presets and extended history remain future work.
+Presets are explicit partial patches. Preview additions, changes, unchanged values, inapplicable/restricted patches and expected conflicts. Require confirmation before overwriting explicit values. Preserve unrelated selections and record preset provenance. Undo restores only affected values not subsequently edited by the user, even if the edited value later equals the preset value. Current session-level undo remains the baseline. **Category reset history (0.3.0, TD-09):** the most recent category resets of the session (up to 5) can each be restored independently; a restore brings back only that reset's values whose attribute is still unset and was not changed after the reset (a later edit — including clearing — wins); stored values come back exactly (exclusion, custom entries, preset origin, inactive values) and remain subject to the safety policy. User-defined permanent presets and extended history remain future work.
 
 ## 10. Visual example production (TD-03)
 
@@ -105,5 +105,6 @@ A lock protects selected specification values against presets, bulk reset and fu
 
 ## 14. Change log
 
+- 0.3.0 (2026-11-25, Sprint 2-C.2): explicit prompt output order separate from UI order (TD-08); category reset history (TD-09); contradiction / convention conflict classes and slider conditions (TD-10).
 - 0.2.0 (2026-11-24, Sprint 2-B.1 approval): output inclusion default (included) and representation decided; expression role fields; custom value schema and rules; category reset scope; semantic relation classes and conditional wording; safety over non-output values and structured age assessment.
 - 0.1.0: Consolidated agreed catalog principles, output exclusion, custom values, visual examples, and future locking. Output default and technical representation remain review items.

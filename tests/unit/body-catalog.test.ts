@@ -143,12 +143,22 @@ describe("registration and integrity (45 new, 153 cumulative person attributes)"
 });
 
 describe("independence (approval §10)", () => {
-  it("no body attribute references identity (gender, age, nationality, ethnicity) or any other attribute; there are no body rules", () => {
+  it("no body attribute references identity (gender, age, nationality, ethnicity) or any other attribute; body rules (TD-10) are non-blocking and stay within the body", () => {
     for (const a of body) {
       const refs = (a.appliesWhen ?? []).flatMap(conditionAttributeIds);
       expect(refs, a.id).toEqual(["subject.kind"]);
     }
-    expect(core.rules.filter((r) => r.involves.some((id) => id.startsWith("person.body.")))).toEqual([]);
+    // Sprint 2-C.2 (TD-10) added choice ↔ slider contradictions; they read only body attributes (never identity) and never block.
+    const bodyRules = core.rules.filter((r) => r.involves.some((id) => id.startsWith("person.body.")));
+    expect(bodyRules.map((r) => r.id)).toEqual([
+      "body-muscular-build-vs-low-muscle-mass", "body-plump-build-vs-low-body-fat", "body-slender-build-vs-high-body-fat",
+      "body-hourglass-vs-low-waist-hip-contrast", "body-chibi-vs-tall-head-ratio",
+    ]);
+    for (const r of bodyRules) {
+      expect(r.involves.every((id) => id.startsWith("person.body.")), r.id).toBe(true);
+      expect(r.when.flatMap(conditionAttributeIds).every((id) => id.startsWith("person.body.")), r.id).toBe(true);
+      expect([r.kind, r.severity, r.basis, r.actions], r.id).toEqual(["conflict", "warning", "contradiction", undefined]);
+    }
   });
 
   it("the overall build (or identity) sets no other body value; any combination compiles as chosen", () => {
@@ -160,9 +170,13 @@ describe("independence (approval §10)", () => {
     ]);
     expect(Object.keys(spec.selections).filter((k) => k.startsWith("person.body."))).toEqual([B("build")]);
     // independent axes freely combine (no automatic linkage, no diagnostics)
-    const c = out([[B("build"), single("slender")], [B("muscle_mass"), num(5)], [B("body_fat"), num(5)], [B("frame"), num(1)], [B("shoulder_width"), num(5)], [B("pelvis_width"), num(1)], [B("waist_width"), num(1)], [B("waist_curvature"), num(1)]]);
+    const c = out([[B("build"), single("slender")], [B("muscle_mass"), num(5)], [B("body_fat"), num(2)], [B("frame"), num(1)], [B("shoulder_width"), num(5)], [B("pelvis_width"), num(1)], [B("waist_width"), num(1)], [B("waist_curvature"), num(1)]]);
     expect(c.fragments).toHaveLength(8);
     expect(c.diagnostics.filter((d) => d.code.startsWith("rule.") || d.code.startsWith("selection."))).toEqual([]);
+    // A real contradiction (TD-10) is only REPORTED: every value is still output as chosen, nothing changes.
+    const w = out([[B("build"), single("slender")], [B("muscle_mass"), num(5)], [B("body_fat"), num(5)]]);
+    expect(w.fragments).toHaveLength(3);
+    expect(w.diagnostics.filter((d) => d.code.startsWith("rule.")).map((d) => [d.code, d.severity])).toEqual([["rule.body-slender-build-vs-high-body-fat", "warning"]]);
   });
 
   it("no body phrase links the body to expression, personality, attractiveness, health, sexuality or clothing", () => {

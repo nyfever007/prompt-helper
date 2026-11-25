@@ -50,6 +50,11 @@ export const evaluateCondition = (condition: Condition, spec: ImageSpec, ctx?: C
     }
     case "intervalMismatch":
       return ctx?.intervalMismatch ? ctx.intervalMismatch(spec, condition.attributeId, condition.groupAttributeId) : false;
+    case "numberIn": {
+      const value = spec.selections[condition.attributeId]?.value;
+      if (value?.kind !== "number") return false; // unset (or not a number) → nothing is inferred
+      return (condition.min === undefined || value.value >= condition.min) && (condition.max === undefined || value.value <= condition.max);
+    }
   }
 };
 

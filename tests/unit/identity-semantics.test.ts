@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { placeUnlistedByOrder } from "@/testing/promptOrder";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -291,7 +292,7 @@ describe("Unset / Selected / Excluded states (D3)", () => {
   it("Metadata role never emits prompt text but is still validated and safety-checked", () => {
     const c = cloneCore();
     c.attributes.push({ id: "x.meta.internal_id", domain: "x", status: "approved", type: "text", tier: "detailed", order: 5000, maxLength: 100, label: { en: "Internal id" }, prompt: { template: "{value}" }, expression: { role: "metadata", kind: "freeText" } });
-    const reg = CatalogRegistry.createOrThrow(c);
+    const reg = CatalogRegistry.createOrThrow(placeUnlistedByOrder(c));
     const spec = buildSpec(reg, [["subject.kind", single("person")], ["x.meta.internal_id", text("CHAR-0042")]]);
     expect(compilePrompt(spec, reg).prompt).toBe("Main subject: a single person.");
     const bad = buildSpec(reg, [["intent.description", text("a sexy pose")], ["x.meta.internal_id", text("schoolgirl")]]);
