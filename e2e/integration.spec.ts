@@ -207,10 +207,11 @@ test("E — complex saved spec survives reload, JSON export/import; Sprint 0/1/2
   expect(await stored(page)).toEqual(edited);
   expect(await promptText(page)).toBe(editedPrompt);
 
-  await ensurePreviewOpen(page);
+  // The JSON toolbar sits below the preview; on mobile the open preview sheet can cover it — close it first
+  // (same as composer.spec; found on a slower CI runner).
+  await closePreview(page);
   const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "JSON 내보내기" }).click()]);
   const json = await readFile((await download.path())!, "utf8");
-  await closePreview(page);
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   expect(await stored(page)).toEqual({});
