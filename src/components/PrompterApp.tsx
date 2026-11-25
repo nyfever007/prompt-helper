@@ -9,7 +9,6 @@ import {
   type CatalogRegistry,
   type KeyValueStore,
   type SpecAnalysis,
-  resolveText,
 } from "@/domain";
 import { fmt, getMessages, SUPPORTED_LOCALES, type Messages, type UiLocale } from "@/i18n/messages";
 import { MODES, useUiPrefs } from "@/state/useUiPrefs";
@@ -17,7 +16,7 @@ import { useWorkspace } from "@/state/useWorkspace";
 import { copyText } from "./clipboard";
 import { describeDiagnostic } from "./diagnostics";
 import { downloadText, timestamp } from "./download";
-import { attributeLabel, optionLabel } from "./format";
+import { attributeLabel, optionLabel, presetLabel } from "./format";
 import { ModePanel } from "./modes/ModePanel";
 import { GoToAttribute } from "./navigation";
 import { Notices, type Notice } from "./Notices";
@@ -141,7 +140,7 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
   }
   const undo = workspace.lastPresetUndo;
   if (undo) {
-    const name = resolveText(registry.getPreset(undo.presetId)?.label, locale) || undo.presetId;
+    const name = presetLabel(registry, undo.presetId, locale, t.random.name);
     const labels = (ids: string[]) => ids.map((id) => attributeLabel(registry, id, locale)).join(", ");
     derived.push({
       id: `preset-undo-${undo.id}`,

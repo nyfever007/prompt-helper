@@ -7,6 +7,7 @@ import {
   isOptionAttribute,
   resolveText,
   selectedCustomEntries,
+  isRandomSelection,
   selectedOptionIds,
   type AgeClass,
   type AttributeDefinition,
@@ -21,7 +22,7 @@ import {
 import { fmt, type Messages } from "@/i18n/messages";
 import { describeDiagnostic } from "../diagnostics";
 import { RelatedSettings } from "../RelatedSettings";
-import { attributeLabel, describeValue, optionLabel } from "../format";
+import { attributeLabel, describeValue, optionLabel, presetLabel } from "../format";
 import {
   CardsControl,
   ColorControl,
@@ -92,7 +93,8 @@ export function AttributeField(props: AttributeFieldProps) {
   const inactiveOptions = active ? selectedOptions.filter((o) => !isOptionActive(o)) : [];
   const classified = selectedOptions.filter((o) => o.classification && Object.keys(o.classification).length > 0);
   const restrictedOptions = isOptionAttribute(attribute) ? attribute.options.filter((o) => isOptionRestricted(o)) : [];
-  const presetName = selection?.origin ? resolveText(registry.getPreset(selection.origin.presetId)?.label, locale) || selection.origin.presetId : null;
+  const randomValue = isRandomSelection(selection);
+  const presetName = selection?.origin && !randomValue ? presetLabel(registry, selection.origin.presetId, locale, t.random.name) : null;
   const variantOptions = selectedOptions.filter((o) => o.prompt.variants?.length);
 
   // Option values with custom entries: every edit keeps the other part of the value.
@@ -133,6 +135,11 @@ export function AttributeField(props: AttributeFieldProps) {
           {isSet ? (excluded ? t.field.excludedBadge : t.field.set) : t.field.notSet}
         </span>
         {presetName && <span className="badge badge--preset">{fmt(t.detailed.fromPreset, { name: presetName })}</span>}
+        {randomValue && (
+          <span className="badge badge--random" data-testid={`random-${attribute.id}`}>
+            {t.random.badge}
+          </span>
+        )}
         {/* Sprint 2-C.1: include/exclude and clear sit together in the header, next to the state. */}
         {attribute.outputToggle && isSet && props.onSetExcluded && (
           <label className="output-toggle" data-testid={`output-toggle-${attribute.id}`}>

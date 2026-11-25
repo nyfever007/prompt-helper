@@ -10,6 +10,7 @@ export * from "./catalog/categories";
 export * from "./catalog/phrase";
 export { CONTROL_TYPES, defaultControl, TIER_RANK } from "./catalog/registry";
 export * from "./presets/presets";
+export * from "./random/composer";
 export * from "./spec/schema";
 export * from "./spec/values";
 export * from "./spec/factory";

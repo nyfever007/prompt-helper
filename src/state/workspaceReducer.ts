@@ -1,5 +1,7 @@
 import {
   type PresetApplyMode,
+  applyRandomComposition,
+  composeRandom,
   applyPresetPlan,
   applySelection,
   clearSelection,
@@ -28,6 +30,8 @@ export type WorkspaceAction =
   | { type: "replace"; spec: ImageSpec }
   | { type: "applyPreset"; plan: PresetPlan; mode: PresetApplyMode }
   | { type: "undoPreset" }
+  /** Sprint 2-D.6: one Random Composer run (deterministic for the seed). */
+  | { type: "applyRandom"; seed: number }
   | { type: "setExcluded"; attributeId: string; excluded: boolean }
   | { type: "resetCategory"; categoryId: string; at?: string }
   /** Restore one recorded category reset (default: the most recent). */
@@ -94,6 +98,8 @@ export interface WorkspaceState {
   /** Last used reset sequence number (keeps ids increasing after the history empties). */
   lastResetSeq?: number;
   lastCategoryRestore: CategoryRestoreResult | null;
+  /** Session-only summary of the last Random Composer run (its undo is `presetTransaction`). */
+  lastRandom?: { id: number; written: number; removed: number; safetyDropped: string[] } | null;
 }
 
 export const initialWorkspaceState = (registry: CatalogRegistry): WorkspaceState => ({
@@ -243,6 +249,24 @@ const createStep =
           transition: diffInactive(registry, state.spec, spec, prevId) ?? state.transition,
           presetTransaction: transaction,
           lastPresetUndo: null,
+        };
+      }
+      case "applyRandom": {
+        const composition = composeRandom(state.spec, registry, action.seed);
+        const { spec, transaction } = applyRandomComposition(state.spec, registry, composition);
+        if (transaction.changes.length === 0) return state;
+        return {
+          ...state,
+          spec,
+          transition: diffInactive(registry, state.spec, spec, prevId) ?? state.transition,
+          presetTransaction: transaction,
+          lastPresetUndo: null,
+          lastRandom: {
+            id: (state.lastRandom?.id ?? 0) + 1,
+            written: composition.patches.length,
+            removed: composition.stale.length,
+            safetyDropped: composition.safetyDropped,
+          },
         };
       }
       case "undoPreset": {

@@ -1,4 +1,4 @@
-import { resolveText, selectedCustomEntries, selectedOptionIds, type AttributeDefinition, type CatalogRegistry, type SelectionValue } from "@/domain";
+import { RANDOM_ORIGIN, resolveText, selectedCustomEntries, selectedOptionIds, type AttributeDefinition, type CatalogRegistry, type SelectionValue } from "@/domain";
 
 /** Human-readable, localized summary of a selection value (UI only). Custom entries show their name. */
 export const describeValue = (attribute: AttributeDefinition, value: SelectionValue, locale: string): string => {
@@ -31,3 +31,7 @@ export const optionLabel = (registry: CatalogRegistry, attributeId: string, opti
   const o = registry.getOption(attributeId, optionId);
   return o ? resolveText(o.label, locale) : optionId;
 };
+
+/** Display name of a preset id — the Random Composer's reserved origin (Sprint 2-D.6) is not a catalog preset. */
+export const presetLabel = (registry: CatalogRegistry, presetId: string, locale: string, randomName: string): string =>
+  presetId === RANDOM_ORIGIN.presetId ? randomName : resolveText(registry.getPreset(presetId)?.label, locale) || presetId;
