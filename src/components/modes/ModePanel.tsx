@@ -7,6 +7,7 @@ import type { Workspace } from "@/state/useWorkspace";
 import { DetailedEditor } from "../detailed/DetailedEditor";
 import type { DetailedNavigator } from "../navigation";
 import { BasicComposer } from "./BasicComposer";
+import { RandomComposer } from "./RandomComposer";
 import { RecommendedMode } from "./RecommendedMode";
 import { SpecSummary } from "./SpecSummary";
 
@@ -41,6 +42,7 @@ export function ModePanel({
 }) {
   if (mode === "recommended")
     return <RecommendedMode registry={registry} workspace={workspace} locale={locale} t={t} onPresetApplied={onPresetApplied} onEdit={(m) => onModeChange?.(m)} />;
+  if (mode === "random") return <RandomComposer registry={registry} workspace={workspace} locale={locale} t={t} onEdit={(m) => onModeChange?.(m)} />;
   if (mode === "basic") return <BasicComposer registry={registry} workspace={workspace} locale={locale} t={t} />;
   if (mode === "detailed")
     return (

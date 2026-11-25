@@ -53,6 +53,9 @@ export interface Workspace {
   lastPresetUndo: PresetUndoResult | null;
   applyPreset(plan: PresetPlan, mode: PresetApplyMode): void;
   undoPreset(): void;
+  /** Sprint 2-D.6: fill every applicable unset (or earlier random) attribute with random values. */
+  randomize(seed?: number): void;
+  lastRandom: { id: number; written: number; removed: number; safetyDropped: string[] } | null;
   /** Recent category resets in this session, most recent first (TD-09). */
   categoryResets: CategoryResetRecord[];
   lastCategoryRestore: CategoryRestoreResult | null;
@@ -129,6 +132,7 @@ export const useWorkspace = (registry: CatalogRegistry, store: KeyValueStore | n
   const replace = useCallback((next: ImageSpec) => dispatch({ type: "replace", spec: next }), []);
   const applyPreset = useCallback((plan: PresetPlan, mode: PresetApplyMode) => dispatch({ type: "applyPreset", plan, mode }), []);
   const undoPreset = useCallback(() => dispatch({ type: "undoPreset" }), []);
+  const randomize = useCallback((seed?: number) => dispatch({ type: "applyRandom", seed: seed ?? Math.floor(Math.random() * 2 ** 31) }), []);
   const setExcluded = useCallback((attributeId: string, excluded: boolean) => dispatch({ type: "setExcluded", attributeId, excluded }), []);
   const resetCategory = useCallback((categoryId: string) => dispatch({ type: "resetCategory", categoryId, at: new Date().toISOString() }), []);
   const undoCategoryReset = useCallback((recordId?: number) => dispatch({ type: "undoCategoryReset", ...(recordId !== undefined ? { recordId } : {}) }), []);
@@ -155,6 +159,8 @@ export const useWorkspace = (registry: CatalogRegistry, store: KeyValueStore | n
     lastPresetUndo: state.lastPresetUndo,
     applyPreset,
     undoPreset,
+    randomize,
+    lastRandom: state.lastRandom ?? null,
     categoryResets: state.categoryResets,
     lastCategoryRestore: state.lastCategoryRestore,
     setExcluded,

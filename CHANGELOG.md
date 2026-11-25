@@ -9,6 +9,20 @@
 - 컴파일러(`COMPILER_VERSION`): 0.1.0 / generic-en adapter: 0.1.0
 - 로컬 저장 envelope(`STORAGE_FORMAT_VERSION`): 1
 
+## [Sprint 2-D.6] — 2026-11-25 — Random Composer
+
+버전 변화 없음: core 카탈로그 0.17.0, 카탈로그 형식·컴파일러·ImageSpec·저장 형식·안전 정책 그대로.
+
+### Added
+- Random 탭: “랜덤 생성” 한 번으로 선택하지 않은 모든 적용 가능한 속성을 카탈로그 값으로 채웁니다(빈 상태에서 실행당 약 300개). 기본 선택 5개(종족·성별·스타일·배경·외모 방향)는 모두 선택 사항이며 상태(랜덤·직접 설정)를 표시합니다.
+- `domain/random/composer.ts`: 카탈로그 기반 생성(피사체 먼저, 적용 가능성·활성 선택지만, 슬라이더·수량·다중 선택 지원, 자유 입력·사용자 정의 값 없음), 결정적 시드, 구성 정책과 최대 3회 안전 검사.
+- 랜덤 출처: 예약 origin `random_composer`(저장 형식 그대로). 각 속성에 “랜덤 생성” 표시, 마지막 실행 되돌리기(제거된 값 포함), 결과 요약·개수·값 목록·결과 스케치(얼굴·전신·카메라·조명), Basic·Detailed에서 편집.
+- 테스트: `unit/random-composer`(45, 40개 시드 포함), `component/random`(2), e2e `random`(데스크톱·모바일, JSON 내보내기 포함).
+
+### Changed
+- 모드 탭 5개(Recommended·Random·Basic·Detailed·Precision). 휴대폰에서는 탭을 줄이고 “예정” 표시를 점으로 바꿔 가로 스크롤 없이 표시.
+- 프리셋 거래 기록(세션 전용)에 값 제거 변경을 허용.
+
 ## [0.17.0] — 2026-11-25 — Sprint 2-D.5: Recommended Mode
 
 버전 변화: core 카탈로그 0.16.0 → **0.17.0**(추천 콘셉트 프리셋 12개 추가, 속성·ID·값·출력 변경 없음, 마이그레이션 `changes: []`). 형식·컴파일러·ImageSpec·저장 형식·안전 정책은 그대로.

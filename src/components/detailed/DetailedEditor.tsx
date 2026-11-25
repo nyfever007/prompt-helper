@@ -17,7 +17,7 @@ import type { Workspace } from "@/state/useWorkspace";
 import { WorkspaceField } from "../controls/WorkspaceField";
 import { ModalDialog } from "../ModalDialog";
 import type { DetailedNavigator } from "../navigation";
-import { attributeLabel } from "../format";
+import { attributeLabel, presetLabel } from "../format";
 import { FaceBuilder } from "../face/FaceBuilder";
 import { FigureBuilder } from "../figure/FigureBuilder";
 import { isFigureCategory } from "../figure/figureSketchState";
@@ -103,7 +103,7 @@ export function DetailedEditor({
   });
 
   const tx = workspace.presetTransaction;
-  const txName = tx ? resolveText(registry.getPreset(tx.presetId)?.label, locale) || tx.presetId : "";
+  const txName = tx ? presetLabel(registry, tx.presetId, locale, t.random.name) : "";
   const catName = (id: string) => resolveText(registry.getCategory(id)?.label, locale);
   const [latestReset, ...olderResets] = workspace.categoryResets;
   const lastRestore = workspace.lastCategoryRestore;

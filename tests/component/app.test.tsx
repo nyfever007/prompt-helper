@@ -38,9 +38,9 @@ const fillBasics = async (user: ReturnType<typeof userEvent.setup>) => {
 const EXPECTED = "A quiet harbor. Main subject: a single person. Visual style: watercolor painting.";
 
 describe("Basic mode essentials (Sprint 0 coverage kept)", () => {
-  it("renders four modes (Recommended added in Sprint 2-D.5) with Basic selected and an empty preview", async () => {
+  it("renders five modes (Recommended 2-D.5, Random 2-D.6) with Basic selected and an empty preview", async () => {
     await setUp();
-    expect(screen.getAllByRole("tab").map((x) => x.textContent?.replace(/예정$/, ""))).toEqual(["Recommended", "Basic", "Detailed", "Precision"]);
+    expect(screen.getAllByRole("tab").map((x) => x.textContent?.replace(/예정$/, ""))).toEqual(["Recommended", "Random", "Basic", "Detailed", "Precision"]);
     expect(tab(/Basic/)).toHaveAttribute("aria-selected", "true");
     expect(prompt()).toMatch(/아직 선택한 항목이 없습니다/);
     expect(screen.getByRole("button", { name: "프롬프트 복사" })).toBeDisabled();

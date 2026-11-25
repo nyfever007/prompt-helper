@@ -50,7 +50,8 @@ export interface PresetTransaction {
   presetId: string;
   presetVersion: string;
   mode: PresetApplyMode;
-  changes: Array<{ attributeId: string; before?: AttributeSelection; after: AttributeSelection }>;
+  /** A change without `after` removed the value (random regeneration, Sprint 2-D.6); undo restores `before`. */
+  changes: Array<{ attributeId: string; before?: AttributeSelection; after?: AttributeSelection }>;
   userEdited: string[];
 }
 
