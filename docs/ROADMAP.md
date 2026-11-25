@@ -21,7 +21,7 @@
 | **Sprint 2-C.2 — Architecture, state & diagnostics** | 출력 순서를 UI 순서와 분리(`promptOrder`, TD-08), 카테고리 초기화 이력(최근 5개·기록별 복원, TD-09), 의미 충돌·관례 차이 진단과 슬라이더 조건(규칙 +24, TD-10), 카탈로그 형식 0.5.0·core 0.11.0·컴파일러 0.5.0 — 출력 동일 | ✅ **완료** (승인·병합, PR #11, [보고서](SPRINT_2C2_REPORT.md)) |
 | **Sprint 2-C.3 — Safety & applicability consistency** | 안전 정책 0.3.0(연령 미확인 성적 매력 표현 출력 보류 TD-15, 속옷류 의복 분류와 미성년자 보호 일관성 TD-12), 외모 방향 적용 조건 통일(TD-14), 연령 설정으로 이동하는 안내, core 카탈로그 0.12.0 | ✅ **완료** (승인·병합, PR #12, [보고서](SPRINT_2C3_REPORT.md), [안전 정책](SAFETY_POLICY.md)) |
 | **Sprint 2-C.4 — Performance & integration validation** | 제품 성능 기준선(실제 브라우저, 데스크톱·모바일 CPU 4×, 번들 크기 — [PERFORMANCE.md](PERFORMANCE.md)), TD-11 최종 판단(부분 해결 유지), 키보드 전체 회귀·다크 모드 검증(TD-16 부분 해결, 실제 스크린 리더 미검증), 통합 시나리오 A–G, 전체 페이지 레이아웃 점검, 결함 수정 4건 | ✅ **완료** (Sprint 2-C.4 최종 승인, [보고서](SPRINT_2C4_REPORT.md)) |
-| Sprint 2-D.1 — 시각적 선택 공통 컴포넌트·에셋 표준 | 선택지 시각 표현 공통 컴포넌트, 에셋 표준(TD-03 연결), 테두리 대비(TD-18). 진입 준비 현황: [VISUAL_EDITOR_PRINCIPLES.md](VISUAL_EDITOR_PRINCIPLES.md) §9 | ⏳ 예정 ([설계 원칙](VISUAL_EDITOR_PRINCIPLES.md)) |
+| **Sprint 2-D.1 — 시각적 선택 공통 컴포넌트·에셋 표준** | 시각 선택 카드(정적 SVG·지연 로딩·라이트·다크·확대·텍스트 대체), 에셋 표준과 얼굴형·눈 모양·눈썹 모양 선화 18개(TD-03), 기능 요소 대비(TD-18), core 0.13.0 | ✅ 완료 ([설계 원칙 §10](VISUAL_EDITOR_PRINCIPLES.md)) |
 | Sprint 2-D.2 — 얼굴·이목구비 시각적 선택 | 얼굴형·눈·눈썹·코·입술 시각 선택, 얼굴 조합 프리뷰 | ⏳ 예정 |
 | Sprint 2-D.3 — 헤어·신체·의상 시각적 선택 | 헤어스타일·신체 비율·의상 종류 | ⏳ 예정 |
 | Sprint 2-D.4 — 포즈·카메라·조명 시각적 선택 | 자세·카메라 앵글·프레이밍·조명 방향과 효과 | ⏳ 예정 |

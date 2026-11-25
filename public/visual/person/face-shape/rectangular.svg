@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 120" width="160" height="120"><style>
+svg{--ink:#34322e;--fill:#ecebe7;--soft:#8c887f;--iris:#a9a59c}
+@media (prefers-color-scheme:dark){svg{--ink:#ebe8e2;--fill:#34332f;--soft:#9d998f;--iris:#6d6a63}}
+.o{fill:var(--fill);stroke:var(--ink);stroke-width:2.6;stroke-linejoin:round}
+.l{fill:none;stroke:var(--ink);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.s{fill:none;stroke:var(--soft);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.b{fill:none;stroke:var(--ink);stroke-width:6;stroke-linecap:round;stroke-linejoin:round}
+.i{fill:var(--iris)}.p{fill:var(--ink)}.h{fill:var(--fill)}
+</style><path class="o" d="M80 8 C86.7 8 95.7 8.3 100 11 C104.3 13.7 104.8 17.2 106 24 C107.2 30.8 106.8 42.3 107 52 C107.2 61.7 107.3 74 107 82 C106.7 90 106.8 95.7 105 100 C103.2 104.3 100.2 106.3 96 108 C91.8 109.7 85.3 110 80 110 C74.7 110 68.2 109.7 64 108 C59.8 106.3 56.8 104.3 55 100 C53.2 95.7 53.3 90 53 82 C52.7 74 52.8 61.7 53 52 C53.2 42.3 52.8 30.8 54 24 C55.2 17.2 55.7 13.7 60 11 C64.3 8.3 73.3 8 80 8 Z"/><path class="s" d="M60 52 Q67 48 74 52M86 52 Q93 48 100 52"/><path class="s" d="M61 60 Q67 56 73 60 Q67 63 61 60ZM87 60 Q93 56 99 60 Q93 63 87 60Z"/><path class="s" d="M80 62 L78 74 Q80 76 83 75"/><path class="s" d="M72 86 Q80 89 88 86"/></svg>

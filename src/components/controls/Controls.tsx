@@ -76,33 +76,66 @@ export function DropdownControl(p: OptionControlProps) {
   );
 }
 
+/**
+ * Visual choice (cards). Sprint 2-D.1: an option with a READY example shows it (static SVG / image,
+ * loaded lazily, fixed size so nothing jumps); an option with a placeholder example says so honestly;
+ * an option with no example is a plain text card. Selection is shown by the native control, a ✓ badge
+ * and the accent ring (not colour alone). Each example can be enlarged in an accessible dialog.
+ */
 export function CardsControl(p: OptionControlProps) {
   const [zoom, setZoom] = useState<OptionDefinition | null>(null);
+  const [failed, setFailed] = useState<ReadonlySet<string>>(new Set());
   const isMulti = p.attribute.type === "multi";
   const options = offeredOptions(p);
+  const ready = (o: OptionDefinition) => (failed.has(o.id) ? undefined : o.examples?.find((e) => e.status === "ready" && e.src));
+  const zoomExample = zoom ? ready(zoom) : undefined;
   return (
     <>
       <div className="cards" role={isMulti ? "group" : "radiogroup"} aria-label={p.label}>
         {options.map((o) => {
           const checked = p.selectedIds.includes(o.id);
           const restricted = p.isRestricted(o);
-          const example = o.examples?.find((e) => e.status === "ready" && e.src);
+          const example = ready(o);
+          const placeholder = !example && o.examples?.some((e) => e.status === "placeholder");
           const en = englishTerm(o, p.locale);
+          const name = resolveText(o.label, p.locale);
           return (
-            <div key={o.id} className="card" data-checked={checked} data-option-id={o.id} data-restricted={restricted || undefined} data-inactive={!p.isActive(o) || undefined}>
-              <div className="card__media">
-                {example ? (
-                  <>
-                    {/* eslint-disable-next-line @next/next/no-img-element -- local catalog asset (data URI / static), no optimization needed */}
-                    <img src={example.src} alt={resolveText(example.alt, p.locale)} />
-                    <button type="button" className="link-button card__zoom" onClick={() => setZoom(o)}>
-                      {p.t.controls.zoom}
-                    </button>
-                  </>
-                ) : (
-                  <span className="card__placeholder">{p.t.controls.noImage}</span>
-                )}
-              </div>
+            <div
+              key={o.id}
+              className={`card ${example || placeholder ? "" : "card--text"}`}
+              data-checked={checked}
+              data-option-id={o.id}
+              data-restricted={restricted || undefined}
+              data-inactive={!p.isActive(o) || undefined}
+            >
+              {(example || placeholder) && (
+                <div className="card__media">
+                  {example ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element -- static catalog asset (SVG line art), no optimization needed */}
+                      <img
+                        src={example.src}
+                        alt={resolveText(example.alt, p.locale)}
+                        width={160}
+                        height={120}
+                        loading="lazy"
+                        decoding="async"
+                        onError={() => setFailed((f) => new Set(f).add(o.id))}
+                      />
+                      <button type="button" className="link-button card__zoom" aria-label={fmt(p.t.controls.zoomOption, { name })} onClick={() => setZoom(o)}>
+                        {p.t.controls.zoom}
+                      </button>
+                    </>
+                  ) : (
+                    <span className="card__placeholder">{p.t.controls.noImage}</span>
+                  )}
+                  {checked && (
+                    <span className="card__check" aria-hidden="true">
+                      ✓
+                    </span>
+                  )}
+                </div>
+              )}
               <label className="card__body">
                 <input
                   type={isMulti ? "checkbox" : "radio"}
@@ -111,7 +144,7 @@ export function CardsControl(p: OptionControlProps) {
                   disabled={restricted && !checked}
                   onChange={() => (isMulti ? p.onToggle(o.id) : p.onSelect(o.id))}
                 />
-                <span className="card__label">{resolveText(o.label, p.locale)}</span>
+                <span className="card__label">{name}</span>
                 {en && <span className="card__term" lang="en">{en}</span>}
                 {o.description && <span className="card__desc">{resolveText(o.description, p.locale)}</span>}
               </label>
@@ -119,14 +152,15 @@ export function CardsControl(p: OptionControlProps) {
           );
         })}
       </div>
-      {zoom && (
+      {zoom && zoomExample && (
         <ModalDialog className="zoom" label={resolveText(zoom.label, p.locale)} onClose={() => setZoom(null)} onBackdropClick={() => setZoom(null)}>
           <figure>
             {/* eslint-disable-next-line @next/next/no-img-element -- local catalog asset */}
-            <img src={zoom.examples?.find((e) => e.src)?.src} alt={resolveText(zoom.examples?.find((e) => e.src)?.alt, p.locale)} />
+            <img src={zoomExample.src} alt={resolveText(zoomExample.alt, p.locale)} width={480} height={360} />
             <figcaption>
               {resolveText(zoom.label, p.locale)}
-              {zoom.examples?.[0]?.provenance && <span className="muted small"> · {zoom.examples[0].provenance.source}</span>}
+              {englishTerm(zoom, p.locale) && <span lang="en"> · {englishTerm(zoom, p.locale)}</span>}
+              {zoomExample.provenance && <span className="muted small"> · {zoomExample.provenance.source}</span>}
             </figcaption>
             <button type="button" className="button" onClick={() => setZoom(null)} data-autofocus>
               {p.t.controls.closeZoom}

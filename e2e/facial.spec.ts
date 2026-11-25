@@ -36,7 +36,7 @@ test("facial features: shapes, relative sliders, colors, multi traits, custom va
 
   // Face: shape + combinable traits; focusing a slider stores nothing
   await go(page, "얼굴");
-  await pickChip(page, "person.face.shape", "계란형");
+  await field(page, "person.face.shape").getByRole("radio", { name: /^계란형/ }).check(); // visual cards (Sprint 2-D.1)
   await pickChip(page, "person.face.jawline", "부드러운");
   await pickChip(page, "person.face.jawline", "둥근");
   await pickChip(page, "person.face.cheeks", "통통한");
@@ -46,7 +46,7 @@ test("facial features: shapes, relative sliders, colors, multi traits, custom va
 
   // Eyes: shape, relative sliders (band label only), palette color
   await go(page, "눈");
-  await pickChip(page, "person.eyes.shape", "아몬드형");
+  await field(page, "person.eyes.shape").getByRole("radio", { name: /^아몬드형/ }).check(); // visual cards (Sprint 2-D.1)
   await slide(page, "person.eyes.size", 1);
   await expect(page.getByTestId("slider-value-person.eyes.size")).toHaveText("큼");
   await slide(page, "person.eyes.outer_corner_angle", 1);
@@ -55,7 +55,7 @@ test("facial features: shapes, relative sliders, colors, multi traits, custom va
 
   // Eyebrows, nose (shape covers the same bridge meaning), lips with exclusion
   await go(page, "눈썹");
-  await pickChip(page, "person.eyebrows.shape", "완만한 아치");
+  await field(page, "person.eyebrows.shape").getByRole("radio", { name: /^완만한 아치/ }).check(); // visual cards (Sprint 2-D.1)
   await go(page, "코");
   await pickChip(page, "person.nose.shape", "매부리형");
   await pickChip(page, "person.nose.bridge_shape", "볼록한");

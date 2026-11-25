@@ -28,7 +28,7 @@ describe("Sprint 0 data compatibility (real Sprint 0 output, catalog 0.1.0 → 0
       expect.objectContaining({ op: "renameAttribute", from: "style.visual", to: "style.preset", fromVersion: "0.1.0", toVersion: "0.2.0" }),
     ]);
     expect(r.migrations[0]!.reason.ko).toMatch(/프리셋/);
-    expect(r.spec.catalog).toEqual({ id: "prompter.core", version: "0.12.0" });
+    expect(r.spec.catalog).toEqual({ id: "prompter.core", version: "0.13.0" });
     expect(r.spec.schemaVersion).toBe("0.3.0");
     // every user value is preserved exactly (same value objects, same sources), only the key moved
     expect(r.spec.selections["style.preset"]).toEqual(raw.selections["style.visual"]);
@@ -56,7 +56,7 @@ describe("Sprint 0 data compatibility (real Sprint 0 output, catalog 0.1.0 → 0
   it("an empty Sprint 0 spec migrates without recording changes that did not happen", () => {
     const r = importSpecJson(fixture("export-empty.json"), core);
     expect(r.status === "valid" && r.migrations).toEqual([]);
-    expect(r.status === "valid" && r.spec.catalog.version).toBe("0.12.0");
+    expect(r.status === "valid" && r.spec.catalog.version).toBe("0.13.0");
   });
 
   it("Sprint 0 localStorage data restores, keeps the original, and logs the migration", () => {
@@ -84,14 +84,14 @@ describe("Sprint 0 data compatibility (real Sprint 0 output, catalog 0.1.0 → 0
 });
 
 describe("catalog ID migration mechanics", () => {
-  it("chains multiple steps (0.1.0 → … → 0.12.0 → 0.13.0) and renames options in single and multi values", () => {
-    const reg = extendedRegistry(); // 0.13.0 renames style render_3d→cgi_render, mood eerie→uncanny
+  it("chains multiple steps (0.1.0 → … → 0.13.0 → 0.14.0) and renames options in single and multi values", () => {
+    const reg = extendedRegistry(); // 0.14.0 renames style render_3d→cgi_render, mood eerie→uncanny
     const old = {
       "style.visual": { value: { kind: "single", optionId: "render_3d" }, source: "user" },
       "mood.tone": { value: { kind: "multi", optionIds: ["calm", "eerie"] }, source: "import" },
     };
     const r = migrateCatalogSelections(old, "0.1.0", reg);
-    expect(r.version).toBe("0.13.0");
+    expect(r.version).toBe("0.14.0");
     expect(r.selections).toEqual({
       "style.preset": { value: { kind: "single", optionId: "cgi_render" }, source: "user" },
       "mood.tone": { value: { kind: "multi", optionIds: ["calm", "uncanny"] }, source: "import" },
@@ -136,18 +136,18 @@ describe("catalog ID migration mechanics", () => {
 
   it("current-version specs pass through untouched (same object)", () => {
     const sel = { "mood.tone": { value: multi("calm"), source: "user" } };
-    expect(migrateCatalogSelections(sel, "0.12.0", core).selections).toBe(sel);
+    expect(migrateCatalogSelections(sel, "0.13.0", core).selections).toBe(sel);
     void single;
   });
 
-  it.each(["0.9.0", "0.10.0", "0.11.0"])("a %s spec opens under 0.12.0 unchanged, with no migration record (no ID changes since)", (from) => {
+  it.each(["0.9.0", "0.10.0", "0.11.0", "0.12.0"])("a %s spec opens under 0.13.0 unchanged, with no migration record (no ID changes since)", (from) => {
     const sel = {
       "camera.focal_length": { value: single("mm_85"), source: "user" },
       "lighting.rim_color": { value: single("cyan"), source: "user" },
       "lighting.preset": { value: single("golden_hour"), source: "user" },
     };
     const r = migrateCatalogSelections(sel, from, core);
-    expect(r.version).toBe("0.12.0");
+    expect(r.version).toBe("0.13.0");
     expect(r.selections).toEqual(sel);
     expect(r.records).toEqual([]);
     expect(r.diagnostics).toEqual([]);

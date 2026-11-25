@@ -3,7 +3,7 @@
 사용자가 상상한 이미지를 구조화된 명세(**ImageSpec**)로 정밀하게 정의하고, 이를 이미지 생성 모델용 프롬프트로 변환하는 **Visual Prompt Design Tool**입니다.
 
 - 제품 마스터 계획: [PROMPTER_MASTER_PLAN.md](PROMPTER_MASTER_PLAN.md) (원본 보존, 수정 금지)
-- 현재 단계: **Sprint 2-C (Integration & Usability) 공식 완료** — 2-C.1 UI·접근성, 2-C.2 구조·상태·진단, 2-C.3 안전·적용 일관성, 2-C.4 성능·통합 검증. 최종 보고서는 [docs/SPRINT_2C4_REPORT.md](docs/SPRINT_2C4_REPORT.md), 성능 기준선은 [docs/PERFORMANCE.md](docs/PERFORMANCE.md)(`pnpm perf`, `pnpm perf:bundle`), 안전 정책은 [docs/SAFETY_POLICY.md](docs/SAFETY_POLICY.md)(0.3.0)를 참고하세요. 단계별 보고서: [2-C.3](docs/SPRINT_2C3_REPORT.md)·[2-C.2](docs/SPRINT_2C2_REPORT.md)·[2-C.1](docs/SPRINT_2C1_REPORT.md). 로드맵과 제품 공개 전 호환성 검증 목록은 [docs/ROADMAP.md](docs/ROADMAP.md), 시각적 편집 설계 원칙과 2-D 진입 준비는 [docs/VISUAL_EDITOR_PRINCIPLES.md](docs/VISUAL_EDITOR_PRINCIPLES.md), 기술 부채는 [docs/TECH_DEBT.md](docs/TECH_DEBT.md)에 있습니다. **다음 단계 Sprint 2-D(Visual Editor & Recommendation)는 새 개발 지침을 받은 뒤 시작합니다.**
+- 현재 단계: **Sprint 2-D.1 (Visual editor foundation) 완료** — 시각 선택 카드와 얼굴형·눈 모양·눈썹 모양 선화(에셋 표준: [docs/VISUAL_EDITOR_PRINCIPLES.md](docs/VISUAL_EDITOR_PRINCIPLES.md) §10). Sprint 2-C는 공식 완료([최종 보고서](docs/SPRINT_2C4_REPORT.md)). 로드맵 [docs/ROADMAP.md](docs/ROADMAP.md), 성능 기준선 [docs/PERFORMANCE.md](docs/PERFORMANCE.md), 안전 정책 [docs/SAFETY_POLICY.md](docs/SAFETY_POLICY.md), 기술 부채 [docs/TECH_DEBT.md](docs/TECH_DEBT.md). Sprint 2-D.2는 새 지침을 받은 뒤 시작합니다.
 - 이 빌드는 이미지 생성 API나 유료 LLM API를 **호출하지 않습니다**. API 키도 필요 없습니다.
 
 ## 요구 사항

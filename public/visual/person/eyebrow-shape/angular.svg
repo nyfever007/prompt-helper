@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 120" width="160" height="120"><style>
+svg{--ink:#34322e;--fill:#ecebe7;--soft:#8c887f;--iris:#a9a59c}
+@media (prefers-color-scheme:dark){svg{--ink:#ebe8e2;--fill:#34332f;--soft:#9d998f;--iris:#6d6a63}}
+.o{fill:var(--fill);stroke:var(--ink);stroke-width:2.6;stroke-linejoin:round}
+.l{fill:none;stroke:var(--ink);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.s{fill:none;stroke:var(--soft);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.b{fill:none;stroke:var(--ink);stroke-width:6;stroke-linecap:round;stroke-linejoin:round}
+.i{fill:var(--iris)}.p{fill:var(--ink)}.h{fill:var(--fill)}
+</style><path class="s" d="M54 80 C64 70 96 70 106 80 C96 88 64 88 54 80Z"/><circle class="s" cx="80" cy="79" r="6"/><path class="b" d="M44 55 L94 37 L116 52"/></svg>

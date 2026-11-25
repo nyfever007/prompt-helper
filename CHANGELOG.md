@@ -9,6 +9,20 @@
 - 컴파일러(`COMPILER_VERSION`): 0.1.0 / generic-en adapter: 0.1.0
 - 로컬 저장 envelope(`STORAGE_FORMAT_VERSION`): 1
 
+## [0.13.0] — 2026-11-25 — Sprint 2-D.1: Visual editor foundation
+
+버전 변화: core 카탈로그 0.12.0 → **0.13.0**(ID·값·출력 변경 없음, 마이그레이션 `changes: []`). 형식·컴파일러·ImageSpec·안전 정책은 그대로.
+
+### Added
+- 시각 선택 카드: 준비된 예시는 이미지(지연 로딩, 고정 크기), 자리표시자 예시는 안내, 예시가 없는 선택지는 텍스트 카드. ✓ 선택 표시, 선택지별 확대 대화상자(한·영 라벨), 이미지 실패 시 텍스트 유지
+- 얼굴형 8·눈 모양 4·눈썹 모양 6의 원본 선화 SVG(`public/visual/person/…`, `scripts/generate-visual-assets.mjs`) — 라이트·다크 대응, 기존 `examples` 메타데이터 사용(TD-03)
+- `--border-strong`: 기능 요소 경계 대비 3:1 이상(TD-18), 체크된 목록 행 강조 막대
+- 테스트: `visual-examples`(4), `component/visual-cards`(3), 테마 대비에 경계 6개 추가
+
+### Changed
+- 위 세 속성의 컨트롤: 칩 → 카드
+- 확대 버튼의 이름에 선택지를 넣었습니다(“하트형 예시 크게 보기”).
+
 ## [Sprint 2-C.4] — 2026-11-25 — Performance & integration validation (승인됨 — **Sprint 2-C 공식 완료**: 2-C.1·2-C.2·2-C.3·2-C.4 완료)
 
 버전 변화 없음: core 카탈로그 0.12.0, 카탈로그 형식 0.5.0, 컴파일러 0.5.0, ImageSpec 0.3.0, 안전 정책 0.3.0. 속성·ID·저장 형식·프롬프트 출력·진단 규칙은 그대로입니다.
