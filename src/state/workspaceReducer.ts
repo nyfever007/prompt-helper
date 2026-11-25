@@ -9,7 +9,15 @@ import {
   createEmptySpec,
   findInactiveSelections,
   inactiveKey,
+  isUserPresetId,
   keepLocked,
+  recordHistory,
+  redoHistory,
+  restoreHistoryEntry,
+  startHistory,
+  undoHistory,
+  type History,
+  type HistoryKind,
   locksOf,
   setLocks,
   unlockAll,
@@ -37,7 +45,7 @@ export interface LastRandom {
   style: RandomStyle;
 }
 
-export type WorkspaceAction =
+type Action =
   | { type: "set"; attributeId: string; value: SelectionValue }
   | { type: "clear"; attributeId: string }
   | { type: "reset" }
@@ -54,7 +62,17 @@ export type WorkspaceAction =
   | { type: "setExcluded"; attributeId: string; excluded: boolean }
   | { type: "resetCategory"; categoryId: string; at?: string }
   /** Restore one recorded category reset (default: the most recent). */
-  | { type: "undoCategoryReset"; recordId?: number };
+  | { type: "undoCategoryReset"; recordId?: number }
+  /** Sprint 3.4 — history: step back / forward, restore an entry or a snapshot (each restore is a new entry). */
+  | { type: "undo" }
+  | { type: "redo" }
+  | { type: "restoreHistory"; id: number }
+  | { type: "restoreSnapshot"; spec: ImageSpec; name: string }
+  /** The restored workspace and its history (not itself a history entry). */
+  | { type: "hydrate"; spec: ImageSpec; history: History };
+
+/** Every action may carry its time (epoch ms) for the history; the reducer itself never reads a clock. */
+export type WorkspaceAction = Action & { time?: number };
 
 /** Session-only history of category resets (TD-09): most recent first, at most this many. */
 export const CATEGORY_RESET_HISTORY_LIMIT = 5;
@@ -119,6 +137,8 @@ export interface WorkspaceState {
   lastCategoryRestore: CategoryRestoreResult | null;
   /** Session-only summary of the last Random Composer run (its undo is `presetTransaction`). */
   lastRandom?: LastRandom | null;
+  /** Sprint 3.4: multi-step history of the whole spec (stored beside the workspace). */
+  history: History;
 }
 
 export const initialWorkspaceState = (registry: CatalogRegistry): WorkspaceState => ({
@@ -129,6 +149,59 @@ export const initialWorkspaceState = (registry: CatalogRegistry): WorkspaceState
   lastPresetUndo: null,
   categoryResets: [],
   lastCategoryRestore: null,
+  history: startHistory(createEmptySpec(registry), 0),
+});
+
+/** How an action appears in the history (bulk actions are one entry; same-attribute edits coalesce). */
+const describe = (action: Action): { kind: HistoryKind; detail?: string; coalesce?: string } => {
+  switch (action.type) {
+    case "set": {
+      // continuous input (slider drags, typing, custom-color dragging) is one edit; separate option clicks are not
+      const v = action.value;
+      const continuous = v.kind === "number" || v.kind === "range" || v.kind === "text" || ((v.kind === "single" || v.kind === "multi") && "custom" in v && v.custom !== undefined);
+      return { kind: "edit", detail: action.attributeId, ...(continuous ? { coalesce: `edit:${action.attributeId}` } : {}) };
+    }
+    case "clear":
+      return { kind: "edit", detail: action.attributeId };
+    case "lock":
+      return { kind: "lock", detail: action.locked ? "on" : "off" };
+    case "unlockAll":
+      return { kind: "lock", detail: "off" };
+    case "setExcluded":
+      return { kind: "output", detail: action.attributeId };
+    case "applyRandom":
+      return { kind: "random", detail: action.style ?? DEFAULT_RANDOM_STYLE };
+    case "applyPreset":
+      return { kind: isUserPresetId(action.plan.preset.id) ? "userPreset" : "preset", detail: action.plan.preset.id };
+    case "undoPreset":
+      return { kind: "presetUndo" };
+    case "resetCategory":
+      return { kind: "categoryReset", detail: action.categoryId };
+    case "undoCategoryReset":
+      return { kind: "categoryRestore" };
+    case "reset":
+      return { kind: "reset" };
+    case "restoreResetSnapshot":
+      return { kind: "resetRestore" };
+    case "restoreSnapshot":
+      return { kind: "snapshot", detail: action.name };
+    default:
+      return { kind: "import" };
+  }
+};
+
+/** A whole-spec jump (undo / redo / restore): session-only helpers no longer describe the new state. */
+const jumpTo = (registry: CatalogRegistry, state: WorkspaceState, spec: ImageSpec, history: History): WorkspaceState => ({
+  ...state,
+  spec,
+  history,
+  transition: diffInactive(registry, state.spec, spec, state.transition?.id ?? 0) ?? state.transition,
+  resetSnapshot: null,
+  presetTransaction: null,
+  lastPresetUndo: null,
+  categoryResets: [],
+  lastCategoryRestore: null,
+  lastRandom: null,
 });
 
 const diffInactive = (registry: CatalogRegistry, before: ImageSpec, after: ImageSpec, prevId: number): Transition | null => {
@@ -172,16 +245,33 @@ const trackEdits = (records: CategoryResetRecord[], changed: readonly string[]):
 export const createWorkspaceReducer = (registry: CatalogRegistry) => {
   const step = createStep(registry);
   return (state: WorkspaceState, action: WorkspaceAction): WorkspaceState => {
+    const time = action.time ?? 0;
+    switch (action.type) {
+      case "hydrate":
+        return { ...state, spec: action.spec, history: action.history, transition: null, presetTransaction: null, categoryResets: [] };
+      case "undo":
+      case "redo": {
+        const r = action.type === "undo" ? undoHistory(state.history) : redoHistory(state.history);
+        return r ? jumpTo(registry, state, r.spec, r.history) : state;
+      }
+      case "restoreHistory": {
+        const r = restoreHistoryEntry(state.history, action.id, time);
+        return r ? jumpTo(registry, state, r.spec, r.history) : state;
+      }
+      case "restoreSnapshot":
+        return jumpTo(registry, state, action.spec, recordHistory(state.history, { ...describe(action), spec: action.spec, at: time }));
+    }
     const next = step(state, action);
     if (next === state || next.spec === state.spec) return next;
+    const history = recordHistory(state.history, { ...describe(action), spec: next.spec, at: time });
     // Any later change of an attribute that a recorded reset removed protects the current value (TD-09).
     // The new record of a `resetCategory` is excluded: its own removals are not edits.
     const changed = changedAttributeIds(state.spec, next.spec);
     if (action.type === "resetCategory") {
       const [own, ...older] = next.categoryResets;
-      return own ? { ...next, categoryResets: [own, ...trackEdits(older, changed)] } : next;
+      return own ? { ...next, history, categoryResets: [own, ...trackEdits(older, changed)] } : { ...next, history };
     }
-    return { ...next, categoryResets: trackEdits(next.categoryResets, changed) };
+    return { ...next, history, categoryResets: trackEdits(next.categoryResets, changed) };
   };
 };
 
@@ -353,6 +443,7 @@ const createStep =
           categoryResets: [],
           lastResetSeq: state.categoryResets[0]?.id ?? state.lastResetSeq,
           lastCategoryRestore: null,
+          history: state.history,
         };
       }
       case "restoreResetSnapshot":
@@ -368,5 +459,7 @@ const createStep =
       case "replace":
         // A whole new spec (import, recovery): earlier resets no longer describe it. Its own locks come with it.
         return { ...state, spec: action.spec, transition: null, presetTransaction: null, categoryResets: [] };
+      default:
+        return state; // history actions are handled by the reducer wrapper
     }
   };

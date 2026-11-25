@@ -15,7 +15,9 @@ import {
 } from "@/domain";
 import { fmt, getMessages, SUPPORTED_LOCALES, type Messages, type UiLocale } from "@/i18n/messages";
 import { MODES, useUiPrefs } from "@/state/useUiPrefs";
+import { useSnapshots } from "@/state/useSnapshots";
 import { useUserPresets } from "@/state/useUserPresets";
+import { HistoryControls } from "./history/HistoryControls";
 import { useWorkspace } from "@/state/useWorkspace";
 import { PresetNamesContext } from "./presetNames";
 import { copyText } from "./clipboard";
@@ -60,6 +62,7 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
   const workspace = useWorkspace(registry, store);
   const prefs = useUiPrefs(store);
   const userPresets = useUserPresets(registry, store);
+  const snapshots = useSnapshots(registry, store);
   const { mode, setMode, locale, setLocale } = prefs;
   const t = getMessages(locale);
   const ctx = { registry, locale, t };
@@ -263,7 +266,12 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
           </button>
         ))}
       </nav>
-      <p className="muted mode-hint">{t.modeHint}</p>
+      <div className="mode-row">
+        <p className="muted mode-hint">{t.modeHint}</p>
+        <PresetNamesContext.Provider value={userPresets.nameOf}>
+          <HistoryControls registry={registry} workspace={workspace} snapshots={snapshots} locale={locale} t={t} onNotice={(text, kind) => push({ kind, text, autoDismissMs: noticeTimeoutMs })} />
+        </PresetNamesContext.Provider>
+      </div>
 
       <Notices notices={notices} onDismiss={dismiss} dismissLabel={t.dismiss} />
       {hydration.status === "invalid" && (

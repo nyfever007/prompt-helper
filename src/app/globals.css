@@ -692,3 +692,21 @@ select, textarea, input[type="number"], .dropdown, .text-input, .option-search i
 .save-preset__attrs { padding-left: 22px; font-size: 0.8rem; }
 .save-preset__group { display: flex; gap: 6px; align-items: center; }
 .preset-locks { display: flex; gap: 6px; align-items: center; }
+
+/* Sprint 3.4 — history and snapshots */
+.mode-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px 12px; }
+.mode-row .mode-hint { margin: 0; }
+.history-bar { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.history-panel { display: flex; flex-direction: column; gap: 10px; max-height: 85vh; overflow: auto; width: min(640px, 100%); }
+.history-panel h3 { margin: 4px 0; font-size: 0.95rem; }
+.history-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.history-item { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; }
+.history-item.is-current { border-color: var(--accent); background: var(--accent-soft); }
+.history-item.is-redo { opacity: 0.75; border-style: dashed; }
+.history-item__time { font-variant-numeric: tabular-nums; min-width: 5.5em; }
+.history-item__what { flex: 1 1 180px; min-width: 0; }
+.history-item__actions { display: inline-flex; gap: 8px; align-items: center; }
+.history-panel__snapform { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.history-panel__snapform input { flex: 1 1 180px; min-width: 0; }
+.history-panel__snapshots { border-top: 1px solid var(--border); padding-top: 8px; }
+.mode-row { margin-bottom: 8px; }

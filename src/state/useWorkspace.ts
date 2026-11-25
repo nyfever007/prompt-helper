@@ -5,7 +5,16 @@ import {
   type PresetApplyMode,
   compilePrompt,
   createSpecStorage,
+  canRedo,
+  canUndo,
+  createEmptySpec,
+  HISTORY_LIMIT,
+  HISTORY_STORAGE_KEY,
   loadLegacyLocks,
+  parseHistory,
+  resumeHistory,
+  serializeHistory,
+  type History,
   lockedIds,
   removeLegacyLocks,
   setLocks,
@@ -28,6 +37,7 @@ import {
   createWorkspaceReducer,
   initialWorkspaceState,
   type CategoryResetRecord,
+  type WorkspaceAction,
   type CategoryRestoreResult,
   type LastRandom,
   type PresetUndoResult,
@@ -72,6 +82,16 @@ export interface Workspace {
   undoCategoryReset(recordId?: number): void;
   setValue(attributeId: string, value: SelectionValue): void;
   clear(attributeId: string): void;
+  /** Sprint 3.4: multi-step history of the whole spec, undo / redo, restore an entry or a snapshot. */
+  history: History;
+  canUndo: boolean;
+  canRedo: boolean;
+  undo(): void;
+  redo(): void;
+  restoreHistory(id: number): void;
+  restoreSnapshot(spec: ImageSpec, name: string): void;
+  /** False when the browser's storage could not keep the full history. */
+  historySaved: boolean;
   /** Sprint 3.1: locked attribute ids (sorted) and a fast lookup. */
   locks: string[];
   isLocked(attributeId: string): boolean;
@@ -90,7 +110,9 @@ export interface Workspace {
  */
 export const useWorkspace = (registry: CatalogRegistry, store: KeyValueStore | null): Workspace => {
   const reducer = useMemo(() => createWorkspaceReducer(registry), [registry]);
-  const [state, dispatch] = useReducer(reducer, registry, initialWorkspaceState);
+  const [state, rawDispatch] = useReducer(reducer, registry, initialWorkspaceState);
+  // every action carries its time for the history (Sprint 3.4); the reducer stays pure
+  const dispatch = useCallback((action: WorkspaceAction) => rawDispatch({ ...action, time: Date.now() }), []);
   const storage = useMemo(() => (store ? createSpecStorage(store, registry) : null), [store, registry]);
   const [hydration, setHydration] = useState<HydrationState>({ status: "pending" });
   const [save, setSave] = useState<SaveState>({ status: "idle" });
@@ -109,9 +131,17 @@ export const useWorkspace = (registry: CatalogRegistry, store: KeyValueStore | n
     const legacy = store ? loadLegacyLocks(store, registry.id) : null;
     if (legacy !== null) legacyLocksPending.current = true;
     const withLegacy = <T extends ImageSpec>(spec: T): ImageSpec => (legacy?.length ? setLocks(spec, legacy, true) : spec);
+    // Sprint 3.4: continue the stored history with the restored design (or start one)
+    let storedHistory: string | null = null;
+    try {
+      storedHistory = store?.getItem(HISTORY_STORAGE_KEY) ?? null;
+    } catch {
+      // unavailable
+    }
+    const startSpec = loaded.status === "loaded" ? withLegacy(loaded.spec) : createEmptySpec(registry);
+    dispatch({ type: "hydrate", spec: startSpec, history: resumeHistory(parseHistory(storedHistory, registry), startSpec, Date.now()) });
     switch (loaded.status) {
       case "loaded":
-        dispatch({ type: "replace", spec: withLegacy(loaded.spec) });
         setHydration({
           status: "loaded",
           savedAt: loaded.savedAt,
@@ -131,6 +161,7 @@ export const useWorkspace = (registry: CatalogRegistry, store: KeyValueStore | n
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per storage; store and registry define it
   }, [storage]);
 
+
   // Autosave every change after hydration — paused while a recovery decision is pending,
   // so the damaged original is never overwritten before the user decides.
   const autosaveOn = hydration.status !== "pending" && hydration.status !== "recoverable";
@@ -145,33 +176,72 @@ export const useWorkspace = (registry: CatalogRegistry, store: KeyValueStore | n
     setSave(result.ok ? { status: "saved", savedAt: result.value.savedAt } : { status: "failed", diagnostics: result.diagnostics });
   }, [state.spec, storage, autosaveOn, store]);
 
+  // History is saved beside the workspace (debounced; flushed when the page is hidden or closed; fewer
+  // entries if the browser's storage is full).
+  const [historySaved, setHistorySaved] = useState(true);
+  const pendingHistory = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    if (!store || !autosaveOn) return;
+    const write = () => {
+      pendingHistory.current = null;
+      for (const limit of [HISTORY_LIMIT, 20, 5]) {
+        try {
+          store.setItem(HISTORY_STORAGE_KEY, serializeHistory(state.history, registry.id, limit));
+          setHistorySaved(limit === HISTORY_LIMIT);
+          return;
+        } catch {
+          // try fewer entries
+        }
+      }
+      setHistorySaved(false);
+    };
+    pendingHistory.current = write;
+    const timer = window.setTimeout(write, 300);
+    return () => window.clearTimeout(timer);
+  }, [state.history, store, registry.id, autosaveOn]);
+  useEffect(() => {
+    const flush = () => pendingHistory.current?.();
+    const onVisibility = () => document.visibilityState === "hidden" && flush();
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVisibility);
+      flush(); // unmount
+    };
+  }, []);
+
   const compilation = useMemo(() => compilePrompt(state.spec, registry), [state.spec, registry]);
   const locks = useMemo(() => lockedIds(state.spec), [state.spec]);
   const lockSet = useMemo(() => new Set(locks), [locks]);
   const isLocked = useCallback((id: string) => lockSet.has(id), [lockSet]);
-  const lock = useCallback((attributeIds: string[], locked: boolean) => dispatch({ type: "lock", attributeIds, locked }), []);
-  const unlockAll = useCallback(() => dispatch({ type: "unlockAll" }), []);
+  const lock = useCallback((attributeIds: string[], locked: boolean) => dispatch({ type: "lock", attributeIds, locked }), [dispatch]);
+  const undo = useCallback(() => dispatch({ type: "undo" }), [dispatch]);
+  const redo = useCallback(() => dispatch({ type: "redo" }), [dispatch]);
+  const restoreHistory = useCallback((id: number) => dispatch({ type: "restoreHistory", id }), [dispatch]);
+  const restoreSnapshot = useCallback((spec: ImageSpec, name: string) => dispatch({ type: "restoreSnapshot", spec, name }), [dispatch]);
+  const unlockAll = useCallback(() => dispatch({ type: "unlockAll" }), [dispatch]);
   const inactive = useMemo(() => findInactiveSelections(state.spec, registry), [state.spec, registry]);
 
-  const setValue = useCallback((attributeId: string, value: SelectionValue) => dispatch({ type: "set", attributeId, value }), []);
-  const clear = useCallback((attributeId: string) => dispatch({ type: "clear", attributeId }), []);
-  const reset = useCallback(() => dispatch({ type: "reset" }), []);
-  const restoreResetSnapshot = useCallback(() => dispatch({ type: "restoreResetSnapshot" }), []);
-  const replace = useCallback((next: ImageSpec) => dispatch({ type: "replace", spec: next }), []);
+  const setValue = useCallback((attributeId: string, value: SelectionValue) => dispatch({ type: "set", attributeId, value }), [dispatch]);
+  const clear = useCallback((attributeId: string) => dispatch({ type: "clear", attributeId }), [dispatch]);
+  const reset = useCallback(() => dispatch({ type: "reset" }), [dispatch]);
+  const restoreResetSnapshot = useCallback(() => dispatch({ type: "restoreResetSnapshot" }), [dispatch]);
+  const replace = useCallback((next: ImageSpec) => dispatch({ type: "replace", spec: next }), [dispatch]);
   const applyPreset = useCallback(
     (plan: PresetPlan, mode: PresetApplyMode, lockIds?: readonly string[]) => dispatch({ type: "applyPreset", plan, mode, ...(lockIds?.length ? { lockIds } : {}) }),
-    [],
+    [dispatch],
   );
-  const undoPreset = useCallback(() => dispatch({ type: "undoPreset" }), []);
-  const randomize = useCallback((style?: RandomStyle, seed?: number) => dispatch({ type: "applyRandom", seed: seed ?? Math.floor(Math.random() * 2 ** 31), ...(style ? { style } : {}) }), []);
-  const setExcluded = useCallback((attributeId: string, excluded: boolean) => dispatch({ type: "setExcluded", attributeId, excluded }), []);
-  const resetCategory = useCallback((categoryId: string) => dispatch({ type: "resetCategory", categoryId, at: new Date().toISOString() }), []);
-  const undoCategoryReset = useCallback((recordId?: number) => dispatch({ type: "undoCategoryReset", ...(recordId !== undefined ? { recordId } : {}) }), []);
+  const undoPreset = useCallback(() => dispatch({ type: "undoPreset" }), [dispatch]);
+  const randomize = useCallback((style?: RandomStyle, seed?: number) => dispatch({ type: "applyRandom", seed: seed ?? Math.floor(Math.random() * 2 ** 31), ...(style ? { style } : {}) }), [dispatch]);
+  const setExcluded = useCallback((attributeId: string, excluded: boolean) => dispatch({ type: "setExcluded", attributeId, excluded }), [dispatch]);
+  const resetCategory = useCallback((categoryId: string) => dispatch({ type: "resetCategory", categoryId, at: new Date().toISOString() }), [dispatch]);
+  const undoCategoryReset = useCallback((recordId?: number) => dispatch({ type: "undoCategoryReset", ...(recordId !== undefined ? { recordId } : {}) }), [dispatch]);
   const applyRecovery = useCallback(() => {
     if (hydration.status !== "recoverable") return;
     dispatch({ type: "replace", spec: hydration.proposed });
     setHydration({ status: "recovered", excludedCount: hydration.excluded.length, backupKey: hydration.backupKey });
-  }, [hydration]);
+  }, [hydration, dispatch]);
   const discardRecovery = useCallback(() => {
     if (hydration.status !== "recoverable") return;
     setHydration({ status: "discarded", backupKey: hydration.backupKey });
@@ -199,6 +269,14 @@ export const useWorkspace = (registry: CatalogRegistry, store: KeyValueStore | n
     undoCategoryReset,
     setValue,
     clear,
+    history: state.history,
+    canUndo: canUndo(state.history),
+    canRedo: canRedo(state.history),
+    undo,
+    redo,
+    restoreHistory,
+    restoreSnapshot,
+    historySaved,
     locks,
     isLocked,
     lock,
