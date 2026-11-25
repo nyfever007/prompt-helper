@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { ensurePreviewOpen, guardNetwork } from "./helpers";
+import { closePreview, ensurePreviewOpen, guardNetwork } from "./helpers";
 
 /**
  * Sprint 2-B.4 — Person › Body on the PRODUCT catalog (/), desktop and mobile.
@@ -77,7 +77,9 @@ test("body: subcategories, build, relative sliders, heads tall, exclusion, reset
   await expect(output(page)).toHaveText(expected);
   expect(await stored(page)).toEqual(before);
 
-  // Resetting the parent 신체 clears all subcategories (excluded value included) and can be undone
+  // Resetting the parent 신체 clears all subcategories (excluded value included) and can be undone.
+  // On mobile the open preview sheet (taller since 2-D.7: detail and length / cost) can cover the reset button — keep it closed.
+  await closePreview(page);
   await go(page, "신체");
   await closeNav(page);
   await page.getByTestId("category-reset").click();

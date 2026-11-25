@@ -13,13 +13,19 @@ import {
   planPreset,
   setPromptExclusion,
   undoPresetTransaction,
+  RANDOM_STYLES,
   type ImageSpec,
+  type RandomStyle,
 } from "@/domain";
 import { buildSpec, multi, single } from "../fixtures/specs";
 
-/** Sprint 2-D.6 — Random Composer: whole-catalog random values, user values kept, regeneration, undo, safety. */
+/**
+ * Sprint 2-D.6 — Random Composer: whole-catalog random values, user values kept, regeneration, undo, safety.
+ * Since Sprint 2-D.7 the whole-catalog generation is the `chaos` style (unchanged); ownership, undo and
+ * safety guarantees are checked for every style.
+ */
 const core = getCoreRegistry();
-const run = (spec: ImageSpec, seed: number) => applyRandomComposition(spec, core, composeRandom(spec, core, seed));
+const run = (spec: ImageSpec, seed: number, style: RandomStyle = "chaos") => applyRandomComposition(spec, core, composeRandom(spec, core, seed, style));
 const SEEDS = Array.from({ length: 40 }, (_, i) => i * 7919 + 1);
 
 describe("Random Composer", () => {
@@ -48,12 +54,12 @@ describe("Random Composer", () => {
     expect(compilePrompt(spec, core).blocked).toBe(false);
   });
 
-  it("keeps the user's values, a concept's values and an excluded value; regenerates only random values", () => {
+  it.each(RANDOM_STYLES)("%s: keeps the user's values, a concept's values and an excluded value; regenerates only random values", (style) => {
     let spec = buildSpec(core, [["person.identity.gender", single("woman")], ["style.preset", single("watercolor")]]);
     const concept = planPreset(spec, core, "concept_vintage_film");
     if (!concept.ok) throw new Error("plan");
     spec = applyPresetPlan(spec, core, concept.value, "keepUser").spec;
-    const first = run(spec, 11).spec;
+    const first = run(spec, 11, style).spec;
     expect(first.selections["person.identity.gender"]).toEqual(spec.selections["person.identity.gender"]);
     expect(first.selections["style.preset"]).toEqual(spec.selections["style.preset"]);
     expect(first.selections["lighting.color_temperature"]).toEqual(spec.selections["lighting.color_temperature"]); // from the concept
@@ -62,7 +68,7 @@ describe("Random Composer", () => {
     if (!edited.ok) throw new Error("edit");
     const excludedId = Object.keys(first.selections).find((id) => isRandomSelection(first.selections[id]) && id.startsWith("person.hair."))!;
     const mine = setPromptExclusion(edited.value, excludedId, true);
-    const second = run(mine, 12).spec;
+    const second = run(mine, 12, style).spec;
     expect(second.selections["camera.angle"]!.value).toEqual(single("worms_eye"));
     expect(second.selections["camera.angle"]!.source).toBe("user");
     expect(second.selections[excludedId]).toEqual(mine.selections[excludedId]);
@@ -71,25 +77,25 @@ describe("Random Composer", () => {
     expect(regenerated.length).toBeGreaterThan(20);
   });
 
-  it("undoes the last run exactly, including values a run removed", () => {
+  it.each(RANDOM_STYLES)("%s: undoes the last run exactly, including values a run removed", (style) => {
     const start = buildSpec(core, [["subject.kind", single("person")]]);
-    const a = run(start, 1);
-    const b = run(a.spec, 2);
+    const a = run(start, 1, style);
+    const b = run(a.spec, 2, "natural"); // switching styles between runs is a normal regeneration
     expect(undoPresetTransaction(b.spec, b.transaction).spec).toEqual(a.spec);
     expect(undoPresetTransaction(a.spec, a.transaction).spec).toEqual(start);
   });
 
-  it("is deterministic per seed and follows a subject the user chose", () => {
-    expect(composeRandom(createEmptySpec(core), core, 5)).toEqual(composeRandom(createEmptySpec(core), core, 5));
-    const { spec } = run(buildSpec(core, [["subject.kind", single("landscape")]]), 3);
+  it.each(RANDOM_STYLES)("%s: is deterministic per seed and follows a subject the user chose", (style) => {
+    expect(composeRandom(createEmptySpec(core), core, 5, style)).toEqual(composeRandom(createEmptySpec(core), core, 5, style));
+    const { spec } = run(buildSpec(core, [["subject.kind", single("landscape")]]), 3, style);
     expect(Object.keys(spec.selections).some((id) => id.startsWith("person."))).toBe(false);
     expect(Object.keys(spec.selections).some((id) => id.startsWith("scene.") || id.startsWith("lighting."))).toBe(true);
   });
 
-  it("never changes the user's age or bypasses safety: a hold caused by the user's own values stays", () => {
+  it.each(RANDOM_STYLES)("%s: never changes the user's age or bypasses safety: a hold caused by the user's own values stays", (style) => {
     const risky = buildSpec(core, [["person.identity.age_group", single("child")], ["person.appearance.direction", multi("sexy")]]);
     expect(compilePrompt(risky, core).blocked).toBe(true);
-    const { spec } = run(risky, 4);
+    const { spec } = run(risky, 4, style);
     expect(spec.selections["person.identity.age_group"]).toEqual(risky.selections["person.identity.age_group"]);
     expect(spec.selections["person.appearance.direction"]).toEqual(risky.selections["person.appearance.direction"]);
     expect(compilePrompt(spec, core).blocked).toBe(true); // existing block and guidance are kept

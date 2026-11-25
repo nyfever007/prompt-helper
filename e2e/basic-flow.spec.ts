@@ -116,7 +116,7 @@ test("keyboard: options can be chosen without a mouse", async ({ page, browserNa
 test("English UI toggle keeps the spec and prompt", async ({ page }) => {
   await page.goto("/");
   await chip(page, "픽셀 아트").click();
-  await page.getByRole("combobox").selectOption("en");
+  await page.getByRole("combobox", { name: "언어" }).selectOption("en");
   await expect(page.getByRole("radio", { name: "Pixel art" })).toBeChecked();
   await expect(page.getByRole("tab", { name: /Precision/ })).toContainText("Planned");
   await expect(page.getByRole("tab", { name: /Detailed/ })).not.toContainText("Planned");

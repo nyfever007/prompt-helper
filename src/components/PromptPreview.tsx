@@ -1,18 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { exportPromptText, getPromptOutput, type CatalogRegistry, type PromptCompilation } from "@/domain";
+import { exportPromptText, getPromptOutput, PROMPT_DETAILS, type CatalogRegistry, type ImageSpec, type PromptDetail, type PromptView } from "@/domain";
 import { fmt, type Messages } from "@/i18n/messages";
 import { copyText } from "./clipboard";
 import { describeDiagnostic } from "./diagnostics";
 import { RelatedSettings } from "./RelatedSettings";
 import { downloadText, timestamp } from "./download";
 import { attributeLabel } from "./format";
+import { PromptStats, type TokenPrefs } from "./PromptStats";
 
 /**
  * All prompt output paths (display, copy, .txt export) go through
  * `getPromptOutput` / `exportPromptText`, so a blocked compilation can never
- * leak through any of them.
+ * leak through any of them. They all use the prompt at the selected detail level
+ * (Compact / Balanced / Full, Sprint 2-D.7) — a view over the same compilation whose
+ * full-spec safety result applies unchanged.
  */
 export function PromptPreview({
   compilation,
@@ -20,13 +23,23 @@ export function PromptPreview({
   locale,
   t,
   onClose,
+  spec,
+  detailIsAuto,
+  onDetail,
+  tokenPrefs,
 }: {
-  compilation: PromptCompilation;
+  /** The compilation as seen at the selected detail level. */
+  compilation: PromptView;
   registry: CatalogRegistry;
   locale: string;
   t: Messages;
   /** Mobile bottom-sheet close (the button is only visible on small screens). */
   onClose?(): void;
+  spec: ImageSpec;
+  /** The detail level is this design's default (not an explicit choice). */
+  detailIsAuto: boolean;
+  onDetail(detail: PromptDetail): void;
+  tokenPrefs: TokenPrefs;
 }) {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
   const output = getPromptOutput(compilation);
@@ -70,6 +83,22 @@ export function PromptPreview({
         </div>
       </header>
 
+      <fieldset className="detail" data-testid="prompt-detail">
+        <legend className="detail__legend">{t.promptDetail.label}</legend>
+        <div className="detail__options">
+          {PROMPT_DETAILS.map((d) => (
+            <label key={d} className={`detail__option${compilation.detail === d ? " is-selected" : ""}`}>
+              <input type="radio" name="prompt-detail" value={d} checked={compilation.detail === d} onChange={() => onDetail(d)} />
+              {t.promptDetail[d]}
+            </label>
+          ))}
+        </div>
+        <p className="muted small detail__help">
+          {t.promptDetail.help[compilation.detail]}
+          {detailIsAuto && <> ({t.promptDetail.auto})</>}
+        </p>
+      </fieldset>
+
       {compilation.blocked ? (
         <div className="blocked" role="alert" data-testid="prompt-blocked">
           <p className="blocked__title">{t.preview.blockedTitle}</p>
@@ -102,6 +131,23 @@ export function PromptPreview({
           {output.ok ? output.prompt : <span className="muted">{t.preview.empty}</span>}
         </output>
       )}
+
+      {compilation.omitted.length > 0 && (
+        <details className="preview__omitted small" data-testid="prompt-omitted">
+          <summary>{fmt(t.promptDetail.omitted, { n: compilation.omitted.length })}</summary>
+          <ul>
+            {compilation.omitted.map((o) => (
+              <li key={o.attributeId} data-reason={o.reason}>
+                <span className="muted">{attributeLabel(registry, o.attributeId, locale)}</span> → <span lang="en">{o.text}</span>{" "}
+                <span className="badge">{t.promptDetail.reason[o.reason]}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="muted">{t.promptDetail.safety}</p>
+        </details>
+      )}
+
+      <PromptStats view={compilation} spec={spec} prefs={tokenPrefs} locale={locale} t={t} />
 
       {languageDiags.length > 0 && (
         <p className="notice notice--warning small" data-testid="mixed-language">

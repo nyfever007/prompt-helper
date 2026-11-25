@@ -27,7 +27,7 @@
 | **Sprint 2-D.4 — 포즈·카메라·조명 시각적 선택** | 관절 마네킹 포즈 카드 16종·Figure Builder 자세 보기, 기준 장면 카메라 카드 14종·카메라 미리보기(화면비 반영), 머리 구체 조명 카드 14종·조명 미리보기, core 0.16.0 | ✅ 완료 ([설계 원칙 §13](VISUAL_EDITOR_PRINCIPLES.md)) |
 | **Sprint 2-D.5 — Recommended Mode** | 추천 콘셉트 12개(기존 프리셋 계획·확인·적용·되돌리기 재사용, 직접 설정한 값 기본 유지 `keepUser`), 추천 탭·콘셉트 카드(설명·스케치·주요 속성), core 0.17.0 | ✅ 완료 ([설계 원칙 §14](VISUAL_EDITOR_PRINCIPLES.md)) |
 | **Sprint 2-D.6 — Random Composer** | Random 탭: 아무것도 고르지 않아도 생성, 기본 선택 5개(종족·성별·스타일·배경·외모 방향, 모두 선택 사항). 선택하지 않은 모든 적용 가능한 속성을 카탈로그 값으로 생성(실행당 약 300개, 개수 제한 없음), 직접 설정·추천 콘셉트·제외한 값 유지, 랜덤 출처 표시(`random_composer`, 저장 형식 그대로), 재생성·되돌리기, 안전 정책 준수(구성 정책 + 최대 3회 검사), 모바일 탭 5개 정리 | ✅ 완료 ([설계 원칙 §15](VISUAL_EDITOR_PRINCIPLES.md), ADR-068) |
-| Sprint 2-D.7 — 통합 및 사용성 개선 | 기존 2-D.6 항목: Visual·Recommended 화면 구조 확정, 통합·사용성 검증(실제 스크린 리더 TD-16 포함) | ⏳ 예정 |
+| **Sprint 2-D.7 — Random Quality & Prompt Optimization** | 랜덤 방식 Natural(기본)·Creative·Chaos(2-D.6 그대로) — 기존 충돌 규칙·`suggestedWhen`·관계와 가중치 데이터 사용, 극단값·장식 제한, 선택적 세부 항목 미설정 허용. 프롬프트 출력 방식 Compact·Balanced·Full(ImageSpec과 분리, 기존 프로젝트 Full, 랜덤 결과 Balanced, 전체 명세 안전 검사 유지, 생략 목록). 길이·토큰·텍스트 입력 비용 표시(로컬 o200k_base 토크나이저, 확인된 가격만 기본값, 직접 입력). 통합·사용성 개선, TD-16 자동 검사 부분 | ✅ 완료 ([설계 원칙 §16](VISUAL_EDITOR_PRINCIPLES.md), ADR-069, [예시](examples/random-prompts.md)) |
 | Sprint 3 — Precision editor | 위치와 개수 지정, 부위별 속성, 중요도, 유지/제외 조건, 참조 이미지 역할(메타데이터) | ⏳ 예정 |
 | Sprint 4 — Style taxonomy & non-person | 직교 스타일 축, 카탈로그 확장, 풍경·건축·제품·게임 에셋 | ⏳ 예정 |
 | Sprint 5 — Image API & live validation | OpenAI provider adapter(서버 측), 비용 가드, 실행 이력, 결과 비교 | ⏳ 예정 |
@@ -35,11 +35,14 @@
 
 ## 제품 공개 전 호환성 검증 목록 (Sprint 2-C.4 최종 승인)
 
-Sprint 2-C.4 기준 **미검증**입니다. Sprint 완료를 막는 조건은 아니며, 제품 공개 전에 확인합니다.
+Sprint 2-C.4 기준 **미검증**입니다(Sprint 2-D.7에서 갱신). Sprint 완료를 막는 조건은 아니며, 제품 공개 전에 확인합니다.
 
 | 항목 | 현재 상태 |
 |---|---|
-| 실제 스크린 리더(macOS VoiceOver, Windows NVDA) | 미검증 — TD-16, Sprint 2-D.7에 배정(2-D.5에서 이동) |
+| 실제 스크린 리더(macOS VoiceOver, Windows NVDA) | 미검증 — TD-16. Sprint 2-D.7에서 자동 검사(새 컨트롤의 역할·이름 ARIA 스냅샷, 데스크톱·모바일)만 수행. 실제 청취 확인은 사람이 해야 하므로 공개 전 검증으로 유지 |
+| 실제 이미지 모델에서의 Natural·Creative 결과 품질 | 미검증 — 이 환경에서는 이미지 생성 API를 쓰지 않음. 관계·가중치 데이터는 실험 결과로 조정 |
+| 토큰 수와 실제 API 집계의 차이 | 미검증 — 로컬 o200k_base 계산(요청 형식에 따른 몇 토큰 차이 가능), 다른 모델은 추정치로 표시 |
+| 모델별 텍스트 입력 가격 | 2026-11-25 공개 가격 확인(GPT Image 1.5 $5, GPT Image 1 mini $2 / 100만 토큰). 공개 전에 다시 확인 |
 | Firefox | 미검증 — E2E는 Chromium만 사용 |
 | Safari(macOS·iOS) | 미검증 |
 | 휴대폰 실기기 | 미검증 — Pixel 7 에뮬레이션 + CPU 4배 제한으로만 측정 |

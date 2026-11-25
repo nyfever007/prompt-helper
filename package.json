@@ -23,6 +23,7 @@
     "perf:bundle": "node scripts/measure-bundle.mjs"
   },
   "dependencies": {
+    "gpt-tokenizer": "4.0.4",
     "next": "16.4.6",
     "react": "19.3.1",
     "react-dom": "19.3.1",

@@ -24,9 +24,20 @@ const setUp = async () => {
 };
 
 describe("Random Composer", () => {
-  it("generates a whole design from nothing; the five basics are optional; results show in sketches and the prompt", async () => {
+  it("generates a whole design from nothing (Natural by default, Chaos on request); the five basics are optional; results show in sketches and the prompt", async () => {
     const { user, store } = await setUp();
     for (const id of ["person.identity.species", "person.identity.gender", "style.preset", "scene.setting", "person.appearance.direction"]) expect(screen.getByTestId(`basic-state-${id}`)).toHaveTextContent("랜덤");
+    expect(screen.getByRole("radio", { name: "Natural" })).toBeChecked();
+    await user.click(screen.getByTestId("random-generate"));
+    const natural = saved(store);
+    expect(Object.keys(natural).length).toBeGreaterThan(50);
+    expect(Object.values(natural).every((x) => isRandom(x as never))).toBe(true);
+    expect(screen.getByTestId("random-result")).toHaveTextContent("방식: Natural");
+    // a random design opens as Balanced in the preview; omitted values are listed
+    expect(within(screen.getByTestId("prompt-detail")).getByRole("radio", { name: "Balanced" })).toBeChecked();
+    expect(screen.getByTestId("prompt-omitted")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("radio", { name: "Chaos" }));
     await user.click(screen.getByTestId("random-generate"));
     const s = saved(store);
     expect(Object.keys(s).length).toBeGreaterThan(150);
@@ -38,8 +49,9 @@ describe("Random Composer", () => {
     expect(screen.getByTestId("random-generate")).toHaveTextContent("다시 랜덤 생성");
   });
 
-  it("keeps a basic the user picked and a value edited in Detailed; regenerates the rest; undo restores the previous run", async () => {
+  it("keeps a basic the user picked and a value edited in Detailed; regenerates the rest; undo restores the previous run (Chaos)", async () => {
     const { user, store } = await setUp();
+    await user.click(screen.getByRole("radio", { name: "Chaos" }));
     await user.click(within(field("person.identity.gender")).getByText("여성", { exact: true }).closest("label")!);
     expect(screen.getByTestId("basic-state-person.identity.gender")).toHaveTextContent("직접 설정");
     await user.click(screen.getByTestId("random-generate"));

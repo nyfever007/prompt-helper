@@ -5,6 +5,9 @@ import {
   compilePrompt,
   getCoreRegistry,
   getPromptOutput,
+  isRandomSelection,
+  viewPrompt,
+  type PromptDetail,
   type CatalogMigrationRecord,
   type CatalogRegistry,
   type KeyValueStore,
@@ -53,7 +56,8 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
   const registry = useMemo(() => registryProp ?? getCoreRegistry(), [registryProp]);
   const store = useMemo(() => (storeProp !== undefined ? storeProp : browserStore()), [storeProp]);
   const workspace = useWorkspace(registry, store);
-  const { mode, setMode, locale, setLocale } = useUiPrefs(store);
+  const prefs = useUiPrefs(store);
+  const { mode, setMode, locale, setLocale } = prefs;
   const t = getMessages(locale);
   const ctx = { registry, locale, t };
 
@@ -151,8 +155,13 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
   }
   const notices = [...derived, ...eventNotices].filter((n) => !dismissed.has(n.id));
 
+  // Prompt detail (Sprint 2-D.7): a view over the compilation, never stored in the ImageSpec. Default: Balanced for
+  // a design holding random values, Full otherwise (existing projects keep their full prompt).
+  const hasRandom = Object.values(workspace.spec.selections).some(isRandomSelection);
+  const detail: PromptDetail = prefs.promptDetail === "auto" ? (hasRandom ? "balanced" : "full") : prefs.promptDetail;
+  const view = useMemo(() => viewPrompt(workspace.compilation, workspace.spec, registry, detail), [workspace.compilation, workspace.spec, registry, detail]);
   // Mobile toolbar status — same gate as every other output path.
-  const output = getPromptOutput(workspace.compilation);
+  const output = getPromptOutput(view);
   const warningCount = workspace.compilation.diagnostics.filter(
     (d) => (d.severity === "warning" || d.severity === "error") && !d.code.startsWith("safety.") && !d.code.startsWith("policy."),
   ).length;
@@ -295,6 +304,8 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
             t={t}
             onPresetApplied={(name, count) => push({ kind: "success", text: fmt(t.presetDialog.applied, { name, n: count }), autoDismissMs: noticeTimeoutMs })}
             onModeChange={setMode}
+            randomStyle={prefs.randomStyle}
+            onRandomStyle={prefs.setRandomStyle}
           />
         </div>
         <aside
@@ -306,7 +317,17 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
             }
           }}
         >
-          <PromptPreview compilation={workspace.compilation} registry={registry} locale={locale} t={t} onClose={() => openPreview(false, true)} />
+          <PromptPreview
+            compilation={view}
+            spec={workspace.spec}
+            registry={registry}
+            locale={locale}
+            t={t}
+            onClose={() => openPreview(false, true)}
+            detailIsAuto={prefs.promptDetail === "auto"}
+            onDetail={prefs.setPromptDetail}
+            tokenPrefs={prefs}
+          />
           <SpecToolbar
             registry={registry}
             spec={workspace.spec}

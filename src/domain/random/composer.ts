@@ -1,11 +1,14 @@
 import { isAttributeActive, isOptionActive, isOptionRestricted } from "../catalog/applicability";
+import { evaluateAll } from "../catalog/conditions";
 import type { CatalogRegistry } from "../catalog/registry";
-import type { AttributeDefinition, OptionDefinition } from "../catalog/schema";
+import type { AttributeDefinition, CatalogRule, OptionDefinition } from "../catalog/schema";
 import { compilePrompt } from "../compiler/compiler";
+import { attributeImportance, RANDOM_PRESET_ID } from "../compiler/detail";
 import type { PresetTransaction } from "../presets/presets";
 import { applySelection } from "../spec/operations";
 import type { AttributeSelection, ImageSpec, SelectionOrigin } from "../spec/schema";
-import type { SelectionValue } from "../spec/values";
+import { selectedOptionIds, type SelectionValue } from "../spec/values";
+import { DEFAULT_RANDOM_STYLE, ODD, OPTIONAL, PROFILES, RARE, RELATIONS, type Relation, type RandomStyle, type StyleProfile } from "./styles";
 
 /**
  * Random Composer (Sprint 2-D.6, ADR-068) — fills every APPLICABLE, UNSET attribute of the whole catalog
@@ -24,9 +27,12 @@ import type { SelectionValue } from "../spec/values";
  *   people or innerwear; then the existing safety policy is checked and generated values that cause a
  *   hold are removed (at most 3 rounds — never an unbounded retry). User values are never touched, so a
  *   hold caused by the user's own choices keeps the existing blocked state and guidance.
- * - Creative combinations are allowed: non-blocking conflict notices stay as they are.
+ * - Styles (Sprint 2-D.7, ./styles.ts): `natural` (default) and `creative` weight options by relations,
+ *   typical context and the existing conflict rules, keep sliders near the middle, limit decoration and
+ *   may leave optional details unset; `chaos` is the 2-D.6 generation unchanged (same seed, same result).
+ *   Creative combinations stay possible: non-blocking conflict notices are reported as before.
  */
-export const RANDOM_ORIGIN: SelectionOrigin = { presetId: "random_composer", presetVersion: "1.0.0" };
+export const RANDOM_ORIGIN: SelectionOrigin = { presetId: RANDOM_PRESET_ID, presetVersion: "1.0.0" };
 export const isRandomSelection = (s: AttributeSelection | undefined): boolean => s?.source === "preset" && s.origin?.presetId === RANDOM_ORIGIN.presetId;
 
 /** Composition policy: options never generated (the user can still choose them). */
@@ -110,9 +116,128 @@ const generate = (a: AttributeDefinition, spec: ImageSpec, registry: CatalogRegi
   return null; // free text: no generated candidates
 };
 
-/** What a random run would write. Never changes the spec. */
-export const composeRandom = (spec: ImageSpec, registry: CatalogRegistry, seed: number): RandomComposition => {
+/** Does an option match a key list (option id, a parent option id, or `group:<id>`)? */
+const matches = (keys: readonly string[] | undefined, o: OptionDefinition): boolean =>
+  Boolean(keys?.some((k) => k === o.id || k === o.parentId || (o.group !== undefined && k === `group:${o.group}`)));
+const isUnusual = (attributeId: string, o: OptionDefinition) => matches(ODD[attributeId], o) || matches(RARE[attributeId], o);
+/** Detail attributes that describe an item chosen in a sibling attribute (`…type` / `…style`). */
+const HEAD = /^(person\.clothing\.(?:tops|bottoms|one_piece|outerwear|footwear|hosiery|innerwear)\.|person\.facial_hair\.)(?!type$|style$)[a-z_]+$/;
+const HEAD_ATTR = (prefix: string) => (prefix.startsWith("person.facial_hair") ? "style" : "type");
+const ACCESSORY = /^person\.accessories\.(?!frame_shape$|frame_color$|hat_color$)/;
+/** Unusual choices one design may hold before the rest of the run prefers ordinary ones. */
+const UNUSUAL_BUDGET: Record<Exclude<RandomStyle, "chaos">, number> = { natural: 2, creative: 6 };
+
+/** Natural / Creative generation (see ./styles.ts). */
+class Styled {
+  private readonly relations = new Map<string, Relation[]>();
+  private readonly rules = new Map<string, CatalogRule[]>();
+  unusual = 0;
+  accessories = 0;
+  constructor(
+    private readonly registry: CatalogRegistry,
+    private readonly profile: StyleProfile,
+    private readonly budget: number,
+    private readonly rand: () => number,
+  ) {
+    for (const r of RELATIONS) for (const target of new Set([...Object.keys(r.prefer ?? {}), ...Object.keys(r.avoid ?? {})])) this.relations.set(target, [...(this.relations.get(target) ?? []), r]);
+    for (const rule of registry.rules) {
+      if (rule.kind !== "conflict" || (profile.avoidRules === "contradiction" && (rule.basis ?? "contradiction") !== "contradiction")) continue;
+      for (const id of rule.involves) this.rules.set(id, [...(this.rules.get(id) ?? []), rule]);
+    }
+  }
+
+  /** Whether this run fills the attribute at all (optional details may stay unset). */
+  wants(a: AttributeDefinition, work: ImageSpec): boolean {
+    if (ACCESSORY.test(a.id) && this.accessories >= this.profile.accessories) return false;
+    // a garment's or facial hair's details only when the item itself is there (no colour for absent socks)
+    const head = HEAD.exec(a.id);
+    if (head) {
+      const item = work.selections[`${head[1]}${HEAD_ATTR(head[1]!)}`];
+      if (!item || selectedOptionIds(item.value).every((id) => id === "none" || id === "clean_shaven")) return false;
+    }
+    const p = this.profile.fill[attributeImportance(a)] * (OPTIONAL.some((re) => re.test(a.id)) ? this.profile.optional : 1);
+    return p >= 1 || this.rand() < p;
+  }
+
+  private weight(a: AttributeDefinition, o: OptionDefinition, work: ImageSpec, poolSize: number): number {
+    const { profile, registry } = this;
+    let w = o.id === "none" ? Math.max(0.3, poolSize * 0.1) : 1;
+    if (matches(ODD[a.id], o)) w *= this.unusual >= this.budget ? 0 : profile.odd;
+    if (matches(RARE[a.id], o)) w *= this.unusual >= this.budget ? 0 : profile.rare;
+    if (o.suggestedWhen && !evaluateAll(o.suggestedWhen, work, registry)) w *= profile.atypical;
+    for (const r of this.relations.get(a.id) ?? []) {
+      if (!evaluateAll(r.when, work, registry)) continue;
+      if (matches(r.prefer?.[a.id], o)) w *= profile.prefer;
+      if (matches(r.avoid?.[a.id], o)) w *= profile.avoid;
+    }
+    return w;
+  }
+
+  private pickWeighted(items: Array<{ o: OptionDefinition; w: number }>): OptionDefinition | null {
+    const total = items.reduce((s, x) => s + x.w, 0);
+    if (total <= 0) return null;
+    let r = this.rand() * total;
+    for (const x of items) if ((r -= x.w) <= 0) return x.o;
+    return items[items.length - 1]!.o;
+  }
+
+  /** Conflict rules (per profile) the value would newly trigger. */
+  conflicts(a: AttributeDefinition, before: ImageSpec, after: ImageSpec): boolean {
+    return (this.rules.get(a.id) ?? []).some((rule) => evaluateAll(rule.when, after, this.registry) && !evaluateAll(rule.when, before, this.registry));
+  }
+
+  generate(a: AttributeDefinition, work: ImageSpec, exclude: ReadonlySet<string>): SelectionValue | null {
+    const { registry, profile, rand } = this;
+    if (a.type === "single" || a.type === "multi") {
+      const never = NEVER[a.id] ?? [];
+      const pool = a.options.filter((o) => !never.includes(o.id) && !exclude.has(o.id) && isOptionActive(registry, o, work) && !isOptionRestricted(registry, o, work));
+      const weighted = pool.map((o) => ({ o, w: this.weight(a, o, work, pool.length) })).filter((x) => x.w > 0);
+      const first = this.pickWeighted(weighted);
+      if (!first) return null;
+      if (a.type === "single") return { kind: "single", optionId: first.id };
+      const r = rand();
+      const k = r < profile.multi[1] ? 3 : r < profile.multi[0] + profile.multi[1] ? 2 : 1;
+      const chosen = [first];
+      let rest = weighted.filter((x) => x.o.id !== first.id && x.o.id !== "none");
+      while (first.id !== "none" && chosen.length < k && rest.length) {
+        const next = this.pickWeighted(rest);
+        if (!next) break;
+        chosen.push(next);
+        rest = rest.filter((x) => x.o.id !== next.id);
+      }
+      return { kind: "multi", optionIds: a.options.filter((o) => chosen.includes(o)).map((o) => o.id) };
+    }
+    if (a.type === "number") {
+      // near the middle of the range: extremes are left to the user (or Chaos)
+      const step = a.step ?? 1;
+      const mid = (a.min + a.max) / 2;
+      const raw = mid + (rand() - 0.5) * profile.spread * (a.max - a.min);
+      const snapped = Math.min(a.max, Math.max(a.min, a.min + Math.round((raw - a.min) / step) * step));
+      return { kind: "number", value: Math.round(snapped * 1000) / 1000 };
+    }
+    if (a.type === "quantity") {
+      if (a.max === undefined) return null;
+      const min = a.min ?? 0;
+      return { kind: "number", value: Math.round(min + rand() * (a.max - min)), unit: a.units[0]!.id };
+    }
+    return null;
+  }
+
+  /** Book-keeping after a value is written. */
+  record(a: AttributeDefinition, value: SelectionValue) {
+    if (value.kind !== "single" && value.kind !== "multi") return;
+    if (!(a.type === "single" || a.type === "multi")) return;
+    const ids = value.kind === "single" ? ("optionId" in value ? [value.optionId] : []) : value.optionIds;
+    const opts = a.options.filter((o) => ids.includes(o.id));
+    if (opts.some((o) => isUnusual(a.id, o))) this.unusual++;
+    if (ACCESSORY.test(a.id) && opts.some((o) => o.id !== "none")) this.accessories++;
+  }
+}
+
+/** What a random run would write. Never changes the spec. `style` defaults to Natural. */
+export const composeRandom = (spec: ImageSpec, registry: CatalogRegistry, seed: number, style: RandomStyle = DEFAULT_RANDOM_STYLE): RandomComposition => {
   const rand = rng(seed);
+  const styled = style === "chaos" ? null : new Styled(registry, PROFILES[style], UNUSUAL_BUDGET[style], rand);
   const stale = Object.keys(spec.selections).filter((id) => !owned(spec.selections[id]));
   // the working spec: everything the user (or a concept) owns, without earlier random values
   const base: ImageSpec = { ...spec, selections: Object.fromEntries(Object.entries(spec.selections).filter(([, s]) => owned(s))) };
@@ -136,8 +261,30 @@ export const composeRandom = (spec: ImageSpec, registry: CatalogRegistry, seed: 
     if (SKIP(a.id) || (a.id === "person.identity.age_group" && ageOwned)) continue;
     if (onePiece ? SEPARATES.some((p) => a.id.startsWith(p)) : a.id.startsWith(ONE_PIECE)) continue;
     if (!isAttributeActive(registry, a, work)) continue;
-    const v = generate(a, work, registry, rand);
-    if (v) put(a.id, v);
+    if (!styled) {
+      const v = generate(a, work, registry, rand);
+      if (v) put(a.id, v);
+      continue;
+    }
+    if (!styled.wants(a, work)) continue;
+    // avoid values that would trigger a conflict rule (bounded: a few alternatives, then leave unset)
+    const tried = new Set<string>();
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const v = styled.generate(a, work, tried);
+      if (!v) break;
+      const trial = applySelection(work, registry, a.id, v, "preset", RANDOM_ORIGIN);
+      if (!trial.ok) break;
+      if (styled.conflicts(a, work, trial.value)) {
+        if (v.kind === "single" && "optionId" in v) tried.add(v.optionId);
+        else if (v.kind === "multi") v.optionIds.forEach((id) => tried.add(id));
+        else break;
+        continue;
+      }
+      work = trial.value;
+      patches.set(a.id, v);
+      styled.record(a, v);
+      break;
+    }
   }
   // drop generated values that a later choice made inapplicable (e.g. hair details after “bald”)
   const settle = () => {
