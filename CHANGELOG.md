@@ -9,6 +9,17 @@
 - 컴파일러(`COMPILER_VERSION`): 0.1.0 / generic-en adapter: 0.1.0
 - 로컬 저장 envelope(`STORAGE_FORMAT_VERSION`): 1
 
+## [Sprint 3.3] — 2026-11-25 — User Presets
+
+버전 변화 없음: ImageSpec 0.4.0, 카탈로그 0.17.0, 컴파일러·안전 정책·workspace 저장 형식 그대로. 사용자 프리셋은 새 로컬 키 `prompter:v1:user-presets`에 저장.
+
+### Added
+- 내 프리셋(Recommended 탭): 현재 설정 저장(모두·카테고리·개별 속성, 이름·설명), 카드(속성 수·잠금 수·주요 카테고리·스케치), 즐겨찾기·검색, 이름 변경·복제·삭제, 개별·전체 JSON 내보내기, 가져오기(검증·새 ID).
+- 적용: 기존 확인 대화상자(직접 설정값 기본 유지, 잠금 보호, 범위 밖 유지, 되돌리기, 충돌 진단·안전 정책) + “저장된 잠금도 함께 적용” 선택. 여러 프리셋 순차 적용·조합.
+- Precision: 표시된 속성을 프리셋으로 저장, 출처 필터 “내 프리셋”. 시스템 콘셉트 카드에 “시스템” 표시, 필드의 출처에 내 프리셋 이름.
+- 도메인: `planPresetDefinition`, `domain/presets/user.ts`, 거래 기록 `appliedLocks`.
+- 테스트: `unit/user-presets`(7), `component/user-presets`(3), e2e `user-presets`(데스크톱·모바일).
+
 ## [Sprint 3.2] — 2026-11-25 — Precision Color & Lock Persistence
 
 버전 변화: ImageSpec **0.3.0 → 0.4.0**(선택값 `locked`, 사용자 정의 항목 `color`, 0.1.0~0.3.0 무손실 마이그레이션, 0.4.0 파일은 이전 앱이 읽지 못함 — 승인된 제한). 카탈로그(0.17.0)·카탈로그 형식·컴파일러·안전 정책·workspace 저장 형식(storageVersion 1)은 그대로.

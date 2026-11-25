@@ -6,7 +6,9 @@ import { fmt, type Messages } from "@/i18n/messages";
 import type { Workspace } from "@/state/useWorkspace";
 import { cameraLayers } from "@/visual/camera-sketch";
 import { lightLayers } from "@/visual/light-sketch";
+import type { UserPresets } from "@/state/useUserPresets";
 import { PresetDialog } from "../detailed/PresetDialog";
+import { MyPresets } from "../presets/MyPresets";
 import { SketchSvg } from "../face/FaceSketch";
 import { describeValue, attributeLabel } from "../format";
 import { cameraSketchState, cameraSubject, frameSize, lightSketchState } from "../scene/sceneSketchState";
@@ -28,6 +30,8 @@ export function RecommendedMode({
   t,
   onPresetApplied,
   onEdit,
+  userPresets,
+  onNotice,
 }: {
   registry: CatalogRegistry;
   workspace: Workspace;
@@ -35,6 +39,9 @@ export function RecommendedMode({
   t: Messages;
   onPresetApplied(name: string, count: number): void;
   onEdit(mode: "basic" | "detailed"): void;
+  /** Sprint 3.3: My Presets (shown below the system concepts). */
+  userPresets?: UserPresets;
+  onNotice?(text: string, kind: "success" | "info" | "error"): void;
 }) {
   const concepts = useMemo(() => registry.presets.filter((p) => p.status === "approved" && !p.categoryId), [registry]);
   const [dialogId, setDialogId] = useState<string | null>(null);
@@ -66,6 +73,9 @@ export function RecommendedMode({
         ))}
       </ul>
       <p className="muted small">{r.sketchNote}</p>
+      {userPresets && (
+        <MyPresets registry={registry} workspace={workspace} userPresets={userPresets} locale={locale} t={t} onPresetApplied={onPresetApplied} onNotice={(text, kind) => onNotice?.(text, kind)} />
+      )}
       {dialogId && (
         <PresetDialog
           presetId={dialogId}
@@ -106,7 +116,7 @@ function ConceptCard({ concept, registry, locale, t, applied, onOpen }: { concep
       </div>
       <div className="concept__body">
         <h3>
-          {name} {locale !== "en" && <span className="concept__en" lang="en">{concept.label.en}</span>}
+          {name} {locale !== "en" && <span className="concept__en" lang="en">{concept.label.en}</span>} <span className="badge badge--system">{t.myPresets.system}</span>
           {applied && <span className="badge badge--set"> {t.recommended.applied}</span>}
         </h3>
         {concept.description && <p className="small">{resolveText(concept.description, locale)}</p>}

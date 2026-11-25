@@ -669,3 +669,26 @@ select, textarea, input[type="number"], .dropdown, .text-input, .option-search i
 .color-value--user { padding-right: 4px; }
 .custom-entry__color { display: flex; align-items: center; gap: 6px; margin: 0; font-family: var(--mono); }
 .swatch--inline { display: inline-block; vertical-align: -2px; margin-right: 4px; }
+
+/* Sprint 3.3 — My Presets */
+.my-presets { display: flex; flex-direction: column; gap: 10px; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border); }
+.my-presets__filters { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.my-presets__filters input[type="search"] { flex: 1 1 220px; }
+.my-preset__media { display: flex; gap: 6px; align-items: flex-end; }
+.my-preset__head { width: 72px; height: auto; }
+.my-preset__actions { align-items: center; }
+.my-preset__manage { gap: 10px; }
+.my-preset__fav { font-size: 1rem; line-height: 1; min-width: 36px; }
+.my-preset__fav.is-on { color: var(--warn); border-color: var(--warn); }
+.link-button--danger { color: var(--danger); }
+.badge--mine { background: var(--accent-soft); color: var(--accent); }
+.badge--system { background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
+.save-preset { display: flex; flex-direction: column; gap: 8px; max-height: 80vh; overflow: auto; }
+.save-preset__row { display: flex; flex-direction: column; gap: 2px; font-size: 0.85rem; }
+.save-preset__row textarea { font: inherit; padding: 6px 8px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface); color: var(--text); }
+.save-preset__scope { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.save-preset__scope legend { font-weight: 600; font-size: 0.85rem; padding: 0 4px; }
+.save-preset__groups, .save-preset__attrs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.save-preset__attrs { padding-left: 22px; font-size: 0.8rem; }
+.save-preset__group { display: flex; gap: 6px; align-items: center; }
+.preset-locks { display: flex; gap: 6px; align-items: center; }

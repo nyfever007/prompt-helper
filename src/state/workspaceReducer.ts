@@ -43,7 +43,8 @@ export type WorkspaceAction =
   | { type: "reset" }
   | { type: "restoreResetSnapshot" }
   | { type: "replace"; spec: ImageSpec }
-  | { type: "applyPreset"; plan: PresetPlan; mode: PresetApplyMode }
+  /** `lockIds` (Sprint 3.3): a user preset's saved locks, applied on request where the preset's value now holds. */
+  | { type: "applyPreset"; plan: PresetPlan; mode: PresetApplyMode; lockIds?: readonly string[] }
   | { type: "undoPreset" }
   /** Sprint 2-D.6: one Random Composer run (deterministic for the seed). */
   | { type: "applyRandom"; seed: number; style?: RandomStyle }
@@ -273,8 +274,27 @@ const createStep =
         };
       }
       case "applyPreset": {
-        const { spec, transaction } = applyPresetPlan(state.spec, registry, action.plan, action.mode, locked);
-        if (transaction.changes.length === 0) return state;
+        const applied = applyPresetPlan(state.spec, registry, action.plan, action.mode, locked);
+        let spec = applied.spec;
+        let transaction = applied.transaction;
+        if (action.lockIds?.length) {
+          // lock only attributes that now hold the preset's value: written now, or already the same
+          const holds = action.lockIds.filter((id) => {
+            const e = action.plan.entries.find((x) => x.attributeId === id);
+            return e !== undefined && (e.kind === "same" || transaction.changes.some((c) => c.attributeId === id));
+          });
+          spec = setLocks(spec, holds, true);
+          const appliedLocks = holds.filter((id) => spec.selections[id] !== applied.spec.selections[id]).map((id) => ({ attributeId: id, selection: spec.selections[id]! }));
+          if (appliedLocks.length) {
+            const lockedNow = new Map(appliedLocks.map((l) => [l.attributeId, l.selection]));
+            transaction = {
+              ...transaction,
+              changes: transaction.changes.map((c) => (lockedNow.has(c.attributeId) ? { ...c, after: lockedNow.get(c.attributeId)! } : c)),
+              appliedLocks,
+            };
+          }
+        }
+        if (transaction.changes.length === 0 && !transaction.appliedLocks?.length) return state;
         return {
           ...state,
           spec,

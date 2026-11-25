@@ -25,6 +25,7 @@ import { ScenePreview } from "../scene/ScenePreview";
 import { isCameraCategory, isLightCategory } from "../scene/sceneSketchState";
 import { FACE_CATEGORY_IDS, type FaceCategoryId } from "../face/faceSketchState";
 import { CategoryNav } from "./CategoryNav";
+import { usePresetNames } from "../presetNames";
 import { PresetDialog } from "./PresetDialog";
 
 const PAGE_TITLE = "\u0000page-title";
@@ -103,7 +104,8 @@ export function DetailedEditor({
   });
 
   const tx = workspace.presetTransaction;
-  const txName = tx ? presetLabel(registry, tx.presetId, locale, t.random.name) : "";
+  const presetNames = usePresetNames();
+  const txName = tx ? presetLabel(registry, tx.presetId, locale, t.random.name, presetNames) : "";
   const catName = (id: string) => resolveText(registry.getCategory(id)?.label, locale);
   const [latestReset, ...olderResets] = workspace.categoryResets;
   const lastRestore = workspace.lastCategoryRestore;

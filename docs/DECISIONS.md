@@ -311,6 +311,14 @@
 - 실제 모순만 비차단 경고합니다: 미소 없음 + 다른 미소, 옅은/부드러운 + 활짝 웃는, 다문 + 벌린 미소, 입 다묾 + 치아 보임, 눈 감음 + 시선 상태, 불투명/비침 타이츠 + 반대 비침 정도, 액세서리 ‘없음’ + 다른 항목(7). 원피스 + 상의·하의, 레이어링은 진단하지 않습니다.
 - 안전: 정책·어휘는 바꾸지 않았습니다. “앳된(youthful-looking)” 인상에는 기존 `age.ambiguous_young` 태그를 붙였고(기존 어휘의 “young-looking”과 같은 취급), 성숙한 인상은 연령 판단에 쓰이지 않습니다. 내의 선택지 중 기존 어휘에 걸리는 4개(“underwear”·“bra” 포함)는 미성년·모호 연령과 함께일 때만 기존 규칙으로 차단되며, 이를 피하려고 문구를 바꾸지 않았습니다(TD-12).
 
+## ADR-072 사용자 프리셋 — **확정 (Sprint 3.3)**
+- **저장 위치**: 사용자 라이브러리는 ImageSpec·카탈로그와 분리된 로컬 키 `prompter:v1:user-presets`(`{kind: "prompter.user-presets", version: 1, presets}`)에 둡니다. ImageSpec 0.4.0·workspace 저장 형식은 바뀌지 않습니다. 손상된 데이터는 빈 라이브러리로 읽습니다.
+- **모델**: `UserPreset {id: "user_…", name, description?, favorite?, createdAt, updatedAt, catalog, patches: [{attributeId, value, locked?}]}`. 값은 그대로(사용자 정의 항목·사용자 지정 색상 포함) 저장하고, 잠금은 패치별 `locked`로 보관합니다. 프롬프트 제외 상태는 저장하지 않습니다(출력 상태는 적용 대상 디자인의 것을 유지).
+- **적용은 기존 프리셋 경로**: `userPresetToDefinition`으로 카탈로그 프리셋과 같은 정의를 만들고 `planPresetDefinition` → 확인 대화상자 → `applyPresetPlan`(기본 `keepUser`) → `undoPresetTransaction`을 그대로 씁니다. 출처는 `source: "preset"`, `origin.presetId = user_…`이며 ID 접두사로 시스템 프리셋과 구분합니다.
+- **저장된 잠금 적용(선택)**: `applyPreset`의 `lockIds` — 프리셋 값이 들어간(쓰였거나 이미 같은) 속성에만 잠금을 겁니다. 거래 기록 `appliedLocks`에 그 상태를 남겨, 되돌리기 때 그대로라면 잠금도 함께 풉니다.
+- **검증**: 불러오기·가져오기 때 카탈로그 ID를 확인하고, 카탈로그 버전이 다르면 기존 마이그레이션(`migrateCatalogSelections`)을 거친 뒤 각 값을 검사합니다. 모르는 속성·잘못된 값은 버리고 개수를 알립니다. 가져온 프리셋은 새 ID를 받아 기존 프리셋을 덮어쓰지 않습니다.
+- **안전·잠금·랜덤·추천**: 바뀌지 않습니다. 내 프리셋이 넣은 값도 다른 값과 똑같이 안전 검사됩니다.
+
 ## ADR-071 ImageSpec 0.4.0: 잠금 저장과 사용자 지정 색상 — **확정 (Sprint 3.2)**
 - **승인된 형식 변경**(ADR-070 A안): `AttributeSelection.locked: true`(선택). 0.3.0 → 0.4.0은 버전만 올리는 무손실 마이그레이션이며(0.1.0~0.3.0 모두 읽음), 0.4.0 파일은 이전 버전 앱이 읽지 못합니다(승인된 제한). 정규화(`canonicalizeSpec`)와 내보내기에 포함됩니다.
 - **잠금의 근거는 명세**: 도메인 연산(`composeRandom`, `applyPresetPlan`·`writableEntries`, `undoPresetTransaction`, `resetCategory`, `viewPrompt`)은 기본값으로 명세의 잠금을 읽습니다. workspace의 별도 잠금 목록은 없앴고, 잠금·해제는 명세를 바꾸는 동작입니다(값·출처·출력 상태는 그대로, 컴파일러와 안전 정책은 `locked`를 읽지 않음). 가져온 디자인은 자기 잠금을 가져옵니다(3.1에서는 가져오면 잠금을 지웠음).

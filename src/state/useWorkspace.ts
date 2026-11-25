@@ -57,7 +57,8 @@ export interface Workspace {
   hasResetSnapshot: boolean;
   presetTransaction: PresetTransaction | null;
   lastPresetUndo: PresetUndoResult | null;
-  applyPreset(plan: PresetPlan, mode: PresetApplyMode): void;
+  /** `lockIds` (Sprint 3.3): apply a user preset's saved locks too. */
+  applyPreset(plan: PresetPlan, mode: PresetApplyMode, lockIds?: readonly string[]): void;
   undoPreset(): void;
   /** Sprint 2-D.6: fill every applicable unset (or earlier random) attribute with random values. */
   randomize(style?: RandomStyle, seed?: number): void;
@@ -157,7 +158,10 @@ export const useWorkspace = (registry: CatalogRegistry, store: KeyValueStore | n
   const reset = useCallback(() => dispatch({ type: "reset" }), []);
   const restoreResetSnapshot = useCallback(() => dispatch({ type: "restoreResetSnapshot" }), []);
   const replace = useCallback((next: ImageSpec) => dispatch({ type: "replace", spec: next }), []);
-  const applyPreset = useCallback((plan: PresetPlan, mode: PresetApplyMode) => dispatch({ type: "applyPreset", plan, mode }), []);
+  const applyPreset = useCallback(
+    (plan: PresetPlan, mode: PresetApplyMode, lockIds?: readonly string[]) => dispatch({ type: "applyPreset", plan, mode, ...(lockIds?.length ? { lockIds } : {}) }),
+    [],
+  );
   const undoPreset = useCallback(() => dispatch({ type: "undoPreset" }), []);
   const randomize = useCallback((style?: RandomStyle, seed?: number) => dispatch({ type: "applyRandom", seed: seed ?? Math.floor(Math.random() * 2 ** 31), ...(style ? { style } : {}) }), []);
   const setExcluded = useCallback((attributeId: string, excluded: boolean) => dispatch({ type: "setExcluded", attributeId, excluded }), []);

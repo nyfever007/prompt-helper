@@ -33,5 +33,5 @@ export const optionLabel = (registry: CatalogRegistry, attributeId: string, opti
 };
 
 /** Display name of a preset id — the Random Composer's reserved origin (Sprint 2-D.6) is not a catalog preset. */
-export const presetLabel = (registry: CatalogRegistry, presetId: string, locale: string, randomName: string): string =>
-  presetId === RANDOM_ORIGIN.presetId ? randomName : resolveText(registry.getPreset(presetId)?.label, locale) || presetId;
+export const presetLabel = (registry: CatalogRegistry, presetId: string, locale: string, randomName: string, userName?: (id: string) => string | undefined): string =>
+  presetId === RANDOM_ORIGIN.presetId ? randomName : resolveText(registry.getPreset(presetId)?.label, locale) || userName?.(presetId) || presetId;
