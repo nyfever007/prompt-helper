@@ -38,15 +38,20 @@ export function PresetDialog({
   const p = plan.value;
   const name = resolveText(p.preset.label, locale);
   const by = (kind: PresetPlanEntry["kind"]) => p.entries.filter((e) => e.kind === kind);
+  // Sprint 3.1: locked values are never written by any mode
+  const locked = new Set(workspace.locks);
+  const isLocked = (e: PresetPlanEntry) => locked.has(e.attributeId);
+  const lockedChanges = by("change").filter(isLocked);
+  const changes = by("change").filter((e) => !isLocked(e));
   const value = (e: PresetPlanEntry, which: "current" | "next") => {
     const attr = registry.getAttribute(e.attributeId)!;
     const sel = which === "current" ? e.current! : e.next;
     return describeValue(attr, sel.value, locale);
   };
   const source = (e: PresetPlanEntry) => (e.current?.source === "preset" ? t.presetDialog.sourcePreset : t.presetDialog.sourceUser);
-  const writable = by("new").length + by("change").length;
+  const writable = by("new").length + changes.length;
   // values the user set (or imported) — kept unless the user explicitly chooses to replace them
-  const userOwned = by("change").filter((e) => e.current?.source !== "preset");
+  const userOwned = changes.filter((e) => e.current?.source !== "preset");
 
   const section = (kind: PresetPlanEntry["kind"], title: string, render: (e: PresetPlanEntry) => React.ReactNode) => {
     const list = by(kind);
@@ -73,7 +78,15 @@ export function PresetDialog({
         <p className="small">{t.presetDialog.intro}</p>
         {!p.presetApplicable && <p className="notice notice--warning">{t.presetDialog.notApplicable}</p>}
         {section("new", t.presetDialog.new, (e) => value(e, "next"))}
-        {section("change", t.presetDialog.change, (e) => (
+        {section("change", t.presetDialog.change, (e) =>
+          isLocked(e) ? (
+            <>
+              {value(e, "current")}{" "}
+              <span className="badge badge--locked" data-testid="preset-locked">
+                🔒 {t.lock.presetLocked}
+              </span>
+            </>
+          ) : (
           <>
             {value(e, "current")} <span className="muted">({source(e)})</span> → <strong>{value(e, "next")}</strong>
             {protectUserValues && e.current?.source !== "preset" && (
@@ -83,7 +96,8 @@ export function PresetDialog({
               </span>
             )}
           </>
-        ))}
+          ),
+        )}
         {section("same", t.presetDialog.same, (e) => value(e, "next"))}
         {section("inapplicable", t.presetDialog.inapplicable, (e) => value(e, "next"))}
         {section("restricted", t.presetDialog.restricted, (e) => value(e, "next"))}
@@ -106,10 +120,15 @@ export function PresetDialog({
           </details>
         )}
         {protectUserValues && userOwned.length > 0 && <p className="small notice">{fmt(t.presetDialog.keepUserNote, { n: userOwned.length })}</p>}
+        {lockedChanges.length > 0 && (
+          <p className="small notice" data-testid="preset-locked-note">
+            🔒 {fmt(t.lock.presetLockedNote, { n: lockedChanges.length })}
+          </p>
+        )}
         <div className="toolbar modal__actions">
           {protectUserValues ? (
             <>
-              <button type="button" className="button button--primary" disabled={!p.presetApplicable || writableEntries(p, "keepUser").length === 0} onClick={() => onApplied(p, "keepUser")}>
+              <button type="button" className="button button--primary" disabled={!p.presetApplicable || writableEntries(p, "keepUser", locked).length === 0} onClick={() => onApplied(p, "keepUser")}>
                 {userOwned.length > 0 ? t.presetDialog.applyKeepUser : t.presetDialog.apply}
               </button>
               {userOwned.length > 0 && (
@@ -118,7 +137,7 @@ export function PresetDialog({
                 </button>
               )}
             </>
-          ) : p.requiresOverwriteConfirmation ? (
+          ) : changes.length > 0 ? (
             <>
               <button type="button" className="button button--primary" disabled={!p.presetApplicable} onClick={() => onApplied(p, "all")}>
                 {t.presetDialog.applyAll}

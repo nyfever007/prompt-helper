@@ -70,9 +70,20 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
   const [navTarget, setNavTarget] = useState<string | null>(null);
   const goToAttribute = useCallback(
     (attributeId: string) => {
-      const categoryId = registry.getAttribute(attributeId)?.categoryId;
-      if (!categoryId) return;
+      const a = registry.getAttribute(attributeId);
+      if (!a) return;
+      const categoryId = a.categoryId;
       setPreviewOpen(false); // the mobile preview sheet would cover the editor
+      if (!categoryId) {
+        // Basic-only attributes (no Detailed category): open Basic and focus the field (Sprint 3.1, Precision).
+        setMode("basic");
+        window.setTimeout(() => {
+          const el = document.getElementById(`attr-${attributeId}`);
+          el?.scrollIntoView({ block: "start" });
+          el?.focus();
+        }, 0);
+        return;
+      }
       if (mode === "detailed" && detailedNavigator.current) detailedNavigator.current(categoryId, attributeId);
       else {
         setNavTarget(attributeId);
@@ -159,7 +170,11 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
   // a design holding random values, Full otherwise (existing projects keep their full prompt).
   const hasRandom = Object.values(workspace.spec.selections).some(isRandomSelection);
   const detail: PromptDetail = prefs.promptDetail === "auto" ? (hasRandom ? "balanced" : "full") : prefs.promptDetail;
-  const view = useMemo(() => viewPrompt(workspace.compilation, workspace.spec, registry, detail), [workspace.compilation, workspace.spec, registry, detail]);
+  const lockSet = useMemo(() => new Set(workspace.locks), [workspace.locks]);
+  const view = useMemo(
+    () => viewPrompt(workspace.compilation, workspace.spec, registry, detail, { locked: lockSet }),
+    [workspace.compilation, workspace.spec, registry, detail, lockSet],
+  );
   // Mobile toolbar status — same gate as every other output path.
   const output = getPromptOutput(view);
   const warningCount = workspace.compilation.diagnostics.filter(
@@ -242,7 +257,6 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
             onClick={() => setMode(m)}
           >
             {t.modes[m]}
-            {m === "precision" && <span className="tab__planned">{t.planned.tabBadge}</span>}
           </button>
         ))}
       </nav>
@@ -306,6 +320,7 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
             onModeChange={setMode}
             randomStyle={prefs.randomStyle}
             onRandomStyle={prefs.setRandomStyle}
+            onGoTo={goToAttribute}
           />
         </div>
         <aside
@@ -325,6 +340,7 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
             t={t}
             onClose={() => openPreview(false, true)}
             detailIsAuto={prefs.promptDetail === "auto"}
+            isLocked={workspace.isLocked}
             onDetail={prefs.setPromptDetail}
             tokenPrefs={prefs}
           />
@@ -333,6 +349,8 @@ export function PrompterApp({ registry: registryProp, store: storeProp, noticeTi
             spec={workspace.spec}
             t={t}
             hasResetSnapshot={workspace.hasResetSnapshot}
+            lockCount={workspace.locks.length}
+            onUnlockAll={workspace.unlockAll}
             onImportAnalyzed={onImportAnalyzed}
             onReset={() => {
               workspace.reset();

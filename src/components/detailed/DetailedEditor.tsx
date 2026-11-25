@@ -201,7 +201,7 @@ export function DetailedEditor({
           t={t}
           onClose={() => setDialogPresetId(null)}
           onApplied={(plan: PresetPlan, mode) => {
-            const count = writableEntries(plan, mode).length;
+            const count = writableEntries(plan, mode, new Set(workspace.locks)).length;
             workspace.applyPreset(plan, mode);
             setDialogPresetId(null);
             onPresetApplied(resolveText(plan.preset.label, locale), count);
@@ -254,8 +254,10 @@ function CategoryPanel({
   const c = node.category;
   const path = registry.categoryPath(c.id).map((id) => resolveText(registry.getCategory(id)?.label, locale));
   const presets = node.approved ? registry.presets.filter((p) => p.status === "approved" && p.categoryId === c.id) : [];
-  // Category reset targets: EVERY stored selection of the subtree (not what is shown/filtered).
-  const targets = attributesInCategory(registry, c.id).filter((id) => id in workspace.spec.selections);
+  // Category reset targets: EVERY stored selection of the subtree (not what is shown/filtered) — except locked ones.
+  const allSet = attributesInCategory(registry, c.id).filter((id) => id in workspace.spec.selections);
+  const lockedIds = allSet.filter((id) => workspace.isLocked(id));
+  const targets = allSet.filter((id) => !workspace.isLocked(id));
   const [confirming, setConfirming] = useState(false);
   const stateOf = (id: string) => {
     const a = registry.getAttribute(id)!;
@@ -265,21 +267,41 @@ function CategoryPanel({
     if (!registry.isExposed(a, "detailed")) tags.push(t.categoryReset.hidden);
     return tags;
   };
-  const showReset = (node.approved && (node.attributes.length > 0 || node.children.length > 0)) || targets.length > 0;
+  const showReset = (node.approved && (node.attributes.length > 0 || node.children.length > 0)) || allSet.length > 0;
   return (
     <section className="cat-panel" aria-labelledby="cat-panel-title" data-category-id={c.id}>
       <p className="breadcrumb muted small">{path.join(" › ")}</p>
       <div className="cat-panel__head">
         <h2 id="cat-panel-title" tabIndex={-1}>
           {resolveText(c.label, locale)} {!node.approved && <span className="badge badge--planned">{t.detailed.draft}</span>}
-          {targets.length > 0 && <span className="badge badge--set"> {fmt(t.detailed.setCount, { n: targets.length })}</span>}
+          {allSet.length > 0 && <span className="badge badge--set"> {fmt(t.detailed.setCount, { n: allSet.length })}</span>}
+          {lockedIds.length > 0 && (
+            <span className="badge badge--locked" data-testid="category-locked-count">
+              {" "}
+              🔒 {fmt(t.lock.count, { n: lockedIds.length })}
+            </span>
+          )}
         </h2>
+        {allSet.length > 0 && (
+          <span className="cat-panel__locks">
+            {targets.length > 0 && (
+              <button type="button" className="button button--small" onClick={() => workspace.lock(targets, true)} data-testid="category-lock">
+                🔒 {fmt(t.lock.lockCategory, { n: targets.length })}
+              </button>
+            )}
+            {lockedIds.length > 0 && (
+              <button type="button" className="button button--small" onClick={() => workspace.lock(lockedIds, false)} data-testid="category-unlock">
+                🔓 {fmt(t.lock.unlockCategory, { n: lockedIds.length })}
+              </button>
+            )}
+          </span>
+        )}
         {showReset && (
           <button
             type="button"
             className="button button--small"
             disabled={targets.length === 0}
-            title={targets.length === 0 ? t.categoryReset.nothing : undefined}
+            title={targets.length === 0 ? (lockedIds.length ? t.lock.allLocked : t.categoryReset.nothing) : undefined}
             onClick={() => setConfirming(true)}
             data-testid="category-reset"
           >
@@ -298,6 +320,11 @@ function CategoryPanel({
           <div className="modal__card">
             <h3 id="cat-reset-title">{fmt(t.categoryReset.title, { name: resolveText(c.label, locale) })}</h3>
             <p>{fmt(t.categoryReset.body, { n: targets.length })}</p>
+            {lockedIds.length > 0 && (
+              <p className="small" data-testid="category-reset-locked">
+                🔒 {fmt(t.lock.resetKeeps, { n: lockedIds.length })}
+              </p>
+            )}
             <ul className="small">
               {targets.map((id) => {
                 const tags = stateOf(id);

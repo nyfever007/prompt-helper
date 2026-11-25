@@ -7,9 +7,9 @@ import type { Workspace } from "@/state/useWorkspace";
 import { DetailedEditor } from "../detailed/DetailedEditor";
 import type { DetailedNavigator } from "../navigation";
 import { BasicComposer } from "./BasicComposer";
+import { PrecisionPanel } from "./PrecisionPanel";
 import { RandomComposer } from "./RandomComposer";
 import { RecommendedMode } from "./RecommendedMode";
-import { SpecSummary } from "./SpecSummary";
 
 /**
  * Recommended (Sprint 2-D.5) starts from a concept preset; Basic renders approved basic-tier attributes; Detailed renders the
@@ -28,6 +28,7 @@ export function ModePanel({
   initialAttributeId,
   randomStyle = DEFAULT_RANDOM_STYLE,
   onRandomStyle,
+  onGoTo,
 }: {
   mode: Mode;
   /** Registered by the Detailed editor so “go to attribute” works while it is shown. */
@@ -44,6 +45,8 @@ export function ModePanel({
   /** Random mode: the selected style (a view preference, not part of the spec). */
   randomStyle?: RandomStyle;
   onRandomStyle?(style: RandomStyle): void;
+  /** Precision: open an attribute's field for editing. */
+  onGoTo?(attributeId: string): void;
 }) {
   if (mode === "recommended")
     return <RecommendedMode registry={registry} workspace={workspace} locale={locale} t={t} onPresetApplied={onPresetApplied} onEdit={(m) => onModeChange?.(m)} />;
@@ -64,16 +67,5 @@ export function ModePanel({
         {...(initialAttributeId ? { initialAttributeId } : {})}
       />
     );
-  const title = t.planned.precisionTitle;
-  const body = t.planned.precisionBody;
-  return (
-    <div className="planned">
-      <div className="planned__banner" role="note">
-        <span className="badge badge--planned">{t.planned.badge}</span>
-        <h2>{title}</h2>
-        <p>{body}</p>
-      </div>
-      <SpecSummary registry={registry} spec={workspace.spec} locale={locale} t={t} />
-    </div>
-  );
+  return <PrecisionPanel registry={registry} workspace={workspace} locale={locale} t={t} onGoTo={(id) => onGoTo?.(id)} />;
 }

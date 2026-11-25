@@ -1,5 +1,6 @@
 import type { CatalogRegistry } from "../catalog/registry";
 import type { AttributeDefinition } from "../catalog/schema";
+import { NO_LOCKS, type Locks } from "../spec/locks";
 import type { AttributeSelection, ImageSpec } from "../spec/schema";
 import { selectedCustomEntries, selectedOptionIds } from "../spec/values";
 import { genericEnglishAdapter } from "./adapters/generic";
@@ -113,14 +114,19 @@ const repeatsPrimary = (spec: ImageSpec, id: string): boolean => {
   return Boolean(primary && own && !primary.excludedFromPrompt && JSON.stringify(primary.value) === JSON.stringify(own.value));
 };
 
-/** The prompt as seen at one detail level (see module doc). `full` returns the compilation unchanged. */
+/**
+ * The prompt as seen at one detail level (see module doc). `full` returns the compilation unchanged.
+ * A locked value (Sprint 3.1) is kept like the user's own value, whoever set it.
+ */
 export const viewPrompt = (
   compilation: PromptCompilation,
   spec: ImageSpec,
   registry: CatalogRegistry,
   detail: PromptDetail,
-  adapter: PromptAdapter = genericEnglishAdapter,
+  options: { adapter?: PromptAdapter; locked?: Locks } = {},
 ): PromptView => {
+  const adapter = options.adapter ?? genericEnglishAdapter;
+  const locked = options.locked ?? NO_LOCKS;
   const base = { ...compilation, detail, omitted: [], fullFragmentCount: compilation.fragments.length };
   if (detail === "full" || compilation.blocked) return base;
   const keep = KEEP[detail];
@@ -134,7 +140,7 @@ export const viewPrompt = (
       kept.push(f);
       continue;
     }
-    const owner = valueOwner(s);
+    const owner = locked.has(f.attributeId) ? "user" : valueOwner(s);
     const text = f.text.trim().toLowerCase();
     let reason: OmitReason | null = null;
     if (seen.has(text) || repeatsPrimary(spec, f.attributeId)) reason = "duplicate";

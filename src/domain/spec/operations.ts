@@ -1,6 +1,7 @@
 import type { CatalogRegistry } from "../catalog/registry";
 import { checkValueForAttribute } from "../catalog/valueCheck";
 import { error, fail, ok, type Result } from "../shared/diagnostics";
+import { NO_LOCKS, type Locks } from "./locks";
 import type { AttributeSelection, ImageSpec, SelectionOrigin, SelectionSource } from "./schema";
 import type { SelectionValue } from "./values";
 
@@ -90,23 +91,27 @@ export const attributesInCategory = (registry: CatalogRegistry, categoryId: stri
 /**
  * Category reset (approved N5): clears EVERY stored selection of the category
  * subtree — regardless of search/filter/visibility, output exclusion,
- * applicability or exposure. Returns the removed selection objects (by
- * reference) so the reset can be undone precisely.
+ * applicability or exposure — except LOCKED attributes (Sprint 3.1), which are kept and listed.
+ * Returns the removed selection objects (by reference) so the reset can be undone precisely.
  */
 export const resetCategory = (
   spec: ImageSpec,
   registry: CatalogRegistry,
   categoryId: string,
-): { spec: ImageSpec; removed: Record<string, AttributeSelection> } => {
+  locked: Locks = NO_LOCKS,
+): { spec: ImageSpec; removed: Record<string, AttributeSelection>; kept: string[] } => {
   const removed: Record<string, AttributeSelection> = {};
+  const kept: string[] = [];
   for (const id of attributesInCategory(registry, categoryId)) {
     const s = spec.selections[id];
-    if (s) removed[id] = s;
+    if (!s) continue;
+    if (locked.has(id)) kept.push(id);
+    else removed[id] = s;
   }
-  if (Object.keys(removed).length === 0) return { spec, removed };
+  if (Object.keys(removed).length === 0) return { spec, removed, kept };
   const selections = { ...spec.selections };
   for (const id of Object.keys(removed)) delete selections[id];
-  return { spec: { ...spec, selections }, removed };
+  return { spec: { ...spec, selections }, removed, kept };
 };
 
 /**

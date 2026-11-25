@@ -28,7 +28,8 @@
 | **Sprint 2-D.5 — Recommended Mode** | 추천 콘셉트 12개(기존 프리셋 계획·확인·적용·되돌리기 재사용, 직접 설정한 값 기본 유지 `keepUser`), 추천 탭·콘셉트 카드(설명·스케치·주요 속성), core 0.17.0 | ✅ 완료 ([설계 원칙 §14](VISUAL_EDITOR_PRINCIPLES.md)) |
 | **Sprint 2-D.6 — Random Composer** | Random 탭: 아무것도 고르지 않아도 생성, 기본 선택 5개(종족·성별·스타일·배경·외모 방향, 모두 선택 사항). 선택하지 않은 모든 적용 가능한 속성을 카탈로그 값으로 생성(실행당 약 300개, 개수 제한 없음), 직접 설정·추천 콘셉트·제외한 값 유지, 랜덤 출처 표시(`random_composer`, 저장 형식 그대로), 재생성·되돌리기, 안전 정책 준수(구성 정책 + 최대 3회 검사), 모바일 탭 5개 정리 | ✅ 완료 ([설계 원칙 §15](VISUAL_EDITOR_PRINCIPLES.md), ADR-068) |
 | **Sprint 2-D.7 — Random Quality & Prompt Optimization** | 랜덤 방식 Natural(기본)·Creative·Chaos(2-D.6 그대로) — 기존 충돌 규칙·`suggestedWhen`·관계와 가중치 데이터 사용, 극단값·장식 제한, 선택적 세부 항목 미설정 허용. 프롬프트 출력 방식 Compact·Balanced·Full(ImageSpec과 분리, 기존 프로젝트 Full, 랜덤 결과 Balanced, 전체 명세 안전 검사 유지, 생략 목록). 길이·토큰·텍스트 입력 비용 표시(로컬 o200k_base 토크나이저, 확인된 가격만 기본값, 직접 입력). 통합·사용성 개선, TD-16 자동 검사 부분 | ✅ 완료 ([설계 원칙 §16](VISUAL_EDITOR_PRINCIPLES.md), ADR-069, [예시](examples/random-prompts.md)) |
-| Sprint 3 — Precision editor | 위치와 개수 지정, 부위별 속성, 중요도, 유지/제외 조건, 참조 이미지 역할(메타데이터) | ⏳ 예정 |
+| **Sprint 3.1 — Precision Controls** | 속성 잠금(개별·카테고리·표시된 항목·전체 해제, 잠긴 개수, 잠긴 속성만 보기). 잠긴 값은 랜덤 재생성·추천 적용(모든 방식)·카테고리/전체 초기화·프리셋 되돌리기에서 유지, 직접 수정·지우기는 잠금 해제 후. 잠금과 프롬프트 제외는 독립, 안전 검사는 그대로. Precision 탭: 설정된 속성 목록(카테고리·값·출처·잠금·프롬프트 포함), 검색·필터, 속성으로 이동. 잠금은 ImageSpec 밖 별도 로컬 키에 저장(저장 형식 변경 없음) | ✅ 완료 (ADR-070, [설계 원칙 §17](VISUAL_EDITOR_PRINCIPLES.md)) |
+| Sprint 3 — Precision editor (3.2 이후) | 위치와 개수 지정, 부위별 속성, 중요도, 유지/제외 조건, 참조 이미지 역할(메타데이터). 잠금을 JSON 내보내기에 포함할지 결정(ADR-070 변경안, 승인 필요) | ⏳ 예정 |
 | Sprint 4 — Style taxonomy & non-person | 직교 스타일 축, 카탈로그 확장, 풍경·건축·제품·게임 에셋 | ⏳ 예정 |
 | Sprint 5 — Image API & live validation | OpenAI provider adapter(서버 측), 비용 가드, 실행 이력, 결과 비교 | ⏳ 예정 |
 | Sprint 6 — Product validation | 실사용자 검증, 지표, 유료화 탐색 | ⏳ 예정 |

@@ -157,11 +157,11 @@ describe("Basic Composer: search, presets, conflicts, parameters", () => {
     await user.click(screen.getByRole("treeitem", { name: "스타일" }));
     expect(field("style.preset").dataset.state).toBe("set");
     expect(fieldFor("style.medium")).toBeNull();
-    // Precision summary (read-only) shows set values only for exposed/set attributes
+    // Precision (Sprint 3.1) lists set attributes only: the preset's characteristics were not set
     await user.click(tab(/Precision/));
-    const summary = screen.getByRole("region", { name: "현재 공유 명세" });
-    expect(summary.querySelector('[data-attribute-id="style.medium"]')).toBeNull();
-    expect(summary.querySelector('[data-attribute-id="style.preset"]')).toHaveAttribute("data-state", "set");
+    const precision = screen.getByTestId("precision-panel");
+    expect(precision.querySelector('[data-attribute-row="style.medium"]')).toBeNull();
+    expect(precision.querySelector('[data-attribute-row="style.preset"]')).toHaveTextContent("애니메이션풍");
   });
 
   it("a conflict names the attributes, explains how to resolve, and only acts when the user clicks", async () => {
@@ -251,7 +251,8 @@ describe("9. mode switching keeps settings (Basic ⊂ Detailed, one spec)", () =
     expect(prompt()).toBe(withAngle);
 
     await user.click(tab(/Precision/));
-    expect(screen.getByText(/Precision 모드는 후속 개발 예정/)).toBeInTheDocument();
+    // Precision (Sprint 3.1) reads the same spec: the Detailed edit is listed
+    expect(document.querySelector('[data-attribute-row="camera.angle"]')).toHaveTextContent("로우 앵글 (올려다봄)");
     expect(prompt()).toBe(withAngle);
 
     await user.click(tab(/Basic/));

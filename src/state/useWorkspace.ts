@@ -5,6 +5,8 @@ import {
   type PresetApplyMode,
   compilePrompt,
   createSpecStorage,
+  loadLocks,
+  saveLocks,
   findInactiveSelections,
   type CatalogMigrationRecord,
   type CatalogRegistry,
@@ -67,6 +69,11 @@ export interface Workspace {
   undoCategoryReset(recordId?: number): void;
   setValue(attributeId: string, value: SelectionValue): void;
   clear(attributeId: string): void;
+  /** Sprint 3.1: locked attribute ids (sorted) and a fast lookup. */
+  locks: string[];
+  isLocked(attributeId: string): boolean;
+  lock(attributeIds: string[], locked: boolean): void;
+  unlockAll(): void;
   reset(): void;
   restoreResetSnapshot(): void;
   replace(spec: ImageSpec): void;
@@ -95,7 +102,7 @@ export const useWorkspace = (registry: CatalogRegistry, store: KeyValueStore | n
     const loaded = storage.load();
     switch (loaded.status) {
       case "loaded":
-        dispatch({ type: "replace", spec: loaded.spec });
+        dispatch({ type: "replace", spec: loaded.spec, locks: store ? loadLocks(store, registry.id) : [] });
         setHydration({
           status: "loaded",
           savedAt: loaded.savedAt,
@@ -112,6 +119,7 @@ export const useWorkspace = (registry: CatalogRegistry, store: KeyValueStore | n
       case "empty":
         setHydration({ status: "empty" });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per storage; store and registry define it
   }, [storage]);
 
   // Autosave every change after hydration — paused while a recovery decision is pending,
@@ -124,7 +132,17 @@ export const useWorkspace = (registry: CatalogRegistry, store: KeyValueStore | n
     setSave(result.ok ? { status: "saved", savedAt: result.value.savedAt } : { status: "failed", diagnostics: result.diagnostics });
   }, [state.spec, storage, autosaveOn]);
 
+  // Locks are saved beside the workspace (separate key, ImageSpec unchanged).
+  useEffect(() => {
+    if (!store || !autosaveOn) return;
+    saveLocks(store, registry.id, state.locks);
+  }, [state.locks, store, registry.id, autosaveOn]);
+
   const compilation = useMemo(() => compilePrompt(state.spec, registry), [state.spec, registry]);
+  const lockSet = useMemo(() => new Set(state.locks), [state.locks]);
+  const isLocked = useCallback((id: string) => lockSet.has(id), [lockSet]);
+  const lock = useCallback((attributeIds: string[], locked: boolean) => dispatch({ type: "lock", attributeIds, locked }), []);
+  const unlockAll = useCallback(() => dispatch({ type: "unlockAll" }), []);
   const inactive = useMemo(() => findInactiveSelections(state.spec, registry), [state.spec, registry]);
 
   const setValue = useCallback((attributeId: string, value: SelectionValue) => dispatch({ type: "set", attributeId, value }), []);
@@ -170,6 +188,10 @@ export const useWorkspace = (registry: CatalogRegistry, store: KeyValueStore | n
     undoCategoryReset,
     setValue,
     clear,
+    locks: state.locks,
+    isLocked,
+    lock,
+    unlockAll,
     reset,
     restoreResetSnapshot,
     replace,

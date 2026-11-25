@@ -71,6 +71,12 @@ export interface AttributeFieldProps {
   isAttributeSet(attributeId: string): boolean;
   /** Optional visual next to the control (e.g. the live face-sketch preview of a relative slider). */
   visual?: ReactNode;
+  /** Sprint 3.1: the value is locked — editing and clearing wait until it is unlocked. */
+  locked?: boolean;
+  /** Lock / unlock (offered when the attribute is set). */
+  onToggleLock?(locked: boolean): void;
+  /** Rule actions never clear a locked attribute. */
+  isAttributeLocked?(attributeId: string): boolean;
 }
 
 /**
@@ -85,6 +91,7 @@ export function AttributeField(props: AttributeFieldProps) {
   const description = resolveText(attribute.description, locale);
   const isSet = selection !== undefined;
   const excluded = Boolean(selection?.excludedFromPrompt);
+  const locked = isSet && Boolean(props.locked);
   const [addRequest, setAddRequest] = useState<{ name: string; n: number } | null>(null);
 
   const selectedIds = selectedOptionIds(selection?.value);
@@ -125,6 +132,7 @@ export function AttributeField(props: AttributeFieldProps) {
       data-attribute-id={attribute.id}
       data-state={isSet ? (excluded ? "excluded" : "set") : "unset"}
       data-active={active && inactiveOptions.length === 0 ? "true" : "false"}
+      data-locked={locked ? "true" : undefined}
       tabIndex={-1}
     >
       <header className="field__header">
@@ -147,12 +155,29 @@ export function AttributeField(props: AttributeFieldProps) {
             <span>{t.field.includeInPrompt}</span>
           </label>
         )}
+        {isSet && props.onToggleLock && (
+          <button
+            type="button"
+            className={`lock-toggle${locked ? " is-locked" : ""}`}
+            aria-pressed={locked}
+            aria-label={`${t.lock.lock}: ${label}`}
+            onClick={() => props.onToggleLock!(!locked)}
+            data-testid={`lock-${attribute.id}`}
+          >
+            <span aria-hidden="true">{locked ? "🔒" : "🔓"}</span> {locked ? t.lock.locked : t.lock.lock}
+          </button>
+        )}
         {isSet && (
-          <button type="button" className="link-button field__clear" onClick={onClear} aria-label={`${t.field.clear}: ${label}`}>
+          <button type="button" className="link-button field__clear" onClick={onClear} aria-label={`${t.field.clear}: ${label}`} disabled={locked}>
             {t.field.clear}
           </button>
         )}
       </header>
+      {locked && (
+        <p className="field__locked small" data-testid={`locked-note-${attribute.id}`}>
+          {t.lock.note}
+        </p>
+      )}
       {excluded && <p className="muted small field__excluded">{t.field.excludedHint}</p>}
       {description && <p className="field__description">{description}</p>}
       {isSet && !active && <p className="field__inactive">{t.field.inactive}</p>}
@@ -162,6 +187,7 @@ export function AttributeField(props: AttributeFieldProps) {
         </p>
       )}
 
+      <fieldset className="field__lockable" disabled={locked}>
       {(() => {
         const control = (
           <Control
@@ -203,6 +229,7 @@ export function AttributeField(props: AttributeFieldProps) {
           {t.field.useDefault}: {describeValue(attribute, attribute.defaultValue, locale)}
         </button>
       )}
+      </fieldset>
 
       {classified.length > 0 && (
         <div className="classification" data-testid={`classification-${attribute.id}`}>
@@ -245,7 +272,7 @@ export function AttributeField(props: AttributeFieldProps) {
                 {desc.actions && desc.actions.length > 0 && (
                   <span className="diag__actions">
                     {desc.actions
-                      .filter((a) => props.isAttributeSet(a.attributeId))
+                      .filter((a) => props.isAttributeSet(a.attributeId) && !props.isAttributeLocked?.(a.attributeId))
                       .map((a) => (
                         <button key={a.attributeId} type="button" className="button button--small" onClick={() => props.onClearAttribute(a.attributeId)}>
                           {fmt(t.field.clearOther, { label: attributeLabel(registry, a.attributeId, locale) })}

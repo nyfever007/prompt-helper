@@ -46,8 +46,9 @@ export function RandomComposer({
   const r = t.random;
   const spec = workspace.spec;
   const sels = Object.entries(spec.selections);
-  const randomIds = sels.filter(([, s]) => isRandomSelection(s) && !s.excludedFromPrompt).map(([id]) => id);
-  const userCount = sels.filter(([, s]) => s.source === "user" || s.source === "import" || (isRandomSelection(s) && s.excludedFromPrompt)).length;
+  // a locked random value is kept like the user's own (Sprint 3.1)
+  const randomIds = sels.filter(([id, s]) => isRandomSelection(s) && !s.excludedFromPrompt && !workspace.isLocked(id)).map(([id]) => id);
+  const userCount = sels.filter(([id, s]) => s.source === "user" || s.source === "import" || (isRandomSelection(s) && (s.excludedFromPrompt || workspace.isLocked(id)))).length;
   const conceptCount = sels.filter(([, s]) => s.source === "preset" && !isRandomSelection(s)).length;
   const lastIsRandom = workspace.presetTransaction?.presetId === RANDOM_ORIGIN.presetId;
   const last = workspace.lastRandom;
@@ -92,6 +93,11 @@ export function RandomComposer({
         )}
       </div>
       <p className="muted small">{style === "chaos" ? r.creative : r.detailHint}</p>
+      {workspace.locks.length > 0 && (
+        <p className="small" data-testid="random-locks">
+          🔒 {fmt(t.lock.randomKeeps, { n: workspace.locks.length })}
+        </p>
+      )}
 
       {last && lastIsRandom && (
         <p className="notice" role="status" data-testid="random-result" key={last.id}>
