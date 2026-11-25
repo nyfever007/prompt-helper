@@ -9,6 +9,17 @@
 - 컴파일러(`COMPILER_VERSION`): 0.1.0 / generic-en adapter: 0.1.0
 - 로컬 저장 envelope(`STORAGE_FORMAT_VERSION`): 1
 
+## [Sprint 3.4] — 2026-11-25 — History & Restore (Sprint 3 완료)
+
+버전 변화 없음: ImageSpec 0.4.0, 카탈로그 0.17.0, 컴파일러·안전 정책·workspace 저장 형식 그대로. 이력·스냅샷은 새 로컬 키 `prompter:v1:history`, `prompter:v1:snapshots`.
+
+### Added
+- 다단계 실행 취소·다시 실행(버튼, Ctrl/⌘+Z, Ctrl/⌘+Shift+Z, Ctrl+Y): 속성 편집, 잠금, 프롬프트 포함 여부, 랜덤 생성, 추천·내 프리셋 적용, 카테고리·전체 초기화와 기존 되돌리기. 일괄 작업은 한 단계, 연속 입력은 한 단계, 실행 취소 뒤 새 편집은 다시 실행 분기 제거.
+- 작업 이력 패널: 시간·작업 종류·변경 속성 수·현재 위치·복원(잠금 포함 전체 상태, 복원도 실행 취소 가능).
+- 스냅샷: 현재 디자인 전체를 이름과 함께 저장, 이름 변경·복원·삭제, 새로고침 후 유지.
+- 도메인: `domain/history/history.ts`, `domain/history/snapshots.ts`.
+- 테스트: `unit/history`(12), `component/history`(3), e2e `history`(데스크톱·모바일).
+
 ## [Sprint 3.3] — 2026-11-25 — User Presets
 
 버전 변화 없음: ImageSpec 0.4.0, 카탈로그 0.17.0, 컴파일러·안전 정책·workspace 저장 형식 그대로. 사용자 프리셋은 새 로컬 키 `prompter:v1:user-presets`에 저장.
