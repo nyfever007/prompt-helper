@@ -498,7 +498,7 @@ describe("ImageSpec 0.2.0 compatibility (D2)", () => {
     const r = importSpecJson(fixture("sprint1", "export-full.json"), core);
     expect(r.status).toBe("valid");
     if (r.status !== "valid") return;
-    expect(r.spec.schemaVersion).toBe("0.3.0"); // migrated 0.1.0 → 0.2.0 → 0.3.0 (version-only steps)
+    expect(r.spec.schemaVersion).toBe("0.4.0"); // migrated 0.1.0 → 0.2.0 → 0.3.0 → 0.4.0 (version-only steps)
     expect(r.spec.catalog).toEqual({ id: "prompter.core", version: "0.17.0" });
     expect(r.spec.selections).toEqual(raw.selections);
     expect(r.migrations).toEqual([]);
@@ -516,7 +516,7 @@ describe("ImageSpec 0.2.0 compatibility (D2)", () => {
     expect(r.status === "valid" && r.spec.selections["composition.framing"]!.value).toEqual(single("full_body"));
   });
 
-  it("new exports are 0.3.0 (older apps cannot read them — documented limitation)", () => {
-    expect(JSON.parse(exportSpecJson(createEmptySpec(core))).schemaVersion).toBe("0.3.0");
+  it("new exports are 0.4.0 (older apps cannot read them — documented limitation)", () => {
+    expect(JSON.parse(exportSpecJson(createEmptySpec(core))).schemaVersion).toBe("0.4.0");
   });
 });

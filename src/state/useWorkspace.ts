@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import {
   type PresetApplyMode,
   compilePrompt,
   createSpecStorage,
-  loadLocks,
-  saveLocks,
+  loadLegacyLocks,
+  lockedIds,
+  removeLegacyLocks,
+  setLocks,
   findInactiveSelections,
   type CatalogMigrationRecord,
   type CatalogRegistry,
@@ -91,6 +93,9 @@ export const useWorkspace = (registry: CatalogRegistry, store: KeyValueStore | n
   const storage = useMemo(() => (store ? createSpecStorage(store, registry) : null), [store, registry]);
   const [hydration, setHydration] = useState<HydrationState>({ status: "pending" });
   const [save, setSave] = useState<SaveState>({ status: "idle" });
+  // Sprint 3.2: locks of the Sprint 3.1 side key were moved into the restored spec; the key is removed
+  // once that spec has been saved (so a failed save loses nothing).
+  const legacyLocksPending = useRef(false);
 
   // Restore once on mount (client only — avoids SSR/localStorage mismatch).
   useEffect(() => {
@@ -100,9 +105,12 @@ export const useWorkspace = (registry: CatalogRegistry, store: KeyValueStore | n
       return;
     }
     const loaded = storage.load();
+    const legacy = store ? loadLegacyLocks(store, registry.id) : null;
+    if (legacy !== null) legacyLocksPending.current = true;
+    const withLegacy = <T extends ImageSpec>(spec: T): ImageSpec => (legacy?.length ? setLocks(spec, legacy, true) : spec);
     switch (loaded.status) {
       case "loaded":
-        dispatch({ type: "replace", spec: loaded.spec, locks: store ? loadLocks(store, registry.id) : [] });
+        dispatch({ type: "replace", spec: withLegacy(loaded.spec) });
         setHydration({
           status: "loaded",
           savedAt: loaded.savedAt,
@@ -111,7 +119,7 @@ export const useWorkspace = (registry: CatalogRegistry, store: KeyValueStore | n
         });
         break;
       case "recoverable":
-        setHydration({ status: "recoverable", proposed: loaded.spec, excluded: loaded.excluded, migrations: loaded.migrations, backupKey: loaded.backupKey });
+        setHydration({ status: "recoverable", proposed: withLegacy(loaded.spec), excluded: loaded.excluded, migrations: loaded.migrations, backupKey: loaded.backupKey });
         break;
       case "invalid":
         setHydration({ status: "invalid", diagnostics: loaded.diagnostics, backupKey: loaded.backupKey });
@@ -128,18 +136,17 @@ export const useWorkspace = (registry: CatalogRegistry, store: KeyValueStore | n
   useEffect(() => {
     if (!storage || !autosaveOn) return;
     const result = storage.save(state.spec);
+    if (result.ok && legacyLocksPending.current && store) {
+      removeLegacyLocks(store);
+      legacyLocksPending.current = false;
+    }
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reflects the outcome of an external write
     setSave(result.ok ? { status: "saved", savedAt: result.value.savedAt } : { status: "failed", diagnostics: result.diagnostics });
-  }, [state.spec, storage, autosaveOn]);
-
-  // Locks are saved beside the workspace (separate key, ImageSpec unchanged).
-  useEffect(() => {
-    if (!store || !autosaveOn) return;
-    saveLocks(store, registry.id, state.locks);
-  }, [state.locks, store, registry.id, autosaveOn]);
+  }, [state.spec, storage, autosaveOn, store]);
 
   const compilation = useMemo(() => compilePrompt(state.spec, registry), [state.spec, registry]);
-  const lockSet = useMemo(() => new Set(state.locks), [state.locks]);
+  const locks = useMemo(() => lockedIds(state.spec), [state.spec]);
+  const lockSet = useMemo(() => new Set(locks), [locks]);
   const isLocked = useCallback((id: string) => lockSet.has(id), [lockSet]);
   const lock = useCallback((attributeIds: string[], locked: boolean) => dispatch({ type: "lock", attributeIds, locked }), []);
   const unlockAll = useCallback(() => dispatch({ type: "unlockAll" }), []);
@@ -188,7 +195,7 @@ export const useWorkspace = (registry: CatalogRegistry, store: KeyValueStore | n
     undoCategoryReset,
     setValue,
     clear,
-    locks: state.locks,
+    locks,
     isLocked,
     lock,
     unlockAll,

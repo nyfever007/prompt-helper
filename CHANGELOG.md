@@ -9,6 +9,21 @@
 - 컴파일러(`COMPILER_VERSION`): 0.1.0 / generic-en adapter: 0.1.0
 - 로컬 저장 envelope(`STORAGE_FORMAT_VERSION`): 1
 
+## [Sprint 3.2] — 2026-11-25 — Precision Color & Lock Persistence
+
+버전 변화: ImageSpec **0.3.0 → 0.4.0**(선택값 `locked`, 사용자 정의 항목 `color`, 0.1.0~0.3.0 무손실 마이그레이션, 0.4.0 파일은 이전 앱이 읽지 못함 — 승인된 제한). 카탈로그(0.17.0)·카탈로그 형식·컴파일러·안전 정책·workspace 저장 형식(storageVersion 1)은 그대로.
+
+### Added
+- 잠금이 JSON 저장·내보내기·가져오기에 포함됨. 3.1의 로컬 잠금 키는 시작할 때 명세로 옮기고, 저장에 성공한 뒤 지움.
+- 사용자 지정 색상: 모든 색상 속성(27개)의 색상 컨트롤에 컬러 피커·HEX·RGB 숫자·슬라이더(서로 동기화), 실시간 미리보기와 가장 가까운 팔레트 색, 해제, 형식 오류 안내. 다중 선택(아이섀도)은 “추가”. Precision 값 열에 색 견본.
+- 프롬프트: `custom color #RRGGBB (RGB r, g, b, close to …)`, 재현 비보장 안내. Face·Figure·Lighting 미리보기에 사용자 색 반영.
+- 테스트: `unit/custom-color`(10), `component/custom-color`(3), `component/precision`(+3 마이그레이션), e2e `custom-color`(데스크톱·모바일, 0.4.0 내보내기·가져오기).
+
+### Changed
+- 잠금을 별도 목록이 아닌 명세(`selection.locked`)에서 읽음. 다른 디자인을 가져오면 그 디자인의 잠금이 적용됨.
+- 현재 스키마 버전을 확인하던 기존 테스트 6건의 기대값을 0.4.0으로 변경.
+- 사용자 정의 항목 편집(이름·표현)이 색을 유지하고 견본을 표시.
+
 ## [Sprint 3.1] — 2026-11-25 — Precision Controls
 
 버전 변화 없음: core 카탈로그 0.17.0, 카탈로그 형식·컴파일러·ImageSpec(0.3.0)·workspace 저장 형식·안전 정책 그대로. 잠금은 새 로컬 키 `prompter:v1:locks`에 저장(JSON 내보내기에는 포함하지 않음, ADR-070 변경안).

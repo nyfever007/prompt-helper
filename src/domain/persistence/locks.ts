@@ -1,24 +1,18 @@
 import type { KeyValueStore } from "./storage";
 
 /**
- * Local persistence of attribute locks (Sprint 3.1, ADR-070). A separate key beside the workspace: the
- * ImageSpec, the workspace envelope and JSON export are unchanged, so existing projects and files are
- * read exactly as before (no locks). Unknown or damaged data is ignored (= no locks), never an error.
+ * LEGACY lock storage (Sprint 3.1, ADR-070). Since Sprint 3.2 (ADR-071) locks live in the ImageSpec
+ * (`AttributeSelection.locked`). On load the app moves these locks into the restored spec and removes
+ * the key only after that spec was saved successfully — nothing is lost if saving fails.
+ * Unknown or damaged data is ignored (= no locks), never an error.
  */
-export const LOCKS_STORAGE_KEY = "prompter:v1:locks";
+export const LEGACY_LOCKS_STORAGE_KEY = "prompter:v1:locks";
 
-interface LocksEnvelope {
-  kind: "prompter.locks";
-  version: 1;
-  catalogId: string;
-  attributeIds: string[];
-}
-
-export const loadLocks = (store: KeyValueStore, catalogId: string): string[] => {
+export const loadLegacyLocks = (store: KeyValueStore, catalogId: string): string[] | null => {
   try {
-    const raw = store.getItem(LOCKS_STORAGE_KEY);
-    if (!raw) return [];
-    const v = JSON.parse(raw) as Partial<LocksEnvelope>;
+    const raw = store.getItem(LEGACY_LOCKS_STORAGE_KEY);
+    if (!raw) return null;
+    const v = JSON.parse(raw) as { kind?: unknown; version?: unknown; catalogId?: unknown; attributeIds?: unknown };
     if (v.kind !== "prompter.locks" || v.version !== 1 || v.catalogId !== catalogId || !Array.isArray(v.attributeIds)) return [];
     return v.attributeIds.filter((id): id is string => typeof id === "string");
   } catch {
@@ -26,12 +20,10 @@ export const loadLocks = (store: KeyValueStore, catalogId: string): string[] => 
   }
 };
 
-export const saveLocks = (store: KeyValueStore, catalogId: string, attributeIds: readonly string[]): boolean => {
+export const removeLegacyLocks = (store: KeyValueStore): void => {
   try {
-    if (attributeIds.length === 0) store.removeItem(LOCKS_STORAGE_KEY);
-    else store.setItem(LOCKS_STORAGE_KEY, JSON.stringify({ kind: "prompter.locks", version: 1, catalogId, attributeIds: [...attributeIds] } satisfies LocksEnvelope));
-    return true;
+    store.removeItem(LEGACY_LOCKS_STORAGE_KEY);
   } catch {
-    return false;
+    // retried on the next load
   }
 };

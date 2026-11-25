@@ -11,8 +11,8 @@ import { isAttributeActive, isOptionAttribute, selectedCustomEntries, selectedOp
 type Swatch = (optionId: string) => string | null;
 export type Binding<T> =
   | { kind: "degree"; set(p: T, v: number): void }
-  /** Returns the option ids it could NOT draw. */
-  | { kind: "option"; set(p: T, ids: string[], swatch: Swatch): string[] };
+  /** Returns the option ids it could NOT draw. `colors`: user-defined colors of the value (color bindings only). */
+  | { kind: "option"; acceptsColor?: boolean; set(p: T, ids: string[], swatch: Swatch, colors: string[]): string[] };
 
 export const degree = <T>(set: (p: T, v: number) => void): Binding<T> => ({ kind: "degree", set });
 export const single = <T, K extends string>(known: readonly K[], set: (p: T, id: K) => void): Binding<T> => ({
@@ -26,10 +26,12 @@ export const single = <T, K extends string>(known: readonly K[], set: (p: T, id:
     return ids;
   },
 });
+/** A palette swatch, or — when no palette color is chosen — the user's own color (Sprint 3.2). */
 export const color = <T>(set: (p: T, c: string) => void): Binding<T> => ({
   kind: "option",
-  set: (p, ids, swatch) => {
-    const c = ids[0] ? swatch(ids[0]) : null;
+  acceptsColor: true,
+  set: (p, ids, swatch, colors) => {
+    const c = ids[0] ? swatch(ids[0]) : (colors[0] ?? null);
     if (c) set(p, c);
     return c ? [] : ids;
   },
@@ -88,9 +90,14 @@ export const runBindings = <T>(
     }
     const ids = selectedOptionIds(sel.value);
     const swatch: Swatch = (id) => (isOptionAttribute(a) ? (a.options.find((o) => o.id === id)?.swatch ?? null) : null);
-    const missed = b.set(params, ids, swatch);
-    if (ids.length > missed.length) state.drawn.push(a.id);
-    if (missed.length > 0 || selectedCustomEntries(sel.value).length > 0) state.notDrawn.push(a.id);
+    const custom = selectedCustomEntries(sel.value);
+    const colors = b.acceptsColor ? custom.flatMap((c) => (c.color ? [c.color] : [])) : [];
+    const missed = b.set(params, ids, swatch, colors);
+    const drewColor = ids.length === 0 && colors.length > 0;
+    if (ids.length > missed.length || drewColor) state.drawn.push(a.id);
+    // custom values without a drawing (a user color IS drawn when no palette color takes its place)
+    const undrawnCustom = custom.filter((c, i) => !(drewColor && c.color && i === custom.findIndex((x) => x.color)));
+    if (missed.length > 0 || undrawnCustom.length > 0) state.notDrawn.push(a.id);
   }
   return state;
 };

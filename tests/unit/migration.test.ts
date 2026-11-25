@@ -29,7 +29,7 @@ describe("Sprint 0 data compatibility (real Sprint 0 output, catalog 0.1.0 → 0
     ]);
     expect(r.migrations[0]!.reason.ko).toMatch(/프리셋/);
     expect(r.spec.catalog).toEqual({ id: "prompter.core", version: "0.17.0" });
-    expect(r.spec.schemaVersion).toBe("0.3.0");
+    expect(r.spec.schemaVersion).toBe("0.4.0");
     // every user value is preserved exactly (same value objects, same sources), only the key moved
     expect(r.spec.selections["style.preset"]).toEqual(raw.selections["style.visual"]);
     expect(r.spec.selections["subject.kind"]).toEqual(raw.selections["subject.kind"]);

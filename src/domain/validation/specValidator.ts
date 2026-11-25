@@ -171,7 +171,8 @@ const customAndSuggestionNotices = (spec: ImageSpec, registry: CatalogRegistry):
     if (!selection || (attribute.type !== "single" && attribute.type !== "multi")) continue;
     const path = `selections.${attribute.id}`;
     if (attribute.custom?.nameOnlyNotice) {
-      const nameOnly = selectedCustomEntries(selection.value).filter((c) => c.expression === undefined);
+      // a custom color is itself the visual description (Sprint 3.2)
+      const nameOnly = selectedCustomEntries(selection.value).filter((c) => c.expression === undefined && c.color === undefined);
       if (nameOnly.length > 0) {
         out.push(
           info("selection.custom_name_only", `"${attribute.id}": custom value(s) ${nameOnly.map((c) => `"${c.label}"`).join(", ")} have no visual description`, {

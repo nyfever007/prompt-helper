@@ -649,3 +649,23 @@ select, textarea, input[type="number"], .dropdown, .text-input, .option-search i
   .precision__table th, .precision__table td { border: 0; padding: 3px 0; }
   .precision__table td[data-label]::before { content: attr(data-label) " · "; color: var(--muted); font-size: 0.75rem; }
 }
+
+/* Sprint 3.2 — user-defined colors */
+.field__error { color: var(--danger); margin: 0; }
+.custom-color__open { margin-top: 6px; }
+.custom-color { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin: 8px 0 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.custom-color legend { font-size: 0.8rem; font-weight: 600; padding: 0 4px; }
+.custom-color__body { display: flex; flex-wrap: wrap; gap: 12px; }
+.custom-color__preview { display: flex; gap: 10px; align-items: center; flex: 0 1 220px; }
+.custom-color__swatch { width: 56px; height: 56px; border-radius: 8px; border: 1px solid var(--border-strong); flex: none; }
+.custom-color__inputs { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 8px; align-items: center; flex: 1 1 240px; font-size: 0.85rem; }
+.custom-color__inputs .field__error { grid-column: 1 / -1; }
+.custom-color__row { display: contents; }
+.custom-color__row input[type="color"] { width: 48px; height: 32px; padding: 0; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface); }
+.custom-color__hex { font-family: var(--mono); max-width: 12ch; }
+.custom-color__channel { grid-column: 1 / -1; display: grid; grid-template-columns: 3.5em minmax(0, 1fr) 4.5em; gap: 8px; align-items: center; }
+.custom-color__channel input[type="number"] { font: inherit; padding: 3px 6px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface); color: var(--text); min-width: 0; }
+.custom-color p { margin: 0; }
+.color-value--user { padding-right: 4px; }
+.custom-entry__color { display: flex; align-items: center; gap: 6px; margin: 0; font-family: var(--mono); }
+.swatch--inline { display: inline-block; vertical-align: -2px; margin-right: 4px; }

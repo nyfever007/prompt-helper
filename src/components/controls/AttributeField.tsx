@@ -378,8 +378,17 @@ function Control(
         return <CardsControl {...optionProps} />;
       case "searchable":
         return <SearchableListControl {...optionProps} />;
-      case "color":
-        return <ColorControl {...optionProps} />;
+      case "color": {
+        // User-defined colors (Sprint 3.2) are custom entries with `color`; the palette part of the value is kept.
+        const onWriteCustom = attribute.custom
+          ? (entries: CustomEntry[]) => {
+              if (attribute.type === "single") return entries[0] ? onSet({ kind: "single", custom: entries[0] }) : onClear();
+              if (selectedIds.length + entries.length === 0) return onClear();
+              onSet({ kind: "multi", optionIds: [...selectedIds], ...(entries.length ? { custom: entries } : {}) });
+            }
+          : undefined;
+        return <ColorControl {...optionProps} customEntries={customEntries} {...(onWriteCustom ? { onWriteCustom } : {})} />;
+      }
       default:
         return (
           <OptionPicker

@@ -11,7 +11,11 @@ import { IdSchema } from "../shared/ids";
  *
  * 0.3.0 (Sprint 2-B.1): user-defined values (`CustomEntry`) in single/multi
  * values, and an explicit `unit` on number/range values (quantity attributes).
+ * 0.4.0 (Sprint 3.2): optional `color` on a custom entry — a user-defined color (#RRGGBB) for color attributes.
  */
+
+/** Canonical user color: `#` + six UPPERCASE hex digits. */
+export const HEX_COLOR = /^#[0-9A-F]{6}$/;
 
 /** Upper bounds of a user-defined value (approved D4). Catalogs may only lower them. */
 export const CUSTOM_LABEL_MAX = 200;
@@ -29,6 +33,8 @@ export const CustomEntrySchema = z
   .object({
     label: z.string().max(CUSTOM_LABEL_MAX).refine(notBlank, { message: "label must not be blank" }),
     expression: z.string().max(CUSTOM_EXPRESSION_MAX).refine(notBlank, { message: "expression must not be blank (omit it instead)" }).optional(),
+    /** A user-defined color (#RRGGBB, uppercase) — only for color attributes (checked by the validator). */
+    color: z.string().regex(HEX_COLOR, { message: "color must be #RRGGBB (uppercase hex)" }).optional(),
   })
   .strict();
 export type CustomEntry = z.infer<typeof CustomEntrySchema>;

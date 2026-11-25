@@ -106,7 +106,7 @@ test.describe("Person › Identity (product catalog)", () => {
       const path = test.info().outputPath("identity.json");
       await download.saveAs(path);
       const exported = JSON.parse(await readFile(path, "utf8"));
-      expect(exported.schemaVersion).toBe("0.3.0");
+      expect(exported.schemaVersion).toBe("0.4.0");
       expect(exported.selections).toEqual(before);
       page.once("dialog", (d) => d.accept());
       await page.getByRole("button", { name: "설정 초기화" }).click();

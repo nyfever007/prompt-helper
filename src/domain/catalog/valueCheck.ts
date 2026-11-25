@@ -41,6 +41,10 @@ export const checkValueForAttribute = (
           out.push(error("value.text_too_long", `${attributeId}: custom entry exceeds ${labelMax}/${exprMax} characters`, { ...at, params: { max: labelMax } }));
         }
       }
+      // a user-defined color (Sprint 3.2) only on color attributes (the control is never a type default)
+      if (attribute.control !== "color" && custom.some((c) => c.color !== undefined)) {
+        out.push(error("value.color_not_supported", `${attributeId}: custom colors are only allowed on color attributes`, at));
+      }
       if (new Set(custom.map((c) => customKey(c.label))).size !== custom.length) {
         out.push(error("value.duplicate_custom", `${attributeId}: custom entries must have distinct labels`, at));
       }

@@ -5,16 +5,14 @@ import {
   compilePrompt,
   composeRandom,
   createEmptySpec,
-  createMemoryStore,
   exportSpecJson,
   getCoreRegistry,
   isRandomSelection,
-  loadLocks,
-  LOCKS_STORAGE_KEY,
+  importSpecJson,
+  lockedIds,
   planPreset,
   RANDOM_STYLES,
   resetCategory,
-  saveLocks,
   setLocks,
   undoPresetTransaction,
   viewPrompt,
@@ -24,7 +22,10 @@ import {
 import { createWorkspaceReducer, initialWorkspaceState, type WorkspaceState } from "@/state/workspaceReducer";
 import { buildSpec, multi, single } from "../fixtures/specs";
 
-/** Sprint 3.1 — attribute locks: kept by every bulk change, editable only after unlocking, independent of exclusion and safety. */
+/**
+ * Sprint 3.1 — attribute locks: kept by every bulk change, editable only after unlocking, independent of exclusion and safety.
+ * Since Sprint 3.2 the lock is stored in the spec (`selection.locked`, ImageSpec 0.4.0).
+ */
 const core = getCoreRegistry();
 const reduce = createWorkspaceReducer(core);
 const random = (spec: ImageSpec, seed: number, style: (typeof RANDOM_STYLES)[number] = "chaos", locked = new Set<string>()) =>
@@ -36,10 +37,18 @@ const plan = (spec: ImageSpec, id: string) => {
 };
 
 describe("lock list", () => {
-  it("only set attributes can be locked; unlocking and pruning keep the list sorted and valid", () => {
+  it("only set attributes can be locked; a lock changes nothing but the flag; unlocking removes it", () => {
     const spec = buildSpec(core, [["style.preset", single("watercolor")], ["mood.tone", multi("calm")]]);
-    expect(setLocks([], spec, ["mood.tone", "style.preset", "camera.angle"], true)).toEqual(["mood.tone", "style.preset"]);
-    expect(setLocks(["mood.tone", "style.preset"], spec, ["mood.tone"], false)).toEqual(["style.preset"]);
+    const locked = setLocks(spec, ["mood.tone", "style.preset", "camera.angle"], true);
+    expect(lockedIds(locked)).toEqual(["mood.tone", "style.preset"]);
+    expect("camera.angle" in locked.selections).toBe(false);
+    const { locked: flag, ...rest } = locked.selections["style.preset"]!;
+    expect(flag).toBe(true);
+    expect(rest).toEqual(spec.selections["style.preset"]);
+    const unlocked = setLocks(locked, ["mood.tone"], false);
+    expect(lockedIds(unlocked)).toEqual(["style.preset"]);
+    expect(unlocked.selections["mood.tone"]).toEqual(spec.selections["mood.tone"]);
+    expect(setLocks(spec, ["camera.angle"], true)).toBe(spec); // nothing to lock: same spec
   });
 });
 
@@ -86,18 +95,18 @@ describe("resets", () => {
 });
 
 describe("workspace reducer", () => {
-  const withSpec = (spec: ImageSpec, locks: string[] = []): WorkspaceState => ({ ...initialWorkspaceState(core), spec, locks });
+  const withSpec = (spec: ImageSpec): WorkspaceState => ({ ...initialWorkspaceState(core), spec });
   const base = buildSpec(core, [["style.preset", single("watercolor")], ["camera.angle", single("low_angle")], ["output.aspect_ratio", single("square")]]);
 
   it("a locked value cannot be changed or cleared until unlocked; prompt exclusion stays independent", () => {
     let st = reduce(withSpec(base), { type: "lock", attributeIds: ["style.preset"], locked: true });
-    expect(st.locks).toEqual(["style.preset"]);
+    expect(lockedIds(st.spec)).toEqual(["style.preset"]);
     expect(reduce(st, { type: "set", attributeId: "style.preset", value: single("oil_painting") })).toBe(st);
     expect(reduce(st, { type: "clear", attributeId: "style.preset" })).toBe(st);
     // exclusion works on a locked value and keeps the lock
     const excluded = reduce(st, { type: "setExcluded", attributeId: "style.preset", excluded: true });
     expect(excluded.spec.selections["style.preset"]!.excludedFromPrompt).toBe(true);
-    expect(excluded.locks).toEqual(["style.preset"]);
+    expect(lockedIds(excluded.spec)).toEqual(["style.preset"]);
     // unlock → editable again
     st = reduce(st, { type: "lock", attributeIds: ["style.preset"], locked: false });
     expect(reduce(st, { type: "set", attributeId: "style.preset", value: single("oil_painting") }).spec.selections["style.preset"]!.value).toEqual(single("oil_painting"));
@@ -105,25 +114,27 @@ describe("workspace reducer", () => {
 
   it("random runs, concepts, category resets and a full reset keep locked values; unlock all releases every lock", () => {
     let st = reduce(withSpec(base), { type: "lock", attributeIds: ["camera.angle", "output.aspect_ratio"], locked: true });
+    const pinned = { ...st.spec.selections };
     st = reduce(st, { type: "applyRandom", seed: 3, style: "chaos" });
-    expect(st.spec.selections["camera.angle"]).toBe(base.selections["camera.angle"]);
+    expect(st.spec.selections["camera.angle"]).toBe(pinned["camera.angle"]);
     st = reduce(st, { type: "applyPreset", plan: plan(st.spec, "concept_cyberpunk"), mode: "all" });
-    expect(st.spec.selections["output.aspect_ratio"]).toBe(base.selections["output.aspect_ratio"]);
+    expect(st.spec.selections["output.aspect_ratio"]).toBe(pinned["output.aspect_ratio"]);
     st = reduce(st, { type: "resetCategory", categoryId: "shared_camera" });
-    expect(st.spec.selections["camera.angle"]).toBe(base.selections["camera.angle"]);
+    expect(st.spec.selections["camera.angle"]).toBe(pinned["camera.angle"]);
     st = reduce(st, { type: "reset" });
     expect(Object.keys(st.spec.selections).sort()).toEqual(["camera.angle", "output.aspect_ratio"]);
-    expect(st.locks).toEqual(["camera.angle", "output.aspect_ratio"]);
+    expect(lockedIds(st.spec)).toEqual(["camera.angle", "output.aspect_ratio"]);
     st = reduce(st, { type: "unlockAll" });
-    expect(st.locks).toEqual([]);
+    expect(lockedIds(st.spec)).toEqual([]);
   });
 
   it("a random value can be locked without editing it (source and provenance unchanged)", () => {
     let st = reduce(withSpec(createEmptySpec(core)), { type: "applyRandom", seed: 5, style: "natural" });
     const id = Object.keys(st.spec.selections).find((k) => k.startsWith("person.hair."))!;
-    const before = st.spec.selections[id];
+    const random = st.spec.selections[id]!;
     st = reduce(st, { type: "lock", attributeIds: [id], locked: true });
-    expect(st.spec.selections[id]).toBe(before);
+    const before = st.spec.selections[id];
+    expect(before).toEqual({ ...random, locked: true }); // same value, source and origin
     expect(isRandomSelection(st.spec.selections[id])).toBe(true);
     st = reduce(st, { type: "applyRandom", seed: 6, style: "natural" });
     expect(st.spec.selections[id]).toBe(before);
@@ -132,10 +143,11 @@ describe("workspace reducer", () => {
     expect(st.spec.selections[id]).toBe(before);
   });
 
-  it("importing another design drops the locks; restoring the saved workspace keeps those that still apply", () => {
+  it("a design brings its own locks: replacing the spec (import, recovery) uses the new design's locks", () => {
     const st = reduce(withSpec(base), { type: "lock", attributeIds: ["style.preset"], locked: true });
-    expect(reduce(st, { type: "replace", spec: createEmptySpec(core) }).locks).toEqual([]);
-    expect(reduce(withSpec(createEmptySpec(core)), { type: "replace", spec: base, locks: ["style.preset", "mood.tone"] }).locks).toEqual(["style.preset"]);
+    expect(lockedIds(reduce(st, { type: "replace", spec: createEmptySpec(core) }).spec)).toEqual([]);
+    const other = reduce(withSpec(createEmptySpec(core)), { type: "replace", spec: st.spec });
+    expect(lockedIds(other.spec)).toEqual(["style.preset"]);
   });
 
   it("safety: a locked value is checked like any other — a hold caused by it stays", () => {
@@ -155,22 +167,22 @@ describe("prompt detail", () => {
   });
 });
 
-describe("lock storage (beside the workspace; the ImageSpec and JSON export are unchanged)", () => {
-  it("saves and loads; ignores other catalogs and damaged data; no key = no locks", () => {
-    const store = createMemoryStore();
-    expect(loadLocks(store, core.id)).toEqual([]);
-    saveLocks(store, core.id, ["style.preset"]);
-    expect(loadLocks(store, core.id)).toEqual(["style.preset"]);
-    expect(loadLocks(store, "other.catalog")).toEqual([]);
-    store.setItem(LOCKS_STORAGE_KEY, "{not json");
-    expect(loadLocks(store, core.id)).toEqual([]);
-    saveLocks(store, core.id, []);
-    expect(store.getItem(LOCKS_STORAGE_KEY)).toBeNull();
+describe("lock persistence (ImageSpec 0.4.0)", () => {
+  it("JSON export carries the locks; importing restores them", () => {
+    const spec = buildSpec(core, [["style.preset", single("watercolor")], ["mood.tone", multi("calm")]]);
+    const locked = reduce({ ...initialWorkspaceState(core), spec }, { type: "lock", attributeIds: ["style.preset"], locked: true });
+    const json = exportSpecJson(locked.spec);
+    expect(JSON.parse(json).selections["style.preset"].locked).toBe(true);
+    expect(JSON.parse(json).selections["mood.tone"].locked).toBeUndefined();
+    const back = importSpecJson(json, core);
+    expect(back.status).toBe("valid");
+    if (back.status === "valid") expect(lockedIds(back.spec)).toEqual(["style.preset"]);
   });
 
-  it("JSON export of a design is byte-identical with or without locks", () => {
+  it("unlocking removes the field (an unlocked design exports exactly as before locking)", () => {
     const spec = buildSpec(core, [["style.preset", single("watercolor")]]);
-    const locked = reduce({ ...initialWorkspaceState(core), spec }, { type: "lock", attributeIds: ["style.preset"], locked: true });
-    expect(exportSpecJson(locked.spec)).toBe(exportSpecJson(spec));
+    let st = reduce({ ...initialWorkspaceState(core), spec }, { type: "lock", attributeIds: ["style.preset"], locked: true });
+    st = reduce(st, { type: "unlockAll" });
+    expect(exportSpecJson(st.spec)).toBe(exportSpecJson(spec));
   });
 });

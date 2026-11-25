@@ -5,13 +5,16 @@ import {
   normalizeSearch,
   resolveText,
   searchOptions,
+  normalizeHex,
   type AttributeDefinition,
+  type CustomEntry,
   type OptionAttributeDefinition,
   type OptionDefinition,
   type SelectionValue,
 } from "@/domain";
 import { fmt, type Messages } from "@/i18n/messages";
 import { ModalDialog } from "../ModalDialog";
+import { CustomColorPanel } from "./CustomColor";
 
 export interface OptionControlProps {
   attribute: OptionAttributeDefinition;
@@ -30,6 +33,9 @@ export interface OptionControlProps {
   onAddCustomRequest?(name: string): void;
   /** Names of custom entries already in the value (an exact match hides the “add” shortcut). */
   customLabels?: readonly string[];
+  /** Color control (Sprint 3.2): the value's custom entries and a writer for them (user-defined colors). */
+  customEntries?: readonly CustomEntry[];
+  onWriteCustom?(entries: CustomEntry[]): void;
 }
 
 /** Options offered: applicable ones + current selections (kept) + restricted ones (shown disabled). */
@@ -383,8 +389,11 @@ export function ColorControl(p: OptionControlProps) {
   const paletteId = useId();
   const offered = offeredOptions(p);
   const selected = p.attribute.options.filter((o) => p.selectedIds.includes(o.id));
-  const custom = p.customLabels ?? [];
-  const hasValue = selected.length > 0 || custom.length > 0;
+  const entries = p.customEntries ?? [];
+  const colorEntries = entries.filter((e) => e.color);
+  // name-only custom entries (no color) keep their previous display
+  const custom = p.customEntries ? entries.filter((e) => !e.color).map((e) => e.label) : (p.customLabels ?? []);
+  const hasValue = selected.length > 0 || custom.length > 0 || colorEntries.length > 0;
 
   const close = (returnFocus: boolean) => {
     setOpen(false);
@@ -455,6 +464,25 @@ export function ColorControl(p: OptionControlProps) {
               </button>
             </span>
           ))}
+          {colorEntries.map((e) => {
+            const name = normalizeHex(e.label) === e.color ? e.color! : `${e.label} (${e.color})`;
+            return (
+              <span key={`color-${e.label}`} className="color-value color-value--user" data-custom-color={e.color}>
+                <span className="swatch" style={{ background: e.color }} aria-hidden="true" />
+                <span>{fmt(p.t.color.current, { name })}</span>
+                {p.onWriteCustom && (
+                  <button
+                    type="button"
+                    className="color-value__clear"
+                    aria-label={fmt(p.t.field.deselect, { name })}
+                    onClick={() => p.onWriteCustom!(entries.filter((x) => x !== e))}
+                  >
+                    <span aria-hidden="true">×</span>
+                  </button>
+                )}
+              </span>
+            );
+          })}
           {custom.map((name) => (
             <span key={`custom-${name}`} className="color-value color-value--custom">
               <span className="swatch swatch--custom" aria-hidden="true" />
@@ -520,6 +548,17 @@ export function ColorControl(p: OptionControlProps) {
             {p.t.controls.colorDone}
           </button>
         </div>
+      )}
+      {p.onWriteCustom && (
+        <CustomColorPanel
+          attribute={p.attribute}
+          label={p.label}
+          entries={entries}
+          paletteHex={selected[0]?.swatch ?? null}
+          locale={p.locale}
+          t={p.t}
+          onWrite={p.onWriteCustom}
+        />
       )}
     </div>
   );
