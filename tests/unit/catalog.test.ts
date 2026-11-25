@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { placeUnlistedByOrder } from "@/testing/promptOrder";
 import {
   CatalogRegistry,
   compilePrompt,
@@ -68,11 +69,11 @@ const FACIAL_IDS = [
   ...["shape", "mouth_width", "upper_thickness", "lower_thickness", "ratio", "cupids_bow", "corners", "natural_color"].map((x) => `person.lips.${x}`),
 ];
 
-describe("8. core catalog 0.10.0", () => {
+describe("8. core catalog 0.11.0", () => {
   it("is valid, versioned and declares its format", () => {
     expect(core.id).toBe("prompter.core");
-    expect(core.version).toBe("0.10.0");
-    expect(coreCatalog.formatVersion).toBe("0.4.0");
+    expect(core.version).toBe("0.11.0");
+    expect(coreCatalog.formatVersion).toBe("0.5.0");
   });
 
   it("Basic tier attributes in order", () => {
@@ -331,6 +332,6 @@ describe("8c. catalog registry and extensibility", () => {
   it("createOrThrow throws with readable diagnostics", () => {
     const c = buildExtendedCatalog();
     c.rules![c.rules!.length - 1]!.involves = ["ghost.attr"];
-    expect(() => CatalogRegistry.createOrThrow(c)).toThrow(/unknown "ghost.attr"/);
+    expect(() => CatalogRegistry.createOrThrow(placeUnlistedByOrder(c))).toThrow(/unknown "ghost.attr"/);
   });
 });

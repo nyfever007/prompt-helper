@@ -389,3 +389,16 @@ textarea { width: 100%; resize: vertical; min-height: 80px; }
 .field__header .output-toggle + .field__clear { margin-left: 8px; }
 .field__excluded { margin: 4px 0 0; }
 #preview-title:focus { outline: none; }
+
+/* ── Sprint 2-C.2: reset history (TD-09) and diagnostics (TD-10) ─────── */
+.reset-history { align-items: flex-start; }
+.reset-history > span { flex: 1; min-width: 0; }
+.reset-history__older { flex-basis: 100%; color: var(--text); }
+.reset-history__older summary { cursor: pointer; color: var(--accent); font-size: 0.85rem; }
+.reset-history__older ol { margin: 6px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.reset-history__older li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.field__diagnostics .diag--info { border-left-color: var(--accent); }
+.diag__basis { display: inline-block; font-size: 0.7rem; font-weight: 600; border-radius: 999px; padding: 0 6px; margin-right: 6px; vertical-align: 1px; }
+.diag__basis--contradiction { background: var(--warn-soft); color: var(--warn); }
+.diag__basis--convention { background: var(--accent-soft); color: var(--accent); }
+.diag__related { display: block; margin-top: 2px; color: var(--muted); }

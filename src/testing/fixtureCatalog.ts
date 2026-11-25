@@ -8,6 +8,7 @@
  * Nothing here is approved product content; option names are placeholders.
  */
 import { CatalogRegistry, coreCatalog, type CatalogInput, type Condition } from "@/domain";
+import { placeUnlistedByOrder } from "./promptOrder";
 
 /** Present in every bundle that includes this file; the isolation check greps for it. */
 export const FIXTURE_MARKER = "PROMPTER_E2E_FIXTURE_CATALOG_v1";
@@ -294,7 +295,7 @@ export const buildFixtureCatalog = (): CatalogInput => {
       ],
     },
   ];
-  return c;
+  return placeUnlistedByOrder(c);
 };
 
 let cached: CatalogRegistry | undefined;

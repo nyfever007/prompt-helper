@@ -78,8 +78,9 @@ export function DetailedEditor({
   const tx = workspace.presetTransaction;
   const txName = tx ? resolveText(registry.getPreset(tx.presetId)?.label, locale) || tx.presetId : "";
   const catName = (id: string) => resolveText(registry.getCategory(id)?.label, locale);
-  const lastReset = workspace.lastCategoryReset;
+  const [latestReset, ...olderResets] = workspace.categoryResets;
   const lastRestore = workspace.lastCategoryRestore;
+  const time = (at: string | undefined) => (at ? new Date(at).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" }) : "");
   const [dismissedRestore, setDismissedRestore] = useState(0);
 
   return (
@@ -100,15 +101,40 @@ export function DetailedEditor({
             </button>
           </div>
         )}
-        {lastReset && (
-          <div className="preset-bar" role="status" data-testid="category-reset-bar">
-            <span>{fmt(t.categoryReset.done, { name: catName(lastReset.categoryId), n: Object.keys(lastReset.removed).length })}</span>
-            <button type="button" className="button button--small" onClick={() => workspace.undoCategoryReset()}>
+        {latestReset && (
+          // TD-09: the most recent reset stays one click away; earlier ones (session only) are listed below it.
+          <div className="preset-bar reset-history" role="status" data-testid="category-reset-bar" data-reset-id={latestReset.id}>
+            <span>
+              {fmt(t.categoryReset.done, { name: catName(latestReset.categoryId), n: Object.keys(latestReset.removed).length })}
+              {latestReset.editedSince.length > 0 && <span className="small"> · {fmt(t.categoryReset.editedNote, { n: latestReset.editedSince.length })}</span>}
+            </span>
+            <button type="button" className="button button--small" onClick={() => workspace.undoCategoryReset(latestReset.id)}>
               {t.categoryReset.undo}
             </button>
+            {olderResets.length > 0 && (
+              <details className="reset-history__older" data-testid="category-reset-history">
+                <summary>{fmt(t.categoryReset.older, { n: olderResets.length })}</summary>
+                <ol>
+                  {olderResets.map((r) => (
+                    <li key={r.id} data-reset-id={r.id}>
+                      <span>{fmt(t.categoryReset.entry, { name: catName(r.categoryId), n: Object.keys(r.removed).length, time: time(r.at) })}</span>
+                      {r.editedSince.length > 0 && <span className="small"> · {fmt(t.categoryReset.editedNote, { n: r.editedSince.length })}</span>}
+                      <button
+                        type="button"
+                        className="button button--small"
+                        aria-label={fmt(t.categoryReset.undoOne, { name: catName(r.categoryId), time: time(r.at) })}
+                        onClick={() => workspace.undoCategoryReset(r.id)}
+                      >
+                        {t.categoryReset.undoShort}
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+              </details>
+            )}
           </div>
         )}
-        {!lastReset && lastRestore && lastRestore.id !== dismissedRestore && (
+        {lastRestore && lastRestore.id !== dismissedRestore && (
           <div className="notice" role="status" data-testid="category-restore-notice">
             <span>{fmt(t.categoryReset.restored, { name: catName(lastRestore.categoryId), n: lastRestore.restored.length })}</span>
             {lastRestore.skipped.length > 0 && (

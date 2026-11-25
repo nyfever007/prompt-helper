@@ -22,8 +22,12 @@ import { SelectionValueSchema } from "../spec/values";
  * `covers` (semantic de-duplication), `suggestedWhen` (UI suggestion only),
  * `interval`, conditional `prompt.variants`; conditions `derived`,
  * `selectedCount`, `intervalMismatch`; catalog `ageModel`.
+ * 0.5.0 (Sprint 2-C.2): optional catalog `promptOrder` (prompt output groups as
+ * ordered attribute lists — output order separate from the UI `order`, TD-08);
+ * condition `numberIn`; optional rule `basis` (contradiction | convention, TD-10).
+ * Additive: a catalog without `promptOrder` outputs in `order` as before.
  */
-export const CATALOG_FORMAT_VERSION = "0.4.0" as const;
+export const CATALOG_FORMAT_VERSION = "0.5.0" as const;
 
 /**
  * Product approval status — separate from what the catalog can technically
@@ -122,6 +126,14 @@ export const ConditionSchema = z.discriminatedUnion("op", [
    * either is unset, custom, or the option has no interval.
    */
   z.object({ op: z.literal("intervalMismatch"), attributeId: AttributeIdSchema, groupAttributeId: AttributeIdSchema }).strict(),
+  /**
+   * A number attribute is SET and its value lies in [min, max] (either bound may be omitted).
+   * False when unset — a slider's displayed position is never a value (nothing is inferred).
+   */
+  z
+    .object({ op: z.literal("numberIn"), attributeId: AttributeIdSchema, min: z.number().optional(), max: z.number().optional() })
+    .strict()
+    .refine((c) => c.min !== undefined || c.max !== undefined, { message: "numberIn needs min and/or max" }),
 ]);
 export type Condition = z.infer<typeof ConditionSchema>;
 
@@ -393,6 +405,12 @@ export const CatalogRuleSchema = z
     id: IdSchema,
     kind: z.enum(["conflict", "dependency", "visibility"]),
     severity: z.enum(["error", "warning", "info"]),
+    /**
+     * Why a conflict is reported (TD-10): `contradiction` — the two settings state opposite
+     * meanings; `convention` — unusual compared with common practice (photography, anatomy …)
+     * but legitimate (fantasy, stylization, intent). Omitted = contradiction. Never blocks.
+     */
+    basis: z.enum(["contradiction", "convention"]).optional(),
     /** All conditions must hold for the rule to fire. */
     when: z.array(ConditionSchema).min(1),
     involves: z.array(AttributeIdSchema).min(1),
@@ -469,6 +487,16 @@ export const AgeModelSchema = z
   .strict();
 export type AgeModel = z.infer<typeof AgeModelSchema>;
 
+/**
+ * Prompt output order (TD-08): ordered groups, each an ordered list of attribute ids.
+ * Every attribute appears exactly once. Inserting an attribute = inserting its id in a
+ * list; no other attribute changes. Independent of the UI `order` and of categories.
+ */
+export const PromptGroupSchema = z
+  .object({ id: IdSchema, attributes: z.array(AttributeIdSchema).min(1) })
+  .strict();
+export type PromptGroup = z.infer<typeof PromptGroupSchema>;
+
 export const CatalogSchema = z
   .object({
     formatVersion: z.literal(CATALOG_FORMAT_VERSION),
@@ -479,6 +507,7 @@ export const CatalogSchema = z
     categories: z.array(CategoryDefinitionSchema).default([]),
     attributes: z.array(AttributeDefinitionSchema).min(1),
     rules: z.array(CatalogRuleSchema).default([]),
+    promptOrder: z.array(PromptGroupSchema).optional(),
     migrations: z.array(CatalogMigrationSchema).default([]),
     presets: z.array(PresetDefinitionSchema).default([]),
     ageModel: AgeModelSchema.optional(),

@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { placeUnlistedByOrder } from "@/testing/promptOrder";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -127,7 +128,7 @@ describe("product exposure is separate from catalog expressiveness (D1)", () => 
     // No product person area is draft any more (2-B.6): make one draft in this clone only.
     c.categories = c.categories!.map((cat) => (cat.id === "person_pose" ? { ...cat, status: "draft" as const } : cat));
     c.attributes.push({ id: "x.face.test", domain: "person", status: "approved", categoryId: "person_pose", type: "text", tier: "detailed", order: 500, maxLength: 10, label: { en: "t" }, prompt: { template: "{value}" } });
-    const reg = CatalogRegistry.createOrThrow(c);
+    const reg = CatalogRegistry.createOrThrow(placeUnlistedByOrder(c));
     expect(reg.exposedAttributes("detailed").map((a) => a.id)).not.toContain("x.face.test");
   });
 });
@@ -169,7 +170,7 @@ describe("data-driven categories", () => {
     const c = cloneCore();
     c.categories!.push({ id: "shared_extra", parentId: "shared", order: 99, status: "approved", label: { en: "Extra", ko: "추가" } });
     c.attributes.push({ id: "x.extra", domain: "x", status: "approved", categoryId: "shared_extra", type: "text", tier: "detailed", order: 999, maxLength: 20, label: { en: "Extra" }, prompt: { template: "{value}" } });
-    const reg = CatalogRegistry.createOrThrow(c);
+    const reg = CatalogRegistry.createOrThrow(placeUnlistedByOrder(c));
     const node = flattenCategoryTree(buildCategoryTree(reg, createEmptySpec(reg), [])).find((n) => n.category.id === "shared_extra")!;
     expect(node.attributes.map((a) => a.id)).toEqual(["x.extra"]);
   });
@@ -496,7 +497,7 @@ describe("ImageSpec 0.2.0 compatibility (D2)", () => {
     expect(r.status).toBe("valid");
     if (r.status !== "valid") return;
     expect(r.spec.schemaVersion).toBe("0.3.0"); // migrated 0.1.0 → 0.2.0 → 0.3.0 (version-only steps)
-    expect(r.spec.catalog).toEqual({ id: "prompter.core", version: "0.10.0" });
+    expect(r.spec.catalog).toEqual({ id: "prompter.core", version: "0.11.0" });
     expect(r.spec.selections).toEqual(raw.selections);
     expect(r.migrations).toEqual([]);
     expect(r.diagnostics.filter((d) => d.severity !== "info")).toEqual([]);

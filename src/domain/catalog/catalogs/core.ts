@@ -1,5 +1,7 @@
 import type { CatalogInput, Condition } from "../schema";
 import { appearanceAttribute } from "./person/appearance";
+import { consistencyRules } from "./consistency-rules";
+import { corePromptOrder } from "./prompt-order";
 import { cameraAttributes, cameraCategories, cameraCategoryOf, cameraRules } from "./shared/camera";
 import { lightingAttributes, lightingCategories, lightingCategoryOf, lightingRules } from "./shared/lighting";
 import { POSE_CATEGORY_DESCRIPTION, poseAttributes, poseCategories, poseRules } from "./person/pose";
@@ -37,6 +39,9 @@ const APPROVED_PERSON_AREAS: Record<string, { en: string; ko: string }> = {
  * Lighting 2025–2095 + options added to the six lighting properties — no ID changes, prompts unchanged).
  * 0.10.0 Sprint 2-C.1 (Camera → 5 and Lighting → 6 subcategories for the Detailed navigation — no ID, option,
  * order or output changes).
+ * 0.11.0 Sprint 2-C.2 (format 0.5.0: explicit prompt output order `promptOrder` in prompt-order.ts,
+ * separate from the UI `order` — same output as 0.10.0; contradiction/convention diagnostics with
+ * slider conditions — no ID, value or output changes).
  *
  * Every list here is an extensible STARTING POINT, not a final scope. No option
  * count limits are implied; add entries as data and bump `version`.
@@ -59,9 +64,9 @@ const ORIENTED_SUBJECTS = ["person", "group", "animal", "object", "vehicle", "ar
 const NON_ABSTRACT = [...ORIENTED_SUBJECTS, "landscape"];
 
 export const coreCatalog = {
-  formatVersion: "0.4.0",
+  formatVersion: "0.5.0",
   id: "prompter.core",
-  version: "0.10.0",
+  version: "0.11.0",
   title: { en: "Prompter core catalog", ko: "Prompter 기본 카탈로그" },
   groups: [
     { id: "what", order: 0, label: { en: "What to depict", ko: "무엇을 그릴까요" } },
@@ -817,6 +822,8 @@ export const coreCatalog = {
       id: "sky-light-in-studio",
       kind: "conflict",
       severity: "warning",
+      // A studio can imitate sky light: unusual, not contradictory (TD-10 classification; severity unchanged).
+      basis: "convention",
       when: [
         { op: "anyOf", attributeId: "lighting.preset", optionIds: ["golden_hour", "midday_sun", "blue_hour", "moonlight"] },
         { op: "anyOf", attributeId: "scene.setting", optionIds: ["studio"] },
@@ -918,6 +925,8 @@ export const coreCatalog = {
     ...poseRules,
     ...cameraRules,
     ...lightingRules,
+    // Sprint 2-C.2 (TD-10): contradiction / convention diagnostics, incl. choice ↔ slider (`numberIn`).
+    ...consistencyRules,
   ],
   migrations: [
     {
@@ -983,7 +992,15 @@ export const coreCatalog = {
       // No ID changes: 0.10.0 only moves camera and lighting attributes into subcategories (navigation).
       changes: [],
     },
+    {
+      fromVersion: "0.10.0",
+      toVersion: "0.11.0",
+      // No ID changes: 0.11.0 adds the explicit prompt output order and diagnostic rules (output unchanged).
+      changes: [],
+    },
   ],
+  // Prompt output order (TD-08): explicit groups, independent of the UI `order` and categories.
+  promptOrder: corePromptOrder,
   // Product composite presets require separate approval (none yet). Test-only presets live in the E2E fixture catalog.
   presets: [],
   ageModel: identityAgeModel,

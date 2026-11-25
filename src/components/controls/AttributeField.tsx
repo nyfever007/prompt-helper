@@ -203,9 +203,18 @@ export function AttributeField(props: AttributeFieldProps) {
         <ul className="field__diagnostics">
           {diagnostics.map((d, i) => {
             const desc = describeDiagnostic(d, { registry, locale, t });
+            const basis = d.code.startsWith("rule.") ? (d.params?.basis as "contradiction" | "convention" | undefined) : undefined;
+            // TD-10: the other settings this notice is about, with their page, so they are easy to find.
+            const related = d.code.startsWith("rule.") ? (d.involves ?? []).filter((id) => id !== attribute.id) : [];
+            const where = (id: string) => {
+              const cat = registry.getAttribute(id)?.categoryId;
+              return `${attributeLabel(registry, id, locale)}${cat ? ` (${resolveText(registry.getCategory(cat)?.label, locale)})` : ""}`;
+            };
             return (
-              <li key={`${d.code}-${i}`} className={`diag diag--${d.severity}`} data-code={d.code}>
+              <li key={`${d.code}-${i}`} className={`diag diag--${d.severity}`} data-code={d.code} data-basis={basis}>
+                {basis && <span className={`diag__basis diag__basis--${basis}`}>{t.field.basis[basis]}</span>}
                 <span>{desc.text}</span>
+                {related.length > 0 && <span className="diag__related small">{fmt(t.field.related, { labels: related.map(where).join(", ") })}</span>}
                 {desc.terms && <span className="muted small"> ({desc.terms})</span>}
                 {desc.guidance && (
                   <span className="diag__guidance">

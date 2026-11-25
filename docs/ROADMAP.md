@@ -17,7 +17,7 @@
 | **TD-11 — 속성 테스트 비용** | 결과가 같은 검사 경로 최적화와 테스트 헬퍼 개선, CI 실측 1.79–3.09초(제한 5초, ADR-055) | ✅ **부분 해결 (PR #8)** — 느린 실행기 3초 기준 미충족, TD-11 열림 |
 | **Sprint 2-B.6 — Appearance direction, pose, camera & lighting** | 외모 방향(Basic + Detailed), 자세 22, 카메라 15 + 기존 3, 조명 11 + 기존 7(선택지 추가), core 카탈로그 0.9.0 — 인물 상세 속성 누적 300 | ✅ **승인 — Sprint 2-B 카탈로그 구현 완료** ([보고서](SPRINT_2B6_REPORT.md)) |
 | **Sprint 2-C.1 — UI, UX & accessibility** | 색상 선택 접기(TD-13), 카메라 하위 분류 5·조명 하위 분류 6(림 라이트 색상은 림 라이트와 같은 분류), 공통 편집 화면(헤더 포함·제외, 이전/다음 페이지, 모바일 고정 카테고리 바), 카테고리 트리 키보드 탐색(TD-01), 모달·팝오버 포커스(TD-02), core 카탈로그 0.10.0, 로드맵 갱신 | ✅ **승인 (Sprint 2-C.1 최종 승인)** ([보고서](SPRINT_2C1_REPORT.md)) |
-| Sprint 2-C.2 — Architecture, state & diagnostics | 구조·상태 관리·진단 정리 (TD-08·TD-09·TD-10 검토 포함) | ⏳ 예정 (자동 시작하지 않음) |
+| **Sprint 2-C.2 — Architecture, state & diagnostics** | 출력 순서를 UI 순서와 분리(`promptOrder`, TD-08), 카테고리 초기화 이력(최근 5개·기록별 복원, TD-09), 의미 충돌·관례 차이 진단과 슬라이더 조건(규칙 +24, TD-10), 카탈로그 형식 0.5.0·core 0.11.0·컴파일러 0.5.0 — 출력 동일 | ✅ **승인 (Sprint 2-C.2 최종 승인)** ([보고서](SPRINT_2C2_REPORT.md)) |
 | Sprint 2-C.3 — Safety consistency | TD-12·TD-14·TD-15 (안전 정책 변경은 별도 승인) | ⏳ 예정 |
 | Sprint 2-C.4 — Performance & integration validation | TD-11(부분 해결) 재측정·통합 검증, 실제 스크린 리더(VoiceOver·NVDA)·다크 모드 검증(TD-16) | ⏳ 예정 |
 | Sprint 2-D.1 — 시각적 선택 공통 컴포넌트·에셋 표준 | 선택지 시각 표현 공통 컴포넌트, 에셋 표준(TD-03 연결) | ⏳ 예정 ([설계 원칙](VISUAL_EDITOR_PRINCIPLES.md)) |

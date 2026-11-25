@@ -3,7 +3,7 @@
 사용자가 상상한 이미지를 구조화된 명세(**ImageSpec**)로 정밀하게 정의하고, 이를 이미지 생성 모델용 프롬프트로 변환하는 **Visual Prompt Design Tool**입니다.
 
 - 제품 마스터 계획: [PROMPTER_MASTER_PLAN.md](PROMPTER_MASTER_PLAN.md) (원본 보존, 수정 금지)
-- 현재 단계: **Sprint 2-C.1 (UI, UX & accessibility) — 승인·완료**. 결과는 [docs/SPRINT_2C1_REPORT.md](docs/SPRINT_2C1_REPORT.md), 로드맵은 [docs/ROADMAP.md](docs/ROADMAP.md)(Sprint 2-C 4단계 + 새 Sprint 2-D), 시각적 편집 설계 원칙은 [docs/VISUAL_EDITOR_PRINCIPLES.md](docs/VISUAL_EDITOR_PRINCIPLES.md)를 참고하세요. Sprint 2-B 카탈로그 구현은 완료([2-B.6 보고서](docs/SPRINT_2B6_REPORT.md) 등), 카탈로그 설계는 [docs/catalogs/](docs/catalogs/), 기술 부채는 [docs/TECH_DEBT.md](docs/TECH_DEBT.md). Sprint 2-C.2와 Sprint 2-D는 자동으로 시작하지 않습니다.
+- 현재 단계: **Sprint 2-C.2 (Architecture, state management & diagnostics) — 승인·완료**. 결과는 [docs/SPRINT_2C2_REPORT.md](docs/SPRINT_2C2_REPORT.md). 이전 단계 [Sprint 2-C.1](docs/SPRINT_2C1_REPORT.md)(승인·병합), 로드맵은 [docs/ROADMAP.md](docs/ROADMAP.md), 시각적 편집 설계 원칙은 [docs/VISUAL_EDITOR_PRINCIPLES.md](docs/VISUAL_EDITOR_PRINCIPLES.md), 카탈로그 설계는 [docs/catalogs/](docs/catalogs/), 기술 부채는 [docs/TECH_DEBT.md](docs/TECH_DEBT.md). Sprint 2-C.3과 Sprint 2-D는 자동으로 시작하지 않습니다.
 - 이 빌드는 이미지 생성 API나 유료 LLM API를 **호출하지 않습니다**. API 키도 필요 없습니다.
 
 ## 요구 사항
@@ -95,6 +95,7 @@ scripts/         빌드 검증 스크립트 (테스트 카탈로그 격리)
 - [docs/SPRINT_2B5_REPORT.md](docs/SPRINT_2B5_REPORT.md): Sprint 2-B.5 (Expression, impression, makeup, clothing & accessories) 구현 및 검증 결과
 - [docs/SPRINT_2B6_REPORT.md](docs/SPRINT_2B6_REPORT.md): Sprint 2-B.6 (Appearance direction, pose, camera & lighting) 구현 및 검증 결과
 - [docs/SPRINT_2C1_REPORT.md](docs/SPRINT_2C1_REPORT.md): Sprint 2-C.1 (UI, UX & accessibility) 구현 및 검증 결과
+- [docs/SPRINT_2C2_REPORT.md](docs/SPRINT_2C2_REPORT.md): Sprint 2-C.2 (Architecture, state management & diagnostics) 구현 및 검증 결과
 - [docs/VISUAL_EDITOR_PRINCIPLES.md](docs/VISUAL_EDITOR_PRINCIPLES.md): Sprint 2-D 시각적 편집·추천 설계 원칙
 - [docs/SPRINT_2B1_SPEC_REVIEW.md](docs/SPRINT_2B1_SPEC_REVIEW.md): Sprint 2-B.1 사양 결정 기록(D0–D14, N1–N5, Q1–Q3, 국가·지역 목록, 전체 컴파일 문장)
 - [docs/catalogs/CATALOG_DESIGN_STANDARD.md](docs/catalogs/CATALOG_DESIGN_STANDARD.md): 모든 카탈로그 공통 설계 규격

@@ -141,7 +141,7 @@ export const validateSpecAgainstCatalog = (spec: ImageSpec, registry: CatalogReg
         ruleId: rule.id,
         involves: [...rule.involves],
         ...(rule.actions ? { actions: rule.actions.map((a) => ({ ...a })) } : {}),
-        params: { rule: rule.id, kind: rule.kind, involves: rule.involves.join(",") },
+        params: { rule: rule.id, kind: rule.kind, involves: rule.involves.join(","), ...(rule.kind === "conflict" ? { basis: rule.basis ?? "contradiction" } : {}) },
       });
     }
   }

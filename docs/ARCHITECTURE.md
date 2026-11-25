@@ -368,3 +368,30 @@ components/PrompterApp.tsx ── 모바일 미리보기 시트(비모달): 열�
 | 색상: 기본 접힘, 선택 후 닫힘·포커스 복귀, Escape·바깥 클릭, 다중 선택, 사용자 정의 표시, 새로고침 복원, 프리셋 적용 후 표시 | `component/usability`, E2E `usability` |
 | 트리 키보드(한 Tab 정지점, 화살표·Home·End·Enter), 이름/설명 분리 | `component/usability`, E2E `usability` |
 | 모달 초기 포커스·Tab 순환·inert·Escape·복귀(비활성화된 여는 버튼 → 되돌리기 버튼) | `component/usability`, E2E `usability` |
+
+## 17. Sprint 2-C.2: 출력 순서·초기화 이력·충돌 진단
+
+카탈로그 형식 0.5.0(추가만), core 0.11.0, 컴파일러 0.5.0. ImageSpec과 안전 정책은 그대로이며, 프롬프트 출력도 같습니다.
+
+```text
+catalogs/prompt-order.ts ── corePromptOrder: 15개 출력 그룹 × 속성 ID 목록 (출력 순서의 유일한 원본)
+registry.ts ── checkPromptOrder (모든 속성 정확히 1회) → promptAttributes() [생성 시 1회 평탄화]
+             attributes() = UI 순서(order) — 탐색·카테고리·Basic/Detailed 목록
+compiler.ts ── pass 1 · covers · pass 2(문장) · 안전 검사 모두 promptAttributes() 순서
+
+conditions.ts ── numberIn(attributeId, min?, max?): 설정된 수치만 (미설정 = false)
+catalogs/consistency-rules.ts ── 24개 규칙, basis: contradiction(warning) | convention(info)
+specValidator.ts ── rule 진단 params.basis → AttributeField / PromptPreview 표시
+
+state/workspaceReducer.ts ── categoryResets[≤5] { id, categoryId, at, removed, editedSince }
+  공통 처리: 동작 전후 selections 참조 비교 → 바뀐 속성을 각 기록의 editedSince에 추가
+  undoCategoryReset(recordId?) → 미설정이고 editedSince가 아닌 속성만 restoreCategoryReset
+```
+
+| 보장 | 근거 테스트 |
+|---|---|
+| 0.10.0과 같은 출력(해시·문장 순서), 전체 348개 출력 순서 | `prompt-order` golden |
+| UI 순서·카테고리 변경은 출력에 영향 없음, 새 속성 삽입 시 다른 속성 불변, 무결성 오류 | `prompt-order` |
+| 규칙마다 발생 조건과 발생하지 않는 대표 조건, 출력 불변·비차단·안전 독립 | `consistency-rules` |
+| 여러 초기화, 오래된 기록 먼저 복원, 이후 수정 우선, 이력 5개, 프리셋 독립, 안전 우회 없음 | `category-reset` (TD-09) |
+| UI 이력 목록·안내 표시 | `component/reset-history-diagnostics`, E2E `architecture` |
